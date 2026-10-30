@@ -14,4 +14,4 @@ Remote is made by RUNNERS-IM. It is in early development and has no release yet.
 
 ## License
 
-Remote is distributed under the MIT License. See [LICENSE.md](LICENSE.md).
+Copyright (c) 2026 Runners Co., Ltd. All rights reserved. The source is published for reading only; see [LICENSE.md](LICENSE.md).

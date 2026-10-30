@@ -3,6 +3,7 @@ mod i18n;
 mod input;
 mod menu;
 mod permissions;
+mod tray_icon;
 
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -155,12 +156,13 @@ pub fn run() {
             app.manage(ComputerName(name.clone()));
 
             let menu = menu::build(app, &name)?;
-            let tray = TrayIconBuilder::with_id(TRAY_ID);
-            #[cfg(target_os = "macos")]
-            let tray = tray.icon(tauri::include_image!("icons/tray.png")).icon_as_template(true);
-            #[cfg(not(target_os = "macos"))]
-            let tray = tray.icon(app.default_window_icon().unwrap().clone());
-            tray.tooltip("Remote")
+            let pictures = tray_icon::Pictures::draw();
+            let first = status(app.handle());
+            let tray = TrayIconBuilder::with_id(TRAY_ID)
+                .icon(tray_icon::image(pictures.get(first, 0)))
+                // Why: a template picture follows the menu bar colour on macOS; other systems ignore the flag.
+                .icon_as_template(cfg!(target_os = "macos"))
+                .tooltip("Remote")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "open" => open_window(app),
@@ -173,10 +175,14 @@ pub fn run() {
                     _ => {}
                 })
                 .build(app)?;
+            let picture = tray_icon::start(tray, pictures, first);
 
             let handle = app.handle().clone();
             std::thread::spawn(move || loop {
-                menu::show_status(&handle, &name, status(&handle));
+                let now = status(&handle);
+                menu::show_status(&handle, &name, now);
+                // Why: the picture thread ignores a status it already shows, so sending every round is fine.
+                let _ = picture.send(now);
                 // Why: a backup for the ThemeChanged event, which a hidden window may not get on every OS.
                 menu::follow_theme(&handle);
                 std::thread::sleep(STATUS_EVERY);

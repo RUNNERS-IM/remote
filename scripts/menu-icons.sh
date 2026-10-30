@@ -2,7 +2,7 @@
 # Makes the tray menu icons in src-tauri/icons/menu/ from the official Lucide SVGs.
 # Each icon comes in black (light menus) and white (dark menus) at 36 px, which is 2x of the 18 pt slot muda draws menu icons in.
 # The status dots are filled circles in the system green, yellow, red and grey.
-# The menu bar picture (tray.png) is Lucide screen-share in black; macOS draws it as a template image, so it follows the menu bar colour.
+# The menu bar picture is not made here: src-tauri/src/tray_icon.rs draws it when the app starts, one picture per status.
 # Needs macOS 14 or later (AppKit reads SVG) and network access to unpkg.com.
 set -euo pipefail
 
@@ -35,9 +35,5 @@ for dot in green:#34c759 yellow:#ffcc00 red:#ff3b30 grey:#8e8e93; do
   printf '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="%s"/></svg>' "$color" > "$WORK/dot-$label.svg"
   swift "$DRAW" "$WORK/dot-$label.svg" "$OUT/dot-$label.png" "$PIXELS"
 done
-
-curl -sfL "https://unpkg.com/lucide-static@$LUCIDE_VERSION/icons/screen-share.svg" -o "$WORK/screen-share.svg"
-sed -e 's/currentColor/#000000/g' -e 's/stroke-width="2"/stroke-width="1.5"/' "$WORK/screen-share.svg" > "$WORK/tray.svg"
-swift "$DRAW" "$WORK/tray.svg" "$ROOT/src-tauri/icons/tray.png" "$PIXELS"
 
 echo "wrote $(ls "$OUT" | wc -l | tr -d ' ') files to $OUT"

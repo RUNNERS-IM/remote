@@ -56,7 +56,7 @@ pub fn to_global(bounds: Bounds, x: f64, y: f64) -> (f64, f64) {
 pub use mac::send;
 
 #[cfg(not(target_os = "macos"))]
-pub fn send(_input: &Input) -> Result<(), String> {
+pub fn send(_input: &Input) -> Result<Option<(f64, f64)>, String> {
     Err("unsupported".into())
 }
 
@@ -72,12 +72,14 @@ mod mac {
     /// Why: CGEvent drops a string longer than this per event, so long text goes out in pieces.
     const TEXT_CHUNK: usize = 20;
 
-    pub fn send(input: &Input) -> Result<(), String> {
+    /// Posts `input` and returns the global point a move or click went to (none for keys and text).
+    pub fn send(input: &Input) -> Result<Option<(f64, f64)>, String> {
         let source = CGEventSource::new(CGEventSourceStateID::HIDSystemState).map_err(|_| "event source")?;
         match input {
             Input::Move { display, x, y } => {
                 let at = point(*display, *x, *y)?;
-                mouse(&source, CGEventType::MouseMoved, at, CGMouseButton::Left, 0)
+                mouse(&source, CGEventType::MouseMoved, at, CGMouseButton::Left, 0)?;
+                Ok(Some((at.x, at.y)))
             }
             Input::Click { display, x, y, button, count } => {
                 let at = point(*display, *x, *y)?;
@@ -91,7 +93,7 @@ mod mac {
                     mouse(&source, down, at, which, n)?;
                     mouse(&source, up, at, which, n)?;
                 }
-                Ok(())
+                Ok(Some((at.x, at.y)))
             }
             Input::Key { code, modifiers } => {
                 let flags = modifiers.iter().fold(CGEventFlags::empty(), |all, m| all | flag(*m));
@@ -100,7 +102,7 @@ mod mac {
                     event.set_flags(flags);
                     event.post(CGEventTapLocation::HID);
                 }
-                Ok(())
+                Ok(None)
             }
             Input::Text { text } => {
                 let units: Vec<u16> = text.encode_utf16().collect();
@@ -111,7 +113,7 @@ mod mac {
                         event.post(CGEventTapLocation::HID);
                     }
                 }
-                Ok(())
+                Ok(None)
             }
         }
     }

@@ -10,10 +10,6 @@ pub struct Permissions {
     pub accessibility: bool,
 }
 
-/// System Settings pages for each permission, opened from the window's "Open Settings" buttons.
-pub const SCREEN_RECORDING_SETTINGS: &str = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
-pub const ACCESSIBILITY_SETTINGS: &str = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
-
 #[cfg(target_os = "macos")]
 mod mac {
     use core_foundation::base::TCFType;

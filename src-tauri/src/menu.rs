@@ -9,8 +9,8 @@ use tauri::{App, AppHandle, Manager, Theme, Wry};
 
 use crate::i18n::t;
 
-/// The license line under "RUNNERS" in the about window (shared spec: app name · version · RUNNERS + one MIT line).
-const LICENSE_LINE: &str = "MIT License";
+/// The license line under "RUNNERS" in the about window; Remote is RUNNERS' own, not open source (LICENSE.md).
+const LICENSE_LINE: &str = "© 2026 RUNNERS. All rights reserved.";
 
 /// What the receiving side is doing.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

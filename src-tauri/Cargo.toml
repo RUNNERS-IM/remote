@@ -3,7 +3,7 @@ name = "remote"
 version = "0.1.0"
 description = "See and click the screens of other computers, one monitor at a time"
 authors = ["RUNNERS-IM"]
-license = "MIT"
+license-file = "../LICENSE.md"
 edition = "2024"
 
 [lib]

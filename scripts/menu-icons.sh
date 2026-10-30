@@ -1,17 +1,17 @@
 #!/bin/bash
-# Makes the tray menu icons in src-tauri/icons/menu/ from the official Lucide SVGs.
-# Each icon comes in black (light menus) and white (dark menus) at 36 px, which is 2x of the 18 pt slot muda draws menu icons in.
-# The status dots are filled circles in the system green, yellow, red and grey.
-# The menu bar picture is not made here: src-tauri/src/tray_icon.rs draws it when the app starts, one picture per status.
+# Makes the right-click tray menu icons in resources/menu/ from the official Lucide SVGs.
+# Each icon comes in black (light menus) and white (dark menus) at 36 px, which is 2x of the 18 pt slot the native menu draws icons in.
+# The status dots are filled circles in the system green, yellow and grey.
+# The menu bar picture is not made here: native/src/tray.rs draws it when the app starts, one picture per status.
 # Needs macOS 14 or later (AppKit reads SVG) and network access to unpkg.com.
 set -euo pipefail
 
 LUCIDE_VERSION=1.63.0
 PIXELS=36
-ICONS=(app-window info refresh-cw settings circle-help square-x)
+ICONS=(app-window info refresh-cw circle-help square-x square-check square)
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="$ROOT/src-tauri/icons/menu"
+OUT="$ROOT/resources/menu"
 DRAW="$ROOT/scripts/menu-icons.swift"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -29,7 +29,7 @@ for name in "${ICONS[@]}"; do
 done
 
 # Why: a 9 pt dot centred in the 18 pt slot lines up with the icons below it.
-for dot in green:#34c759 yellow:#ffcc00 red:#ff3b30 grey:#8e8e93; do
+for dot in green:#34c759 yellow:#ffcc00 grey:#8e8e93; do
   label="${dot%%:*}"
   color="${dot#*:}"
   printf '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="%s"/></svg>' "$color" > "$WORK/dot-$label.svg"

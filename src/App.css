@@ -1,21 +1,17 @@
-/* Design standard A shared with Split, Prompt and Monitor: macOS system look, values in px. */
+/* Colours shared by the About window (About.css, RunnersApps.css) and the viewer (Viewer.css): design standard A, the macOS system look. */
 :root {
   --accent: #007aff;
-  --window: #f6f6f6;
+  --panel: #f6f6f6;
   --card: rgba(255, 255, 255, 0.85);
   --ink: #1d1d1f;
   --sub: #6e6e73;
+  --track: rgba(0, 0, 0, 0.08);
   --line: rgba(0, 0, 0, 0.12);
-  --track: rgba(0, 0, 0, 0.12);
-  --ok: #34c759;
-  --off: #8e8e93;
-  --bad: #ff3b30;
-  --screen: #000000;
-  font-family: -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
   font-size: 13px;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
-  /* Why: Korean otherwise breaks inside a word; keep-all breaks at spaces and pretty avoids a lonely last word. */
+  /* Why: Korean otherwise breaks inside a word ("나아집 / 니다"); keep-all breaks at spaces and pretty avoids a lonely last word. */
   word-break: keep-all;
   overflow-wrap: anywhere;
   text-wrap: pretty;
@@ -23,267 +19,126 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --window: #1e1e20;
+    --panel: #1e1e20;
     --card: rgba(255, 255, 255, 0.05);
     --ink: #f5f5f7;
     --sub: #98989d;
+    --track: rgba(255, 255, 255, 0.12);
     --line: rgba(255, 255, 255, 0.14);
-    --track: rgba(255, 255, 255, 0.2);
-    --ok: #30d158;
-    --off: #8e8e93;
-    --bad: #ff453a;
+  }
+}
+
+/* Why: grey text all but vanished over the blurred desktop, so secondary text is darker (lighter in dark mode) when blur is on. */
+:root[data-translucent="true"] {
+  --sub: rgba(0, 0, 0, 0.62);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-translucent="true"] {
+    --sub: rgba(255, 255, 255, 0.7);
   }
 }
 
 html,
 body,
 #root {
-  height: 100%;
   margin: 0;
-  background: var(--window);
   overflow: hidden;
   user-select: none;
+  cursor: default;
 }
 
-.window {
+/* The tray panel: Split's menu values from runners-menu.css (--rm-*). The OS draws the menu material behind it. */
+:root[data-window="panel"] {
+  color: var(--rm-text);
+  font-size: var(--rm-font);
+}
+
+.panel {
   box-sizing: border-box;
-  height: 100%;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  padding: var(--rm-pad-y) 0;
 }
 
-.title {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.subtitle,
-.hint {
-  color: var(--sub);
-  font-size: 11px;
-}
-
-.section-head {
-  margin: 0 0 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--sub);
-}
-
-.card {
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 0.5px solid var(--line);
-  background: var(--card);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.permission {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.permission-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: none;
-}
-
-.dot.on {
-  background: var(--ok);
-}
-
-.dot.off {
-  background: var(--off);
-}
-
-.state {
-  color: var(--sub);
-}
-
-.button {
-  font: inherit;
-  color: var(--ink);
-  padding: 3px 10px;
-  border-radius: 6px;
-  border: 0.5px solid var(--line);
-  background: var(--card);
-  cursor: pointer;
-}
-
-.button:hover {
-  border-color: var(--accent);
-}
-
-.viewer-section {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.tabs {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-}
-
-.tab {
-  font: inherit;
-  color: var(--ink);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 0.5px solid transparent;
-  background: transparent;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.tab svg {
-  color: var(--sub);
-}
-
-.tab.chosen {
-  border-color: var(--line);
-  background: var(--card);
-  font-weight: 600;
-}
-
-.tab.chosen svg {
-  color: var(--accent);
-}
-
-.badge {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--sub);
-}
-
-.viewer {
-  flex: 1;
-  min-height: 0;
-  padding: 0;
-  overflow: hidden;
-  /* Why: a grid cell gives the picture a definite box, so max-height: 100% works and it keeps its own shape. */
-  display: grid;
-  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
-  place-items: center;
-  background: var(--screen);
-}
-
-.screen {
-  display: block;
-  max-width: 100%;
-  max-height: 100%;
-}
-
-.screen.clickable {
-  cursor: crosshair;
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.empty {
-  padding: 20px;
-  text-align: center;
-  color: #98989d;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 6px;
-}
-
-.switch {
+.head {
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
+  min-height: var(--rm-row);
+  margin: 0 var(--rm-inset);
 }
 
-.switch.disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.switch input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.knob {
-  position: relative;
+.host {
   flex: none;
-  width: 26px;
-  height: 16px;
-  border-radius: 8px;
-  background: var(--track);
-  transition: background 0.15s;
-}
-
-.knob::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #ffffff;
-  transition: transform 0.15s;
-}
-
-.switch input:checked + .knob {
-  background: var(--accent);
-}
-
-.switch input:checked + .knob::after {
-  transform: translateX(10px);
-}
-
-.switch input:focus-visible + .knob {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.switch-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.switch-label {
+  max-width: 60%;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.meta {
+.os {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--rm-font-small);
+  color: var(--rm-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Why: the same three colours as the dots in the right-click menu; "being viewed" is yellow so it is noticed. */
+.state-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+
+.state-dot.waiting {
+  background: var(--rm-ok);
+}
+
+.state-dot.viewing {
+  background: #ffcc00;
+}
+
+/* A line inside a boxed group: a name, then its state or a button, like Monitor's rows. */
+.row {
   display: flex;
-  gap: 12px;
-  color: var(--sub);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  margin: 0 14px;
+}
+
+.row-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.error {
-  color: var(--bad);
-  white-space: normal;
+.row-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.row-state {
+  color: var(--rm-text-secondary);
+}
+
+.row-button {
+  padding: 1px 8px;
+  border: none;
+  border-radius: 5px;
+  /* Why: blue text on a pale blue fill was hard to read over the blur, so buttons are filled with white text. */
+  background: var(--rm-accent);
+  color: #fff;
+  font: inherit;
+  font-size: var(--rm-font-small);
+  font-weight: 600;
 }

@@ -1,4 +1,4 @@
-// Screen text for the window. The tray menu in Rust reads the same files in `locales/`.
+// Screen text for the page. The main process (tray, native menu, dialogs) reads the same files in `locales/`.
 import ko from "../locales/ko.json";
 
 type Key = keyof typeof ko;
@@ -15,8 +15,8 @@ function pickLocale(tag: string): string {
   const exact = Object.keys(tables).find((code) => code.toLowerCase() === tag.toLowerCase());
   if (exact) return exact;
   const language = tag.split(/[-_]/)[0].toLowerCase();
-  // Only simplified Chinese ships, so every Chinese variant (zh-CN, zh-TW, zh-Hant…) reads it.
-  if (language === "zh") return "zh-Hans";
+  // Why: Taiwan, Hong Kong and Macau write traditional characters; every other Chinese tag reads simplified.
+  if (language === "zh") return /-(hant|tw|hk|mo)\b/i.test(tag.replace(/_/g, "-")) ? "zh-Hant" : "zh-Hans";
   return language in tables ? language : "en";
 }
 
@@ -33,4 +33,11 @@ export function t(key: Key, args: Record<string, string | number> = {}): string 
     text = text.replaceAll(`{{${name}}}`, String(value));
   }
   return text;
+}
+
+/** "RUNNERS Mac Studio · Remote Off · Screen Recording Needed": the computer, the state and, while off, why. */
+export function statusText(state: "off" | "waiting" | "viewing", reason: "platform" | "screenRecording" | null): string {
+  const parts = [t(`status.${state}`)];
+  if (reason) parts.push(t(`status.reason.${reason}`));
+  return parts.join(" · ");
 }

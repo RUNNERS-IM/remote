@@ -35,4 +35,8 @@ done
 ```
 
 `dev-b`'s Remote window then lists `dev-a`. The `REMOTE_LINK_*` values work in debug runs only; an installed Remote
-reads `linkServer` and `linkKey` from `settings.json` in its user data folder.
+takes the server typed under the computer tabs or from an office link, `remote://join?server=…`
+(`electron/main/join.ts`), and keeps it as `linkServer` in `settings.json` in its user data folder. Each server gets its own
+identity folder (`link/<host>`), so switching back to a server finds its earlier approval. A computer that joins without a
+key waits on the server until an administrator approves it: `headscale auth register --auth-id <id> --user <user>`, with
+the id from the end of the approval address.

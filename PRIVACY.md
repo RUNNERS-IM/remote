@@ -28,7 +28,8 @@ Automatically** stops the daily check. Choosing **Check for Updates…** does th
 
 ### Office connection
 
-When a coordination server is set, Remote starts `remote-link`, which joins a private network run by the organization
+Remote comes with no coordination server. One is set only when the person at the computer types it in, or confirms an
+office link that names it. When a coordination server is set, Remote starts `remote-link`, which joins a private network run by the organization
 that set the server (for Runners, our own Headscale server). Joining sends the server this computer's name, its
 operating system and its network addresses, the same as Tailscale does; the server uses them only to tell the
 computers in that network how to reach each other. Screens, clicks and keys never go through it: they go directly
@@ -82,7 +83,8 @@ Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연
 
 ### 사무실 연결
 
-연결 서버가 정해져 있으면 Remote 는 `remote-link` 를 켜고, 그 서버를 정한 조직이 운영하는 전용 망(러너스는 우리
+Remote 에는 처음부터 정해 둔 연결 서버가 없습니다. 컴퓨터 앞의 사람이 직접 넣거나, 서버가 적힌 사무실 링크를 확인했을
+때만 정해집니다. 연결 서버가 정해져 있으면 Remote 는 `remote-link` 를 켜고, 그 서버를 정한 조직이 운영하는 전용 망(러너스는 우리
 Headscale 서버)에 들어갑니다. 들어갈 때 이 컴퓨터의 이름, 운영체제, 네트워크 주소를 서버에 보냅니다(Tailscale 과
 같습니다). 서버는 이것을 같은 망의 컴퓨터끼리 서로 찾아가는 길을 알려 주는 데만 씁니다. 화면 · 클릭 · 키는 서버를
 거치지 않고 두 컴퓨터 사이를 암호화(WireGuard)해 바로 오가며, 바로 갈 길이 없을 때만 암호화된 중계 서버를 거칩니다.

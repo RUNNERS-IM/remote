@@ -16,6 +16,12 @@ export declare function computerName(): string
  */
 export declare function displays(): string
 
+/**
+ * The app in front as JSON `{ "bundleId": "com.apple.Safari", "name": "Safari" }`, or `null` when none is known
+ * (and always outside macOS). Claude's clicks use it to tell an allowed app from one that needs a person to approve.
+ */
+export declare function frontApp(): string
+
 /** `{ screenRecording, accessibility }` as JSON; both false outside macOS. */
 export declare function permissions(): string
 

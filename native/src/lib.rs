@@ -88,6 +88,23 @@ pub fn request_accessibility() -> bool {
     permissions::request_accessibility()
 }
 
+/// The app in front as JSON `{ "bundleId": "com.apple.Safari", "name": "Safari" }`, or `null` when none is known
+/// (and always outside macOS). Claude's clicks use it to tell an allowed app from one that needs a person to approve.
+#[napi]
+pub fn front_app() -> Result<String> {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::NSWorkspace;
+        let app = NSWorkspace::sharedWorkspace().frontmostApplication();
+        if let Some(app) = app {
+            let bundle_id = app.bundleIdentifier().map(|s| s.to_string()).unwrap_or_default();
+            let name = app.localizedName().map(|s| s.to_string()).unwrap_or_default();
+            return to_json(&serde_json::json!({ "bundleId": bundle_id, "name": name }));
+        }
+    }
+    Ok("null".into())
+}
+
 /// Posts one click, move, key or text (JSON, shape in `input.rs`) into this computer. Returns the global point a
 /// move or click went to, as `[x, y]` in display points, or an empty list for keys and text.
 #[napi]

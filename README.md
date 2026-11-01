@@ -4,19 +4,21 @@
 
 See the screens of the other computers in your office, one monitor at a time, and click or type on them remotely. Claude sessions will be able to use the same remote screens through MCP tools.
 
-Remote is made by RUNNERS-IM for the computers in our office. It is written with [Tauri 2](https://tauri.app), like Monitor.
+Remote is made by RUNNERS-IM for the computers in our office. It is written with [Electron](https://www.electronjs.org) and one Rust native module, like Monitor.
 
 **Remote is in early development and has no release yet.** Right now it only works inside one Mac: it does not connect to other computers and does not listen on the network.
 
 ## What works now (stage 1: the receiving side on macOS)
 
-- Remote sits in the menu bar without a Dock icon. Its menu has a status line (computer name and **Remote Off**, **Waiting** or **Being Viewed**), Open Remote, About Remote, Check for Updates (not yet), Settings (not yet), Help & Feedback and Quit Remote.
+- Remote sits in the menu bar without a Dock icon. The menu-bar picture shows the state: a frame only when **Remote Off**, an arrow when **Waiting**, and a moving arrow while **Being Viewed**. When Remote is off, the status line says why (**macOS Only** or **Screen Recording Needed**).
+- Clicking the menu-bar icon opens a panel; right-clicking opens a menu with the same lines in the same groups as Monitor: the status line, Open Remote, Open at login, Check for Updates Automatically, About Remote, Check for Updates…, Help & Feedback and Quit Remote. The panel also shows whether the Screen Recording and Accessibility permissions are on, with an **Allow…** button for each.
 - The Remote window shows this Mac's displays as tabs and a live picture of the chosen display, about five pictures a second. Pictures are taken with ScreenCaptureKit and sent to the window as JPEG.
-- The window shows whether Remote has the two macOS permissions it needs, with a button to ask for each:
+- Remote needs two macOS permissions:
   - **Screen Recording**, to take pictures of the screen
   - **Accessibility**, to send clicks and keystrokes
-- Clicks and keystrokes are posted with CGEvent, at positions mapped to the chosen display. In the window this is behind a switch labelled **Send Clicks (Test)**, which is off at launch and turns off again when the window closes. While it is off, clicking the picture does nothing.
-- Screen text in 18 languages: Arabic, Chinese (Simplified), Dutch, English, Finnish, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish, Thai and Vietnamese.
+- Clicks are posted with CGEvent, at positions mapped to the chosen display. In the window this is behind a switch labelled **Send Clicks**, which is off at launch and turns off again when the window closes. While it is off, clicking the picture does nothing.
+- Remote checks for updates once a day (see [PRIVACY.md](PRIVACY.md)) and opens at login unless that line is turned off.
+- Screen text in 20 languages: Arabic, Chinese (Simplified), Chinese (Traditional), Dutch, English, Finnish, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish, Thai, Turkish and Vietnamese.
 
 ## Roadmap
 
@@ -32,14 +34,22 @@ Requires macOS 14 or later, [Rust](https://rustup.rs), Node.js 20 or later and p
 
 ```sh
 pnpm install
-pnpm tauri dev      # run with live reload
-pnpm tauri build    # build the app
-node scripts/check-locales.mjs   # check every locale against ko.json
+pnpm native         # build the native module (native/) for this computer
+pnpm dev            # run with live reload
+pnpm dist           # build the app for this OS into dist.noindex/
+pnpm check:locales  # check every locale against ko.json
 ```
 
-When run with `pnpm tauri dev`, macOS asks for permissions on behalf of the terminal app that started Remote, not Remote itself.
+For an Intel Mac build on Apple silicon, also run `pnpm native --target x86_64-apple-darwin` (after `rustup target add x86_64-apple-darwin`).
 
-Screen text lives in `locales/`, with `ko.json` as the source. The window (`src/`) and the menu (`src-tauri/`) read the same files.
+- `electron/main/` is the main process (tray, panel, viewer and About windows, status, updates), `electron/preload/` the bridge the page talks through, `src/` the panel, viewer and About pages.
+- `native/` is the one native module (napi-rs): display capture, posted clicks, permission checks and the tray picture.
+- Screen text lives in `locales/`, with `ko.json` as the source; the page and the main process read the same files.
+- Debug runs take `REMOTE_OPEN=panel|viewer|about` and `REMOTE_THEME=dark|light`. A packaged app ignores them.
+
+When run with `pnpm dev`, macOS asks for permissions on behalf of the terminal app that started Remote, not Remote itself.
+
+So far Remote has been built and checked on macOS (Apple silicon) only. On Windows and Linux it only says that Remote works on macOS for now.
 
 ## Uninstall
 

@@ -1,0 +1,39 @@
+{
+  "name": "remote",
+  "productName": "Remote",
+  "private": true,
+  "version": "2.6.1030",
+  "description": "See and click the screens of other computers, one monitor at a time",
+  "author": "RUNNERS",
+  "homepage": "https://github.com/RUNNERS-IM/remote",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "pnpm typecheck && electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "native": "napi build --manifest-path native/Cargo.toml --package-json-path native/package.json --platform --release --output-dir native --target-dir native/target.noindex --no-js",
+    "link:build": "bash scripts/build-link.sh",
+    "check:locales": "node scripts/check-locales.mjs",
+    "notices": "node scripts/third-party-notices.mjs",
+    "dist": "pnpm build && electron-builder --config electron-builder.config.cjs"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.10",
+    "lucide-react": "^1.63.0",
+    "react": "~19.2.8",
+    "react-dom": "~19.2.8"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.10.9",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "43.8.1",
+    "electron-builder": "26.15.3",
+    "electron-vite": "^6.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  },
+  "license": "UNLICENSED"
+}

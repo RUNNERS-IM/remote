@@ -1,0 +1,365 @@
+/* The viewer window with the shared window values (runners-window.css, user decision `[RUNNERS] 네 앱 화면 값 통일`
+   1B): 28 outer padding, 24 between boxes, a small grey title 8 above each box, boxes 13/16 inside with radius 12,
+   list rows at least 28 tall with 8 between them and 4 between a row's title and its description.
+   Colours come from App.css. Why the scoped names: Vite puts every stylesheet into one file for all windows. */
+:root[data-window="viewer"] {
+  --window: var(--panel);
+  --ok: #34c759;
+  --off: #8e8e93;
+  --bad: #ff3b30;
+  --screen: #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-window="viewer"] {
+    --ok: #30d158;
+    --bad: #ff453a;
+  }
+}
+
+:root[data-window="viewer"] body,
+:root[data-window="viewer"] #root {
+  height: 100%;
+  background: var(--window);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.subtitle,
+.hint {
+  color: var(--sub);
+  font-size: 11px;
+}
+
+.notice {
+  line-height: 1.4;
+}
+
+.viewer-window {
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--rw-pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rw-box-gap);
+}
+
+.section-head {
+  margin: 0 0 var(--rw-section-gap);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.card {
+  padding: var(--rw-row-pad-y) var(--rw-row-pad-x);
+  border-radius: var(--rw-radius);
+  border: 0.5px solid var(--line);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.permission {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+}
+
+.permission-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dot.on {
+  background: var(--ok);
+}
+
+.dot.off {
+  background: var(--off);
+}
+
+.state {
+  color: var(--sub);
+}
+
+.button {
+  font: inherit;
+  color: var(--ink);
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 0.5px solid var(--line);
+  background: var(--card);
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--accent);
+}
+
+.viewer-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rw-section-gap);
+}
+
+.viewer-section .section-head {
+  margin: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.tab {
+  font: inherit;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 0.5px solid transparent;
+  background: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab svg {
+  color: var(--sub);
+}
+
+.tab.chosen {
+  border-color: var(--line);
+  background: var(--card);
+  font-weight: 600;
+}
+
+.tab.chosen svg {
+  color: var(--accent);
+}
+
+.tab-badge {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--sub);
+}
+
+.screen-box {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  /* Why: a grid cell gives the picture a definite box, so max-height: 100% works and it keeps its own shape. */
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+  background: var(--screen);
+}
+
+.screen {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.screen.clickable {
+  cursor: crosshair;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.empty {
+  padding: 28px;
+  text-align: center;
+  color: #98989d;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.switch.disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.knob {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--track);
+  transition: background 0.15s;
+}
+
+.knob::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 0.15s;
+}
+
+.switch input:checked + .knob {
+  background: var(--accent);
+}
+
+.switch input:checked + .knob::after {
+  transform: translateX(10px);
+}
+
+.switch input:focus-visible + .knob {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.switch-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.switch-label {
+  font-weight: 600;
+}
+
+.meta {
+  display: flex;
+  gap: 12px;
+  color: var(--sub);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.error {
+  color: var(--bad);
+  white-space: normal;
+}
+
+.tab:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.link-note {
+  margin-top: var(--rw-section-gap);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-row {
+  margin-top: var(--rw-section-gap);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-row .type-box {
+  flex: 1;
+  min-width: 160px;
+}
+
+.server-label {
+  color: var(--sub);
+}
+
+.server-address {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.server-note {
+  flex-basis: 100%;
+}
+
+.log-switches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  min-height: 28px;
+}
+
+.log-switches .button {
+  margin-left: auto;
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.log-line {
+  color: var(--sub);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.type-row {
+  display: flex;
+  gap: 8px;
+}
+
+.type-box {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--ink);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 0.5px solid var(--line);
+  background: var(--card);
+}
+
+.type-box:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.screen-box:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

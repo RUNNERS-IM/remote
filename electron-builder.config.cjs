@@ -6,8 +6,9 @@
 //
 // Why the tag in file names: the in-app version of a same-day release is 2.6.1030+2 (semver), and a "+" in a
 // GitHub release file name is not kept as is; the tag 2.6.1030.2 is what people see anyway.
-// The native module (native/remote-native.<os>-<cpu>*.node) must be built for every CPU being packaged first
-// (pnpm native, plus --target x86_64-apple-darwin for Intel Macs).
+// The native module (native/remote-native.<os>-<cpu>*.node) and remote-link (link/bin.noindex/remote-link-<os>-<cpu>)
+// must be built for every CPU being packaged first (pnpm native, plus --target x86_64-apple-darwin for Intel Macs;
+// pnpm link:build, or scripts/build-link.sh <os> <cpu>).
 const isRelease = process.env.REMOTE_RELEASE === "1";
 const tag = process.env.REMOTE_TAG || "${version}";
 
@@ -41,7 +42,13 @@ module.exports = {
     "!**/*.map",
     "!node_modules/{react,react-dom,scheduler,lucide-react}/**",
   ],
-  extraResources: [{ from: "native", to: "native", filter: ["remote-native.${platform}-${arch}*.node"] }],
+  // Why outside app.asar: remote-link is a program Remote starts, and the MCP script is run by Claude with
+  // ELECTRON_RUN_AS_NODE=1 straight from the bundle, so both must be plain files.
+  extraResources: [
+    { from: "native", to: "native", filter: ["remote-native.${platform}-${arch}*.node"] },
+    { from: "link/bin.noindex", to: "link", filter: ["remote-link-${platform}-${arch}*"] },
+    { from: "resources/mcp", to: "mcp", filter: ["*.mjs"] },
+  ],
   // Why: no npm package with native code ships; the one native module is built by cargo above.
   npmRebuild: false,
   mac: {

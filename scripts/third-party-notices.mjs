@@ -1,8 +1,8 @@
-// Writes THIRD_PARTY_NOTICES.md: the license notices of every Rust crate (the native module in native/) and npm package
-// (Electron, and the production dependencies) that ships inside Remote.
+// Writes THIRD_PARTY_NOTICES.md: the license notices of every Rust crate (the native module in native/), Go module
+// (remote-link in link/) and npm package (Electron, and the production dependencies) that ships inside Remote.
 // Why: Remote is RUNNERS' own software, but the open source parts it is built from ask for their notices to travel
 // with the app; the About window shows this file ("Open Source Notices"), like Split's.
-// Run after changing dependencies: node scripts/third-party-notices.mjs (needs cargo and pnpm on PATH).
+// Run after changing dependencies: node scripts/third-party-notices.mjs (needs cargo, go and pnpm on PATH).
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -84,6 +84,34 @@ entries.push({
     licenseText(electronDir, electronPkg.license) +
     `\n\nElectron includes Chromium and other open source software; their notices are in LICENSES.chromium.html, ` +
     `published with Electron ${electronPkg.version} at https://github.com/electron/electron/releases/tag/v${electronPkg.version}.`,
+});
+
+// Go: every module remote-link (link/) is built from, for each OS it ships on, plus Go's own standard library.
+const goModules = new Map();
+for (const goos of ["darwin", "windows", "linux"]) {
+  const list = execFileSync("go", ["list", "-deps", "-f", "{{if .Module}}{{.Module.Path}}\t{{.Module.Version}}\t{{.Module.Dir}}{{end}}", "."], {
+    cwd: join(root, "link"),
+    encoding: "utf8",
+    maxBuffer: 1 << 28,
+    env: { ...process.env, GOOS: goos, CGO_ENABLED: "0" },
+  });
+  for (const line of list.split("\n").filter(Boolean)) {
+    const [path, version, dir] = line.split("\t");
+    // Why: the main module is Remote itself.
+    if (version && !goModules.has(path)) goModules.set(path, { version, dir });
+  }
+}
+for (const [path, m] of goModules) {
+  entries.push({ name: path, version: m.version, license: "see file", text: licenseText(m.dir, ""), source: `https://pkg.go.dev/${path}@${m.version}` });
+}
+const goRoot = run("go", ["env", "GOROOT"], root).trim();
+entries.push({
+  name: "go",
+  version: run("go", ["env", "GOVERSION"], root).trim(),
+  license: "BSD-3-Clause",
+  // Why: some Go installs (Homebrew) leave the LICENSE file out; the text is then where Go publishes it.
+  text: existsSync(join(goRoot, "LICENSE")) ? readFileSync(join(goRoot, "LICENSE"), "utf8").trim() : null,
+  source: "https://go.dev/LICENSE",
 });
 
 entries.sort((a, b) => a.name.localeCompare(b.name));

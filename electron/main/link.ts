@@ -223,12 +223,14 @@ function startLink(): void {
   const dir = join(app.getPath("userData"), "link", new URL(target.url).host.replace(/[^a-z0-9.-]/gi, "_"));
   mkdirSync(dir, { recursive: true });
   const name = (DEV && process.env.REMOTE_LINK_NAME) || networkName(status.current().computer);
-  const args = ["--dir", dir, "--hostname", name, "--control", target.url, "--app", `127.0.0.1:${appPort}`, "--token", token];
+  const args = ["--dir", dir, "--hostname", name, "--control", target.url, "--app", `127.0.0.1:${appPort}`];
   if (target.key) args.push("--authkey", target.key);
   state = "starting";
   error = null;
   // Why: stdin stays open as a pipe; remote-link quits when it closes, so it never outlives Remote.
-  const started = spawn(file, args, { stdio: ["pipe", "pipe", "pipe"] });
+  // Why the token goes in the environment: other accounts on the computer can read a program's arguments (ps), not its
+  // environment.
+  const started = spawn(file, args, { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, REMOTE_LINK_TOKEN: token } });
   child = started;
   createInterface({ input: started.stdout! }).on("line", (line) => {
     try {

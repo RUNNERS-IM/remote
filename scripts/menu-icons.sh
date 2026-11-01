@@ -8,7 +8,7 @@ set -euo pipefail
 
 LUCIDE_VERSION=1.63.0
 PIXELS=36
-ICONS=(app-window info refresh-cw circle-help square-x square-check square)
+ICONS=(app-window info refresh-cw circle-help square-x square-check square unplug)
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/resources/menu"

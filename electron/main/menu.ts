@@ -1,5 +1,6 @@
 // The right-click tray menu, with the same groups as the left-click panel and as Monitor's: the status line,
-// Open Remote, the two settings, About / Check for Updates… / Help & Feedback, Quit.
+// Disconnect while someone is looking, Open Remote, the two Allow switches once connected, the two settings,
+// About / Check for Updates… / Help & Feedback, Quit.
 // Icons are the Lucide PNGs from scripts/menu-icons.sh (resources/menu/).
 import { app, Menu, MenuItem, nativeImage, nativeTheme } from "electron";
 import { readFileSync } from "node:fs";
@@ -49,8 +50,16 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
   const separator = () => new MenuItem({ type: "separator" });
   return Menu.buildFromTemplate([
     { label: statusLine(status), icon: icon(DOT[status.state]), enabled: false },
+    ...(status.state === "viewing" ? [line("disconnect", "menu.disconnect", "unplug")] : []),
     line("open", "menu.open", "app-window"),
     separator(),
+    ...(state.linked
+      ? [
+          line("allowViewing", "menu.allowViewing", box(state.allowViewing)),
+          line("allowControl", "menu.allowControl", box(state.allowControl)),
+          separator(),
+        ]
+      : []),
     line("login", "menu.openAtLogin", box(state.openAtLogin)),
     line("autoUpdate", "menu.autoUpdate", box(state.autoUpdate)),
     separator(),

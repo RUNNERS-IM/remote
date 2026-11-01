@@ -1,8 +1,9 @@
 // The tray panel, laid out like Split's macOS menu (src/runners-menu.css) and in the same groups as Monitor's panel:
-// the status block (this computer, whether it can be seen and why not, the two permissions, Open Remote), the two
-// settings, About / Check for Updates… / Help & Feedback, then Quit. The right-click native menu holds the same lines.
+// the status block (this computer, whether it can be seen, who is looking, and why not, the two permissions),
+// Disconnect while someone is looking, Open Remote, the two Allow switches once connected, the two settings,
+// About / Check for Updates… / Help & Feedback, then Quit. The right-click native menu holds the same lines.
 import { useEffect, useRef, useState } from "react";
-import { AppWindow, CircleHelp, Info, RefreshCw, Square, SquareCheck, SquareX, type LucideIcon } from "lucide-react";
+import { AppWindow, CircleHelp, Info, RefreshCw, Square, SquareCheck, SquareX, Unplug, type LucideIcon } from "lucide-react";
 import { statusText, t } from "./i18n";
 import * as native from "./native";
 import type { MenuCommand, MenuState, PermissionKind, Status } from "./native";
@@ -44,6 +45,7 @@ function StatusBlock({ status }: { status: Status }) {
         <span className="host">{status.computer}</span>
         <span className="os">{statusText(status.state, status.reason)}</span>
       </header>
+      {status.viewers.length > 0 && <div className="rm-note">{t("status.viewers", { names: status.viewers.join(", ") })}</div>}
       {!status.supported && <div className="rm-note">{t("status.note.platform")}</div>}
       {status.supported && (
         <div className="rm-group">
@@ -58,7 +60,7 @@ function StatusBlock({ status }: { status: Status }) {
 }
 
 /** The menu commands, the same lines as the right-click menu. */
-function Commands() {
+function Commands({ viewing }: { viewing: boolean }) {
   const [state, setState] = useState<MenuState | null>(null);
   useEffect(() => {
     void native.menuState().then(setState);
@@ -76,8 +78,16 @@ function Commands() {
   );
   return (
     <>
+      {viewing && line("disconnect", Unplug, t("menu.disconnect"))}
       {line("open", AppWindow, t("menu.open"))}
       <div className="rm-separator" />
+      {state?.linked && (
+        <>
+          {line("allowViewing", state.allowViewing ? SquareCheck : Square, t("menu.allowViewing"))}
+          {line("allowControl", state.allowControl ? SquareCheck : Square, t("menu.allowControl"))}
+          <div className="rm-separator" />
+        </>
+      )}
       {line("login", state?.openAtLogin ? SquareCheck : Square, t("menu.openAtLogin"))}
       {line("autoUpdate", state?.autoUpdate ? SquareCheck : Square, t("menu.autoUpdate"))}
       <div className="rm-separator" />
@@ -119,7 +129,7 @@ export default function Panel() {
     <main ref={panelRef} className="panel">
       {status ? <StatusBlock status={status} /> : <div className="head" />}
       <div className="rm-separator" />
-      <Commands />
+      <Commands viewing={status?.state === "viewing"} />
     </main>
   );
 }

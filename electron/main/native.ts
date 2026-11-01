@@ -19,6 +19,8 @@ export interface Native {
   requestAccessibility(): boolean;
   /** Posts one input (JSON); returns the global point `[x, y]` a click or move went to, or `[]`. */
   sendInput(json: string): number[];
+  /** JSON `{ bundleId, name }` of the app in front, or `null`. */
+  frontApp(): string;
   trayPng(status: string, frame: number, r: number, g: number, b: number): Buffer;
   /** `[frames in one bob, milliseconds per frame]`. */
   trayFrames(): number[];

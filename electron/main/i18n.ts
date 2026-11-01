@@ -45,5 +45,6 @@ export function t(key: string, args: Record<string, string | number> = {}): stri
 export function statusLine(status: Status): string {
   const parts = [status.computer, t(`status.${status.state}`)];
   if (status.reason) parts.push(t(`status.reason.${status.reason}`));
+  if (status.viewers.length > 0) parts.push(status.viewers.join(", "));
   return parts.filter(Boolean).join(" · ");
 }

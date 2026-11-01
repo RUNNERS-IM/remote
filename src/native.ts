@@ -1,10 +1,15 @@
 // The page's way to the app: a thin wrapper over `window.remote`, which the preload script provides
 // (electron/preload). Everything the page asks of the main process goes through here.
 import type {
+  Allow,
+  Computer,
   Display,
   Input,
+  Link,
+  LogEntry,
   MenuCommand,
   MenuState,
+  PeerInfo,
   PermissionKind,
   Permissions,
   PressAt,
@@ -21,7 +26,7 @@ declare global {
 
 const api = () => window.remote;
 
-export type { Display, MenuCommand, MenuState, PermissionKind, Permissions, Status, UpdateOffer };
+export type { Allow, Computer, Display, Input, Link, LogEntry, PeerInfo, MenuCommand, MenuState, PermissionKind, Permissions, Status, UpdateOffer };
 
 /** Which window this page is: the tray panel, the viewer window, the About window or the update question. */
 export const page: "panel" | "viewer" | "about" | "update" =
@@ -39,6 +44,13 @@ export const capture = (display: number) => api().capture(display);
 export const requestPermission = (kind: PermissionKind) => api().requestPermission(kind);
 export const setSendClicks = (on: boolean) => api().setSendClicks(on);
 export const sendInput = (input: Input, pressAt: PressAt | null) => api().sendInput(input, pressAt);
+export const link = () => api().link();
+export const openLinkLogin = () => api().openLinkLogin();
+export const setAllow = (what: Allow, on: boolean) => api().setAllow(what, on);
+export const disconnect = () => api().disconnect();
+export const peerInfo = (host: string) => api().peerInfo(host);
+export const peerCapture = (host: string, display: number) => api().peerCapture(host, display);
+export const peerInput = (host: string, input: Input) => api().peerInput(host, input);
 export const onViewerVisible = (listener: (visible: boolean) => void) => api().onViewerVisible(listener);
 export const fitHeight = (height: number) => api().fitHeight(height);
 export const version = () => api().version();

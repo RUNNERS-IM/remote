@@ -1,9 +1,11 @@
 // Remote's main process: a tray app that shows whether this computer can be seen (off / waiting / being viewed),
-// a panel under the tray with the permissions and the shared menu lines, and a viewer window that shows this
-// computer's own screens and can send test clicks into them.
+// a panel under the tray with the permissions, the connection switches and the shared menu lines, and a viewer window
+// that shows this computer's screens or another office computer's (link.ts) and can click and type into them.
 import { app, BrowserWindow, ipcMain, nativeTheme, shell, systemPreferences, type Tray } from "electron";
-import type { Input, PermissionKind, PressAt } from "../preload/api";
+import type { Allow, Input, PermissionKind, PressAt } from "../preload/api";
+import { startClaude } from "./claude";
 import * as input from "./input";
+import * as link from "./link";
 import * as login from "./login";
 import { buildMenu, forgetIcons, type Command, type MenuState } from "./menu";
 import { currentLocale } from "./i18n";
@@ -70,7 +72,14 @@ function openViewer(): void {
 }
 
 function menuState(): MenuState {
-  return { openAtLogin: login.isOn(), autoUpdate: readSettings().autoUpdate };
+  const settings = readSettings();
+  return {
+    openAtLogin: login.isOn(),
+    autoUpdate: settings.autoUpdate,
+    linked: link.hasServer(),
+    allowViewing: settings.allowViewing,
+    allowControl: settings.allowControl,
+  };
 }
 
 function run(command: Command): void {
@@ -78,6 +87,15 @@ function run(command: Command): void {
     case "open":
       hidePanel();
       openViewer();
+      break;
+    case "allowViewing":
+      link.setAllow("allowViewing", !readSettings().allowViewing);
+      break;
+    case "allowControl":
+      link.setAllow("allowControl", !readSettings().allowControl);
+      break;
+    case "disconnect":
+      link.disconnect();
       break;
     case "login":
       login.toggle();
@@ -170,6 +188,19 @@ function registerIpc(): void {
     if (window === panel && process.platform === "win32" && panel.isVisible()) placeUnderTray(panel, tray);
   });
   ipcMain.on("remote:closeWindow", (event) => BrowserWindow.fromWebContents(event.sender)?.close());
+  ipcMain.handle("remote:link", () => link.current());
+  ipcMain.handle("remote:openLinkLogin", () => link.openLogin());
+  ipcMain.handle("remote:setAllow", (_event, what: Allow, on: boolean) => {
+    if (what === "allowViewing" || what === "allowControl") link.setAllow(what, Boolean(on));
+    return link.current();
+  });
+  ipcMain.handle("remote:disconnect", () => {
+    link.disconnect();
+    return link.current();
+  });
+  ipcMain.handle("remote:peerInfo", (_event, host: string) => link.peerInfo(String(host)));
+  ipcMain.handle("remote:peerCapture", (_event, host: string, display: number) => link.peerCapture(String(host), Number(display)));
+  ipcMain.handle("remote:peerInput", (_event, host: string, what: Input) => link.peerInput(String(host), what));
   ipcMain.handle("remote:updateOffer", () => updateOffer());
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
@@ -222,6 +253,8 @@ function start(): void {
     refreshLinuxMenu();
   });
   statusLoop();
+  void link.startConnection();
+  startClaude();
   startUpdates();
   if (DEV) debugHooks();
 }

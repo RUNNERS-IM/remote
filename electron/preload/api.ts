@@ -1,8 +1,25 @@
 // What the preload script gives the page as `window.remote`.
 
-export type MenuCommand = "open" | "login" | "autoUpdate" | "about" | "updates" | "help" | "quit";
+export type MenuCommand =
+  | "open"
+  | "allowViewing"
+  | "allowControl"
+  | "disconnect"
+  | "login"
+  | "autoUpdate"
+  | "about"
+  | "updates"
+  | "help"
+  | "quit";
 
-export type MenuState = { openAtLogin: boolean; autoUpdate: boolean };
+/** `linked` is false until a coordination server is set; the two Allow lines show only after that. */
+export type MenuState = {
+  openAtLogin: boolean;
+  autoUpdate: boolean;
+  linked: boolean;
+  allowViewing: boolean;
+  allowControl: boolean;
+};
 
 /** The update window's content: new version as people see it, the "What's new" lines (null hides the box) and the
  *  download's progress while it is still downloading. */
@@ -26,6 +43,8 @@ export type Status = {
   /** False on Windows and Linux, where nothing works yet. */
   supported: boolean;
   permissions: Permissions;
+  /** The computers looking at this one right now; empty unless the state is viewing. */
+  viewers: string[];
 };
 
 export type Display = {
@@ -48,6 +67,42 @@ export type Input =
   | { kind: "key"; code: number; modifiers: ("shift" | "control" | "option" | "command")[] }
   | { kind: "text"; text: string };
 
+/** One computer in the office network (link/main.go `Computer`). `host` is the address name used to reach it. */
+export type Computer = { name: string; host: string; online: boolean; os: string };
+
+/** The connection: no coordination server set yet, starting, waiting for this computer to be approved, running, or
+ *  failed (the reason is in `error`). */
+export type LinkState = "noServer" | "starting" | "needsLogin" | "running" | "failed";
+
+/** One line of the connection log: who did what to this computer, and when (ms since 1970). `refused` is a request
+ *  turned away because seeing or clicking was off. Typed text itself is never written down. */
+export type LogEntry = { at: number; peer: string; what: "view" | "click" | "key" | "text" | "refused" };
+
+export type Link = {
+  state: LinkState;
+  error: string | null;
+  /** This computer's name in the network. */
+  self: string | null;
+  computers: Computer[];
+  allowViewing: boolean;
+  allowControl: boolean;
+  /** Newest first. */
+  log: LogEntry[];
+};
+
+/** The two switches other computers depend on. */
+export type Allow = "allowViewing" | "allowControl";
+
+/** What another computer tells a viewer before it is looked at. `viewing` / `control` say whether it lets others see
+ *  it and click in it right now; `reason` is set when it cannot be seen at all (same codes as OffReason). */
+export type PeerInfo = {
+  computer: string;
+  displays: Display[];
+  viewing: boolean;
+  control: boolean;
+  reason: OffReason | null;
+};
+
 /** Where the press that asked for a click happened, in screen points, so Remote can tell its own click coming back. */
 export type PressAt = { x: number; y: number };
 
@@ -65,6 +120,20 @@ export type RemoteApi = {
   setSendClicks: (on: boolean) => Promise<void>;
   /** Rejects with `off`, `accessibility`, `unsupported`, `display` or a message. */
   sendInput: (input: Input, pressAt: PressAt | null) => Promise<SendResult>;
+  /** The connection and the computers in the network. */
+  link: () => Promise<Link>;
+  /** Opens the page where this computer is approved to join (only while the state is needsLogin). */
+  openLinkLogin: () => Promise<void>;
+  /** Turns letting others see or click in this computer on or off. */
+  setAllow: (what: Allow, on: boolean) => Promise<Link>;
+  /** Stops everyone looking now and turns seeing off until it is turned on again. */
+  disconnect: () => Promise<Link>;
+  /** Another computer's name and displays. Rejects with `unreachable`, `off`, or a message. */
+  peerInfo: (host: string) => Promise<PeerInfo>;
+  /** One JPEG picture of another computer's display. Rejects with `off`, `permission`, `display` or a message. */
+  peerCapture: (host: string, display: number) => Promise<Uint8Array>;
+  /** One click or key into another computer. Rejects with `off`, `control`, `accessibility` or a message. */
+  peerInput: (host: string, input: Input) => Promise<void>;
   /** Called with true when the viewer window is shown and false when it is hidden. */
   onViewerVisible: (listener: (visible: boolean) => void) => () => void;
   /** Whether the OS blurs what is behind the window; the page draws a solid background when it does not. */

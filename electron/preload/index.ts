@@ -9,6 +9,13 @@ const api: RemoteApi = {
   requestPermission: (kind) => ipcRenderer.invoke("remote:requestPermission", kind),
   setSendClicks: (on) => ipcRenderer.invoke("remote:setSendClicks", on),
   sendInput: (input, pressAt) => ipcRenderer.invoke("remote:sendInput", input, pressAt),
+  link: () => ipcRenderer.invoke("remote:link"),
+  openLinkLogin: () => ipcRenderer.invoke("remote:openLinkLogin"),
+  setAllow: (what, on) => ipcRenderer.invoke("remote:setAllow", what, on),
+  disconnect: () => ipcRenderer.invoke("remote:disconnect"),
+  peerInfo: (host) => ipcRenderer.invoke("remote:peerInfo", host),
+  peerCapture: (host, display) => ipcRenderer.invoke("remote:peerCapture", host, display),
+  peerInput: (host, input) => ipcRenderer.invoke("remote:peerInput", host, input),
   onViewerVisible: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, visible: boolean) => listener(visible);
     ipcRenderer.on("remote:viewerVisible", handler);

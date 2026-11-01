@@ -10,6 +10,7 @@ import type {
   PressAt,
   RemoteApi,
   Status,
+  UpdateOffer,
 } from "../electron/preload/api";
 
 declare global {
@@ -20,11 +21,17 @@ declare global {
 
 const api = () => window.remote;
 
-export type { Display, MenuCommand, MenuState, PermissionKind, Permissions, Status };
+export type { Display, MenuCommand, MenuState, PermissionKind, Permissions, Status, UpdateOffer };
 
-/** Which window this page is: the tray panel, the viewer window or the About window. */
-export const page: "panel" | "viewer" | "about" =
-  location.hash === "#about" ? "about" : location.hash === "#viewer" ? "viewer" : "panel";
+/** Which window this page is: the tray panel, the viewer window, the About window or the update question. */
+export const page: "panel" | "viewer" | "about" | "update" =
+  location.hash === "#about"
+    ? "about"
+    : location.hash === "#viewer"
+      ? "viewer"
+      : location.hash === "#update"
+        ? "update"
+        : "panel";
 
 export const status = () => api().status();
 export const displays = () => api().displays();
@@ -39,6 +46,9 @@ export const openExternal = (url: string) => api().openExternal(url);
 export const menuState = () => api().menuState();
 export const command = (name: MenuCommand) => api().command(name);
 export const closeWindow = () => api().closeWindow();
+export const updateOffer = () => api().updateOffer();
+export const onUpdateOffer = (listener: (offer: UpdateOffer) => void) => api().onUpdateOffer(listener);
+export const answerUpdate = (answer: "install" | "later") => api().answerUpdate(answer);
 
 /** The short code inside an error from the main process ("Error invoking remote method '…': Error: permission"). */
 export function errorCode(error: unknown): string {
@@ -56,6 +66,9 @@ export function applyWindowLook(): void {
   void api()
     .accentColor()
     .then((color) => {
-      if (color) document.documentElement.style.setProperty("--rm-accent", color);
+      if (!color) return;
+      // Why: the menu look (runners-menu.css) and the window look (runners-window.css) both follow the OS accent.
+      document.documentElement.style.setProperty("--rm-accent", color);
+      document.documentElement.style.setProperty("--rw-accent", color);
     });
 }

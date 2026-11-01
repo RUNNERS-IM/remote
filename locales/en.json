@@ -46,6 +46,9 @@
   "update.failed": "Could not check for updates: {{error}}",
   "update.title": "A new version is available",
   "update.ask": "Install Remote {{version}}? Remote will restart after installing.",
+  "update.notes": "What’s New",
+  "update.downloading": "Downloading… {{percent}}%",
+  "update.installing": "Installing…",
   "update.install": "Install Now",
   "update.later": "Later"
 }

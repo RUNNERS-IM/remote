@@ -46,6 +46,9 @@
   "update.failed": "Tidak dapat memeriksa pembaruan: {{error}}",
   "update.title": "Versi baru tersedia",
   "update.ask": "Instal Remote {{version}}? Remote akan dimulai ulang setelah diinstal.",
+  "update.notes": "Yang Baru",
+  "update.downloading": "Mengunduh… {{percent}}%",
+  "update.installing": "Menginstal…",
   "update.install": "Instal Sekarang",
   "update.later": "Nanti"
 }

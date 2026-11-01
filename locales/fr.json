@@ -46,6 +46,9 @@
   "update.failed": "Impossible de rechercher des mises à jour : {{error}}",
   "update.title": "Une nouvelle version est disponible",
   "update.ask": "Installer Remote {{version}} ? Remote redémarrera après l’installation.",
+  "update.notes": "Nouveautés",
+  "update.downloading": "Téléchargement… {{percent}} %",
+  "update.installing": "Installation…",
   "update.install": "Installer maintenant",
   "update.later": "Plus tard"
 }

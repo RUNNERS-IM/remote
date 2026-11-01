@@ -46,6 +46,9 @@
   "update.failed": "Güncellemeler denetlenemedi: {{error}}",
   "update.title": "Yeni bir sürüm var",
   "update.ask": "Remote {{version}} yüklensin mi? Yüklemeden sonra Remote yeniden başlatılır.",
+  "update.notes": "Yenilikler",
+  "update.downloading": "İndiriliyor… %{{percent}}",
+  "update.installing": "Yükleniyor…",
   "update.install": "Şimdi Yükle",
   "update.later": "Daha sonra"
 }

@@ -1,7 +1,7 @@
-/* The viewer window, design standard A and "설정 창 칸 제목" (_docs/작업 가이드/공통.md): 28 outer padding, 28 between
-   boxes, a small grey title 10 above each box, boxes 18/16 inside with radius 12, list rows at least 28 tall with 8
-   between them and 4 between a row's title and its description.
-   Colours come from App.css. Why the scoped names: Vite puts every stylesheet into one file for all three windows. */
+/* The viewer window with the shared window values (runners-window.css, user decision `[RUNNERS] 네 앱 화면 값 통일`
+   1B): 28 outer padding, 24 between boxes, a small grey title 8 above each box, boxes 13/16 inside with radius 12,
+   list rows at least 28 tall with 8 between them and 4 between a row's title and its description.
+   Colours come from App.css. Why the scoped names: Vite puts every stylesheet into one file for all windows. */
 :root[data-window="viewer"] {
   --window: var(--panel);
   --ok: #34c759;
@@ -41,22 +41,22 @@
 .viewer-window {
   box-sizing: border-box;
   height: 100%;
-  padding: 28px;
+  padding: var(--rw-pad);
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: var(--rw-box-gap);
 }
 
 .section-head {
-  margin: 0 0 10px;
+  margin: 0 0 var(--rw-section-gap);
   font-size: 11px;
   font-weight: 600;
   color: var(--sub);
 }
 
 .card {
-  padding: 16px 18px;
-  border-radius: 12px;
+  padding: var(--rw-row-pad-y) var(--rw-row-pad-x);
+  border-radius: var(--rw-radius);
   border: 0.5px solid var(--line);
   background: var(--card);
   display: flex;
@@ -117,7 +117,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--rw-section-gap);
 }
 
 .viewer-section .section-head {

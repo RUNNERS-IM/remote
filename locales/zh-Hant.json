@@ -46,6 +46,9 @@
   "update.failed": "無法檢查更新：{{error}}",
   "update.title": "有新版本可用",
   "update.ask": "要安裝 Remote {{version}} 嗎？安裝後 Remote 將重新啟動。",
+  "update.notes": "新功能",
+  "update.downloading": "正在下載⋯ {{percent}}%",
+  "update.installing": "正在安裝⋯",
   "update.install": "立即安裝",
   "update.later": "稍後"
 }

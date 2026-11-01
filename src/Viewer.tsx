@@ -8,6 +8,7 @@ import { t } from "./i18n";
 import * as native from "./native";
 import type { Display, PermissionKind, Status } from "./native";
 import "./App.css";
+import "./runners-window.css";
 import "./Viewer.css";
 
 // Why: about five pictures a second is enough to find and press a dialog button, and keeps the CPU quiet.

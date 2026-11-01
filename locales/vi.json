@@ -46,6 +46,9 @@
   "update.failed": "Không thể kiểm tra cập nhật: {{error}}",
   "update.title": "Có phiên bản mới",
   "update.ask": "Cài đặt Remote {{version}}? Remote sẽ khởi động lại sau khi cài đặt.",
+  "update.notes": "Có gì mới",
+  "update.downloading": "Đang tải về… {{percent}}%",
+  "update.installing": "Đang cài đặt…",
   "update.install": "Cài đặt ngay",
   "update.later": "Để sau"
 }

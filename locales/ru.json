@@ -46,6 +46,9 @@
   "update.failed": "Не удалось проверить обновления: {{error}}",
   "update.title": "Доступна новая версия",
   "update.ask": "Установить Remote {{version}}? После установки Remote перезапустится.",
+  "update.notes": "Что нового",
+  "update.downloading": "Загрузка… {{percent}}%",
+  "update.installing": "Установка…",
   "update.install": "Установить сейчас",
   "update.later": "Позже"
 }

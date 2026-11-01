@@ -46,6 +46,9 @@
   "update.failed": "अपडेट की जाँच नहीं हो सकी: {{error}}",
   "update.title": "नया संस्करण उपलब्ध है",
   "update.ask": "Remote {{version}} इंस्टॉल करें? इंस्टॉल करने के बाद Remote फिर से शुरू होगा।",
+  "update.notes": "नया क्या है",
+  "update.downloading": "डाउनलोड हो रहा है… {{percent}}%",
+  "update.installing": "इंस्टॉल हो रहा है…",
   "update.install": "अभी इंस्टॉल करें",
   "update.later": "बाद में"
 }

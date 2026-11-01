@@ -6,12 +6,13 @@ import type { Input, PermissionKind, PressAt } from "../preload/api";
 import * as input from "./input";
 import * as login from "./login";
 import { buildMenu, forgetIcons, type Command, type MenuState } from "./menu";
+import { currentLocale } from "./i18n";
 import { native } from "./native";
 import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
 import { createTray, showState } from "./tray";
 import { checkNow, displayVersion, startUpdates } from "./updates";
-import { allowClose, createPanel, placeUnderTray, showAbout, showViewer, TRANSLUCENT } from "./windows";
+import { allowClose, answerUpdate, askUpdate, createPanel, placeUnderTray, showAbout, showViewer, TRANSLUCENT, updateOffer } from "./windows";
 
 const ISSUES_URL = "https://github.com/RUNNERS-IM/remote/issues";
 const STATUS_EVERY_MS = 2000;
@@ -169,10 +170,14 @@ function registerIpc(): void {
     if (window === panel && process.platform === "win32" && panel.isVisible()) placeUnderTray(panel, tray);
   });
   ipcMain.on("remote:closeWindow", (event) => BrowserWindow.fromWebContents(event.sender)?.close());
+  ipcMain.handle("remote:updateOffer", () => updateOffer());
+  ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
 
-/** Debug runs only: `REMOTE_OPEN=panel|viewer|about` opens that window at launch, so it can be captured without
- *  clicking the tray, and `REMOTE_THEME=dark|light` forces the look. The panel opens without focus, so it stays up. */
+/** Debug runs only: `REMOTE_OPEN=panel|viewer|about|update|update-progress` opens that window at launch, so it can be
+ *  captured without clicking the tray (`update` / `update-progress` show the update question with made-up notes,
+ *  downloaded or still downloading, and install nothing), and `REMOTE_THEME=dark|light` forces the look. The panel
+ *  opens without focus, so it stays up. */
 function debugHooks(): void {
   const theme = process.env.REMOTE_THEME;
   if (theme === "dark" || theme === "light") nativeTheme.themeSource = theme;
@@ -181,6 +186,18 @@ function debugHooks(): void {
   if (which === "about") setTimeout(showAbout, 1500);
   if (which === "panel") setTimeout(showWithoutFocus, 1500);
   if (which === "viewer") setTimeout(openViewer, 1500);
+  if (which === "update" || which === "update-progress") {
+    const ko = currentLocale() === "ko";
+    const notes = ko
+      ? ["메뉴 막대 그림이 꺼짐 · 대기 중 · 보는 중을 보여 줍니다.", "업데이트를 받은 뒤 설치할지 묻고, 바뀐 점을 함께 보여 줍니다.", "20개 언어를 지원합니다.", "로그인할 때 이름과 아이콘이 보이게 열립니다.", "화면 보기 창의 간격을 다른 앱과 맞췄습니다.", "다섯 줄이 넘으면 이 칸 안에서 스크롤됩니다."]
+      : ["The menu-bar picture shows off, waiting and being viewed.", "Updates download first, then Remote asks and shows what changed.", "20 languages.", "Opens at login with its name and icon.", "The viewer window uses the same spacing as the other apps.", "Past five lines this box scrolls."];
+    // Why: `update-progress` shows the menu check's download state, held at a made-up 42%.
+    const downloading = which === "update-progress";
+    setTimeout(() => {
+      const prompt = askUpdate({ version: "2.6.1102", notes, downloading, percent: downloading ? 42 : 100 }, false);
+      void prompt.answer.then((answer) => console.log("update answer:", answer));
+    }, 1500);
+  }
 }
 
 function start(): void {

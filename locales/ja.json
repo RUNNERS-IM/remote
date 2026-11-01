@@ -46,6 +46,9 @@
   "update.failed": "アップデートを確認できませんでした: {{error}}",
   "update.title": "新しいバージョンがあります",
   "update.ask": "Remote {{version}} をインストールしますか？インストールすると Remote が再起動します。",
+  "update.notes": "変更点",
+  "update.downloading": "ダウンロード中… {{percent}}%",
+  "update.installing": "インストール中…",
   "update.install": "今すぐインストール",
   "update.later": "あとで"
 }

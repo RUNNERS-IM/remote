@@ -46,6 +46,9 @@
   "update.failed": "تعذّر التحقق من التحديثات: {{error}}",
   "update.title": "يتوفر إصدار جديد",
   "update.ask": "هل تريد تثبيت Remote {{version}}؟ ستتم إعادة تشغيل Remote بعد التثبيت.",
+  "update.notes": "الجديد",
+  "update.downloading": "جارٍ التنزيل… {{percent}}%",
+  "update.installing": "جارٍ التثبيت…",
   "update.install": "التثبيت الآن",
   "update.later": "لاحقًا"
 }

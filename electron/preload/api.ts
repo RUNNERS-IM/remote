@@ -4,6 +4,10 @@ export type MenuCommand = "open" | "login" | "autoUpdate" | "about" | "updates" 
 
 export type MenuState = { openAtLogin: boolean; autoUpdate: boolean };
 
+/** The update window's content: new version as people see it, the "What's new" lines (null hides the box) and the
+ *  download's progress while it is still downloading. */
+export type UpdateOffer = { version: string; notes: string[] | null; downloading: boolean; percent: number };
+
 export type Permissions = { screenRecording: boolean; accessibility: boolean };
 
 export type PermissionKind = keyof Permissions;
@@ -77,4 +81,10 @@ export type RemoteApi = {
   /** Runs a menu line; resolves to the menu state after it. */
   command: (command: MenuCommand) => Promise<MenuState>;
   closeWindow: () => void;
+  /** What the update window shows, or null when no update is being offered. */
+  updateOffer: () => Promise<UpdateOffer | null>;
+  /** Called when the offer changes (download progress, download done). */
+  onUpdateOffer: (listener: (offer: UpdateOffer) => void) => () => void;
+  /** The update window's answer; Later closes the window, Install Now keeps it up until the app quits. */
+  answerUpdate: (answer: "install" | "later") => void;
 };

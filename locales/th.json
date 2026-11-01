@@ -46,6 +46,9 @@
   "update.failed": "ตรวจสอบการอัปเดตไม่ได้: {{error}}",
   "update.title": "มีเวอร์ชันใหม่",
   "update.ask": "ติดตั้ง Remote {{version}} หรือไม่ Remote จะเริ่มใหม่หลังจากติดตั้ง",
+  "update.notes": "มีอะไรใหม่",
+  "update.downloading": "กำลังดาวน์โหลด… {{percent}}%",
+  "update.installing": "กำลังติดตั้ง…",
   "update.install": "ติดตั้งเลย",
   "update.later": "ภายหลัง"
 }

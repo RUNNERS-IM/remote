@@ -1,6 +1,6 @@
 // The page's only door to the main process: `window.remote`. Types are in ./api.ts, which the page imports.
 import { contextBridge, ipcRenderer } from "electron";
-import type { RemoteApi } from "./api";
+import type { RemoteApi, UpdateOffer } from "./api";
 
 const api: RemoteApi = {
   status: () => ipcRenderer.invoke("remote:status"),
@@ -22,6 +22,13 @@ const api: RemoteApi = {
   menuState: () => ipcRenderer.invoke("remote:menuState"),
   command: (command) => ipcRenderer.invoke("remote:command", command),
   closeWindow: () => ipcRenderer.send("remote:closeWindow"),
+  updateOffer: () => ipcRenderer.invoke("remote:updateOffer"),
+  onUpdateOffer: (listener) => {
+    const relay = (_event: Electron.IpcRendererEvent, offer: UpdateOffer) => listener(offer);
+    ipcRenderer.on("remote:updateOffer", relay);
+    return () => ipcRenderer.off("remote:updateOffer", relay);
+  },
+  answerUpdate: (answer) => ipcRenderer.send("remote:answerUpdate", answer),
 };
 
 contextBridge.exposeInMainWorld("remote", api);

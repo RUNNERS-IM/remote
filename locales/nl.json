@@ -46,6 +46,9 @@
   "update.failed": "Kan niet op updates controleren: {{error}}",
   "update.title": "Er is een nieuwe versie beschikbaar",
   "update.ask": "Remote {{version}} installeren? Remote wordt na de installatie opnieuw gestart.",
+  "update.notes": "Wat is er nieuw",
+  "update.downloading": "Downloaden… {{percent}}%",
+  "update.installing": "Installeren…",
   "update.install": "Nu installeren",
   "update.later": "Later"
 }

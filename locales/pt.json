@@ -46,6 +46,9 @@
   "update.failed": "Não foi possível verificar atualizações: {{error}}",
   "update.title": "Há uma nova versão disponível",
   "update.ask": "Instalar o Remote {{version}}? O Remote será reiniciado após a instalação.",
+  "update.notes": "Novidades",
+  "update.downloading": "Transferindo… {{percent}}%",
+  "update.installing": "Instalando…",
   "update.install": "Instalar agora",
   "update.later": "Depois"
 }

@@ -79,6 +79,8 @@ export type LinkState = "noServer" | "starting" | "needsLogin" | "running" | "fa
 export type LogEntry = { at: number; peer: string; what: "view" | "click" | "key" | "text" | "refused" };
 
 export type Link = {
+  /** The coordination server this computer joins (`https://remote.example.com`), or null when none is set. */
+  server: string | null;
   state: LinkState;
   error: string | null;
   /** This computer's name in the network. */
@@ -122,6 +124,9 @@ export type RemoteApi = {
   sendInput: (input: Input, pressAt: PressAt | null) => Promise<SendResult>;
   /** The connection and the computers in the network. */
   link: () => Promise<Link>;
+  /** Saves the connection server typed in the viewer (an empty text removes it). Rejects with `bad` when the text
+   *  cannot be a server address. */
+  setLinkServer: (text: string) => Promise<Link>;
   /** Opens the page where this computer is approved to join (only while the state is needsLogin). */
   openLinkLogin: () => Promise<void>;
   /** Turns letting others see or click in this computer on or off. */

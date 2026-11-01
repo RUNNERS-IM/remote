@@ -49,6 +49,9 @@ module.exports = {
     { from: "link/bin.noindex", to: "link", filter: ["remote-link-${platform}-${arch}*"] },
     { from: "resources/mcp", to: "mcp", filter: ["*.mjs"] },
   ],
+  // Office links `remote://join?server=…` open Remote and fill in the connection server (electron/main/join.ts).
+  // electron-builder writes this into Info.plist on macOS, the registry on Windows and the .desktop file on Linux.
+  protocols: [{ name: "Remote", schemes: ["remote"] }],
   // Why: no npm package with native code ships; the one native module is built by cargo above.
   npmRebuild: false,
   mac: {

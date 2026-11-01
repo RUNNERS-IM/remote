@@ -89,5 +89,16 @@
   "claude.security": "Dit is een beveiligingsvenster van macOS en moet elke keer worden goedgekeurd.",
   "claude.allowOnce": "Eenmaal toestaan",
   "claude.allowApp": "Deze app altijd toestaan",
-  "claude.deny": "Weigeren"
+  "claude.deny": "Weigeren",
+  "server.title": "Verbindingsserver",
+  "server.connect": "Verbinden",
+  "server.change": "Wijzigen",
+  "server.remove": "Server verwijderen",
+  "server.cancel": "Annuleren",
+  "server.bad": "Dit adres kan niet worden gebruikt. Voer een https-adres in.",
+  "server.hint": "Een link van kantoor vult dit in als je erop klikt.",
+  "join.ask": "Verbinden met verbindingsserver {{server}}?",
+  "join.detail": "Deze computer wordt bij die server aangemeld. Zodra een beheerder hem goedkeurt, kunnen computers op dezelfde server elkaars scherm zien.",
+  "join.replace": "Deze computer verlaat de server die hij nu gebruikt ({{current}}).",
+  "join.bad": "Het serveradres in deze link kan niet worden gebruikt: {{server}}"
 }

@@ -89,5 +89,16 @@
   "claude.security": "Tämä on macOS:n suojausikkuna, joten se on hyväksyttävä joka kerta.",
   "claude.allowOnce": "Salli kerran",
   "claude.allowApp": "Salli tämä ohjelma aina",
-  "claude.deny": "Estä"
+  "claude.deny": "Estä",
+  "server.title": "Yhteyspalvelin",
+  "server.connect": "Yhdistä",
+  "server.change": "Vaihda",
+  "server.remove": "Poista palvelin",
+  "server.cancel": "Kumoa",
+  "server.bad": "Tätä osoitetta ei voi käyttää. Kirjoita https-osoite.",
+  "server.hint": "Toimistosta saatu linkki täyttää tämän, kun napsautat sitä.",
+  "join.ask": "Yhdistetäänkö yhteyspalvelimeen {{server}}?",
+  "join.detail": "Tämä tietokone rekisteröidään kyseiselle palvelimelle. Kun ylläpitäjä hyväksyy sen, saman palvelimen tietokoneet näkevät toistensa näytöt.",
+  "join.replace": "Tämä tietokone poistuu nyt käyttämästään palvelimesta ({{current}}).",
+  "join.bad": "Tämän linkin palvelinosoitetta ei voi käyttää: {{server}}"
 }

@@ -89,5 +89,16 @@
   "claude.security": "C’est une fenêtre de sécurité de macOS : il faut l’approuver à chaque fois.",
   "claude.allowOnce": "Autoriser une fois",
   "claude.allowApp": "Toujours autoriser cette app",
-  "claude.deny": "Refuser"
+  "claude.deny": "Refuser",
+  "server.title": "Serveur de connexion",
+  "server.connect": "Se connecter",
+  "server.change": "Modifier",
+  "server.remove": "Supprimer le serveur",
+  "server.cancel": "Annuler",
+  "server.bad": "Cette adresse ne peut pas être utilisée. Saisissez une adresse https.",
+  "server.hint": "Un lien du bureau la remplit quand vous cliquez dessus.",
+  "join.ask": "Se connecter au serveur de connexion {{server}} ?",
+  "join.detail": "Cet ordinateur sera enregistré sur ce serveur. Une fois approuvé par un administrateur, les ordinateurs du même serveur pourront voir l’écran des uns des autres.",
+  "join.replace": "Cet ordinateur quittera le serveur qu’il utilise actuellement ({{current}}).",
+  "join.bad": "L’adresse du serveur dans ce lien ne peut pas être utilisée : {{server}}"
 }

@@ -89,5 +89,16 @@
   "claude.security": "Đây là cửa sổ bảo mật của macOS nên phải duyệt mỗi lần.",
   "claude.allowOnce": "Cho phép một lần",
   "claude.allowApp": "Luôn cho phép ứng dụng này",
-  "claude.deny": "Từ chối"
+  "claude.deny": "Từ chối",
+  "server.title": "Máy chủ kết nối",
+  "server.connect": "Kết nối",
+  "server.change": "Đổi",
+  "server.remove": "Xóa máy chủ",
+  "server.cancel": "Hủy",
+  "server.bad": "Không dùng được địa chỉ này. Hãy nhập địa chỉ https.",
+  "server.hint": "Bấm vào liên kết từ văn phòng sẽ tự điền ô này.",
+  "join.ask": "Kết nối tới máy chủ kết nối {{server}}?",
+  "join.detail": "Máy tính này sẽ được đăng ký trên máy chủ đó. Khi quản trị viên duyệt, các máy tính cùng máy chủ có thể xem màn hình của nhau.",
+  "join.replace": "Máy tính này sẽ rời máy chủ đang dùng ({{current}}).",
+  "join.bad": "Không dùng được địa chỉ máy chủ trong liên kết này: {{server}}"
 }

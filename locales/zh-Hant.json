@@ -89,5 +89,16 @@
   "claude.security": "這是 macOS 安全性視窗，每次都需要核准。",
   "claude.allowOnce": "僅限這次",
   "claude.allowApp": "一律允許此 App",
-  "claude.deny": "拒絕"
+  "claude.deny": "拒絕",
+  "server.title": "連線伺服器",
+  "server.connect": "連線",
+  "server.change": "變更",
+  "server.remove": "移除伺服器",
+  "server.cancel": "取消",
+  "server.bad": "無法使用此位址。請輸入 https 位址。",
+  "server.hint": "點選辦公室傳來的連結即可自動填入。",
+  "join.ask": "要連線到連線伺服器 {{server}} 嗎？",
+  "join.detail": "這台電腦將註冊到該伺服器。管理員核准後，同一伺服器上的電腦可以互相查看螢幕。",
+  "join.replace": "將離開目前使用的伺服器（{{current}}）。",
+  "join.bad": "無法使用此連結中的伺服器位址：{{server}}"
 }

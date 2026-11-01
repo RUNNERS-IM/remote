@@ -289,6 +289,32 @@
   gap: 8px;
 }
 
+.server-row {
+  margin-top: var(--rw-section-gap);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-row .type-box {
+  flex: 1;
+  min-width: 160px;
+}
+
+.server-label {
+  color: var(--sub);
+}
+
+.server-address {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.server-note {
+  flex-basis: 100%;
+}
+
 .log-switches {
   display: flex;
   flex-wrap: wrap;

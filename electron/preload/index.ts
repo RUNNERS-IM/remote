@@ -11,6 +11,7 @@ const api: RemoteApi = {
   sendInput: (input, pressAt) => ipcRenderer.invoke("remote:sendInput", input, pressAt),
   link: () => ipcRenderer.invoke("remote:link"),
   openLinkLogin: () => ipcRenderer.invoke("remote:openLinkLogin"),
+  setLinkServer: (text) => ipcRenderer.invoke("remote:setLinkServer", text),
   setAllow: (what, on) => ipcRenderer.invoke("remote:setAllow", what, on),
   disconnect: () => ipcRenderer.invoke("remote:disconnect"),
   peerInfo: (host) => ipcRenderer.invoke("remote:peerInfo", host),

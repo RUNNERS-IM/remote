@@ -8,7 +8,8 @@ export type Settings = {
   autoUpdate: boolean;
   /** The day (`2026-10-30`) "Later" was chosen in the update dialog, so the daily check does not ask again that day. */
   updateLaterOn: string | null;
-  /** The coordination server (Headscale) every office computer joins, e.g. `https://link.example.com`. Null until set. */
+  /** The coordination server (Headscale) every office computer joins, e.g. `https://remote.example.com`. Null until
+   *  typed in the viewer or set by a `remote://join` link (electron/main/join.ts). */
   linkServer: string | null;
   /** Pre-authorized key from that server, so this computer joins without anyone approving it in a browser. */
   linkKey: string | null;

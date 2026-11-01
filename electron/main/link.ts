@@ -51,6 +51,24 @@ function note(peer: string, what: LogEntry["what"]): void {
   log.length = Math.min(log.length, LOG_KEEP);
 }
 
+/** A typed or linked server address as the origin remote-link is given (`remote.example.com` ->
+ *  `https://remote.example.com`), or null when it cannot be one. Why https only: the coordination server hands out
+ *  who is in the network, so a plain-http address would let anyone on the way swap in their own computers. Debug runs
+ *  also take http, for a Headscale on this Mac. */
+export function parseServer(text: string): string | null {
+  const typed = text.trim();
+  if (!typed) return null;
+  try {
+    const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(typed) ? typed : `https://${typed}`);
+    if (url.username || url.password || url.search || url.hash) return null;
+    if (url.protocol !== "https:" && !(DEV && url.protocol === "http:")) return null;
+    if (!url.hostname.includes(".") && url.hostname !== "localhost" && !DEV) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 function server(): { url: string; key: string | null } | null {
   const settings = readSettings();
   const url = (DEV && process.env.REMOTE_LINK_SERVER) || settings.linkServer;
@@ -200,7 +218,9 @@ function startLink(): void {
     error = "missing";
     return;
   }
-  const dir = join(app.getPath("userData"), "link");
+  // Why one folder per server: the network identity in it belongs to the server that approved it, so switching servers
+  // must not reuse it, and switching back finds the old approval again.
+  const dir = join(app.getPath("userData"), "link", new URL(target.url).host.replace(/[^a-z0-9.-]/gi, "_"));
   mkdirSync(dir, { recursive: true });
   const name = (DEV && process.env.REMOTE_LINK_NAME) || networkName(status.current().computer);
   const args = ["--dir", dir, "--hostname", name, "--control", target.url, "--app", `127.0.0.1:${appPort}`, "--token", token];
@@ -266,6 +286,7 @@ export async function current(): Promise<Link> {
   await refresh();
   const settings = readSettings();
   return {
+    server: server()?.url ?? null,
     state,
     error,
     self,
@@ -274,6 +295,23 @@ export async function current(): Promise<Link> {
     allowControl: settings.allowControl,
     log: log.slice(0, 50),
   };
+}
+
+/** The server this computer joins (null leaves the network): saved, and remote-link restarted for it. A key saved
+ *  for the old server is dropped, since it only works there. */
+export function setServer(url: string | null): void {
+  const before = readSettings();
+  if (before.linkServer === url) return;
+  writeSettings({ linkServer: url, linkKey: null });
+  const old = child;
+  child = null;
+  old?.kill();
+  linkPort = 0;
+  self = null;
+  computers = [];
+  authUrl = null;
+  error = null;
+  startLink();
 }
 
 export function openLogin(): void {

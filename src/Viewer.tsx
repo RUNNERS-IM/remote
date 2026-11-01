@@ -268,6 +268,7 @@ export default function Viewer() {
           ))}
         </div>
         <LinkNote link={link} />
+        {here && link && <ServerField server={link.server} onChange={setLink} />}
       </section>
 
       {here && (
@@ -385,6 +386,67 @@ function LinkNote({ link }: { link: Link | null }) {
     <div className="hint link-note">
       {link.computers.length === 0 ? t("link.empty") : t("link.running", { self: link.self ?? "" })}
     </div>
+  );
+}
+
+/** The connection server: its address with Change, or a box to type one. An office link fills it in too
+ *  (electron/main/join.ts), so most people never type here. */
+function ServerField({ server, onChange }: { server: string | null; onChange: (link: Link) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const [bad, setBad] = useState(false);
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    native.setLinkServer(text).then(
+      (next) => {
+        onChange(next);
+        setEditing(false);
+        setBad(false);
+      },
+      () => setBad(true),
+    );
+  };
+  if (server && !editing) {
+    return (
+      <div className="server-row">
+        <span className="server-label">{t("server.title")}</span>
+        <span className="server-address">{new URL(server).host}</span>
+        <button
+          className="button"
+          onClick={() => {
+            setText(server);
+            setEditing(true);
+          }}
+        >
+          {t("server.change")}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <form className="server-row" onSubmit={save}>
+      <span className="server-label">{t("server.title")}</span>
+      <input
+        className="type-box"
+        value={text}
+        placeholder="remote.example.com"
+        spellCheck={false}
+        autoCapitalize="off"
+        onChange={(event) => {
+          setText(event.target.value);
+          setBad(false);
+        }}
+      />
+      <button className="button" type="submit" disabled={!text.trim() && !server}>
+        {server && !text.trim() ? t("server.remove") : t("server.connect")}
+      </button>
+      {editing && (
+        <button className="button" type="button" onClick={() => setEditing(false)}>
+          {t("server.cancel")}
+        </button>
+      )}
+      <div className={bad ? "hint error server-note" : "hint server-note"}>{bad ? t("server.bad") : t("server.hint")}</div>
+    </form>
   );
 }
 

@@ -46,6 +46,7 @@ export const setSendClicks = (on: boolean) => api().setSendClicks(on);
 export const sendInput = (input: Input, pressAt: PressAt | null) => api().sendInput(input, pressAt);
 export const link = () => api().link();
 export const openLinkLogin = () => api().openLinkLogin();
+export const setLinkServer = (text: string) => api().setLinkServer(text);
 export const setAllow = (what: Allow, on: boolean) => api().setAllow(what, on);
 export const disconnect = () => api().disconnect();
 export const peerInfo = (host: string) => api().peerInfo(host);

@@ -89,5 +89,16 @@
   "claude.security": "这是 macOS 安全窗口，每次都需要批准。",
   "claude.allowOnce": "仅本次允许",
   "claude.allowApp": "始终允许此应用",
-  "claude.deny": "拒绝"
+  "claude.deny": "拒绝",
+  "server.title": "连接服务器",
+  "server.connect": "连接",
+  "server.change": "更改",
+  "server.remove": "移除服务器",
+  "server.cancel": "取消",
+  "server.bad": "无法使用此地址。请输入 https 地址。",
+  "server.hint": "点击办公室发来的链接即可自动填入。",
+  "join.ask": "要连接到连接服务器 {{server}} 吗？",
+  "join.detail": "这台电脑将注册到该服务器。管理员批准后，同一服务器上的电脑可以互相查看屏幕。",
+  "join.replace": "将退出当前使用的服务器（{{current}}）。",
+  "join.bad": "无法使用此链接中的服务器地址：{{server}}"
 }

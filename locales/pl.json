@@ -89,5 +89,16 @@
   "claude.security": "To okno zabezpieczeń macOS, więc trzeba je zatwierdzać za każdym razem.",
   "claude.allowOnce": "Zezwól raz",
   "claude.allowApp": "Zawsze zezwalaj tej aplikacji",
-  "claude.deny": "Odmów"
+  "claude.deny": "Odmów",
+  "server.title": "Serwer połączeń",
+  "server.connect": "Połącz",
+  "server.change": "Zmień",
+  "server.remove": "Usuń serwer",
+  "server.cancel": "Anuluj",
+  "server.bad": "Tego adresu nie można użyć. Wpisz adres https.",
+  "server.hint": "Link z biura wypełni to po kliknięciu.",
+  "join.ask": "Połączyć z serwerem połączeń {{server}}?",
+  "join.detail": "Ten komputer zostanie zarejestrowany na tym serwerze. Po zatwierdzeniu przez administratora komputery na tym samym serwerze będą widzieć nawzajem swoje ekrany.",
+  "join.replace": "Ten komputer opuści serwer, którego teraz używa ({{current}}).",
+  "join.bad": "Nie można użyć adresu serwera z tego linku: {{server}}"
 }

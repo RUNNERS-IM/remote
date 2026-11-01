@@ -89,5 +89,16 @@
   "claude.security": "Ini jendela keamanan macOS, jadi harus disetujui setiap kali.",
   "claude.allowOnce": "Izinkan Sekali",
   "claude.allowApp": "Selalu Izinkan App Ini",
-  "claude.deny": "Tolak"
+  "claude.deny": "Tolak",
+  "server.title": "Server koneksi",
+  "server.connect": "Hubungkan",
+  "server.change": "Ubah",
+  "server.remove": "Hapus server",
+  "server.cancel": "Batal",
+  "server.bad": "Alamat ini tidak bisa dipakai. Masukkan alamat https.",
+  "server.hint": "Tautan dari kantor akan mengisinya saat diklik.",
+  "join.ask": "Hubungkan ke server koneksi {{server}}?",
+  "join.detail": "Komputer ini akan didaftarkan di server itu. Setelah disetujui administrator, komputer di server yang sama bisa saling melihat layar.",
+  "join.replace": "Komputer ini akan keluar dari server yang dipakainya sekarang ({{current}}).",
+  "join.bad": "Alamat server di tautan ini tidak bisa dipakai: {{server}}"
 }

@@ -89,5 +89,16 @@
   "claude.security": "macOS のセキュリティウインドウのため、毎回承認が必要です。",
   "claude.allowOnce": "今回のみ許可",
   "claude.allowApp": "このアプリを常に許可",
-  "claude.deny": "拒否"
+  "claude.deny": "拒否",
+  "server.title": "接続サーバー",
+  "server.connect": "接続",
+  "server.change": "変更",
+  "server.remove": "サーバーを削除",
+  "server.cancel": "キャンセル",
+  "server.bad": "このアドレスは使用できません。https のアドレスを入力してください。",
+  "server.hint": "オフィスで受け取ったリンクをクリックすると自動で入力されます。",
+  "join.ask": "接続サーバー {{server}} に接続しますか？",
+  "join.detail": "このコンピュータがそのサーバーに登録されます。管理者が承認すると、同じサーバーのコンピュータ同士で画面を見られます。",
+  "join.replace": "今使っているサーバー（{{current}}）からは抜けます。",
+  "join.bad": "このリンクのサーバーアドレスは使用できません: {{server}}"
 }

@@ -5,6 +5,7 @@ import { app, BrowserWindow, ipcMain, nativeTheme, shell, systemPreferences, typ
 import type { Allow, Input, PermissionKind, PressAt } from "../preload/api";
 import { startClaude } from "./claude";
 import * as input from "./input";
+import { linkIn, listenForLinks, openLink, startJoin } from "./join";
 import * as link from "./link";
 import * as login from "./login";
 import { buildMenu, forgetIcons, type Command, type MenuState } from "./menu";
@@ -190,6 +191,13 @@ function registerIpc(): void {
   ipcMain.on("remote:closeWindow", (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle("remote:link", () => link.current());
   ipcMain.handle("remote:openLinkLogin", () => link.openLogin());
+  ipcMain.handle("remote:setLinkServer", (_event, text: string) => {
+    const typed = String(text ?? "").trim();
+    const server = typed ? link.parseServer(typed) : null;
+    if (typed && !server) throw new Error("bad");
+    link.setServer(server);
+    return link.current();
+  });
   ipcMain.handle("remote:setAllow", (_event, what: Allow, on: boolean) => {
     if (what === "allowViewing" || what === "allowControl") link.setAllow(what, Boolean(on));
     return link.current();
@@ -253,7 +261,7 @@ function start(): void {
     refreshLinuxMenu();
   });
   statusLoop();
-  void link.startConnection();
+  void link.startConnection().then(() => startJoin(openViewer));
   startClaude();
   startUpdates();
   if (DEV) debugHooks();
@@ -263,7 +271,12 @@ function start(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", openViewer);
+  listenForLinks();
+  app.on("second-instance", (_event, argv) => {
+    const href = linkIn(argv);
+    if (href) openLink(href);
+    else openViewer();
+  });
   app.on("before-quit", allowClose);
   // Why: closing a window must not quit a tray app.
   app.on("window-all-closed", () => undefined);

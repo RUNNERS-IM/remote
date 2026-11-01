@@ -89,5 +89,16 @@
   "claude.security": "This is a macOS security window, so it has to be approved every time.",
   "claude.allowOnce": "Allow Once",
   "claude.allowApp": "Always Allow This App",
-  "claude.deny": "Deny"
+  "claude.deny": "Deny",
+  "server.title": "Connection Server",
+  "server.connect": "Connect",
+  "server.change": "Change",
+  "server.remove": "Remove Server",
+  "server.cancel": "Cancel",
+  "server.bad": "This address can’t be used. Enter an https address.",
+  "server.hint": "An office link fills this in when you click it.",
+  "join.ask": "Connect to the connection server {{server}}?",
+  "join.detail": "This computer will be registered on that server. Once an administrator approves it, computers on the same server can see each other’s screens.",
+  "join.replace": "This computer will leave the server it uses now ({{current}}).",
+  "join.bad": "The server address in this link can’t be used: {{server}}"
 }

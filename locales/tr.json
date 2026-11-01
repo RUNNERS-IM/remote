@@ -89,5 +89,16 @@
   "claude.security": "Bu bir macOS güvenlik penceresi, bu yüzden her seferinde onaylanmalı.",
   "claude.allowOnce": "Bir kez izin ver",
   "claude.allowApp": "Bu uygulamaya her zaman izin ver",
-  "claude.deny": "Reddet"
+  "claude.deny": "Reddet",
+  "server.title": "Bağlantı sunucusu",
+  "server.connect": "Bağlan",
+  "server.change": "Değiştir",
+  "server.remove": "Sunucuyu kaldır",
+  "server.cancel": "Vazgeç",
+  "server.bad": "Bu adres kullanılamaz. Bir https adresi girin.",
+  "server.hint": "Ofisten gelen bir bağlantıya tıklayınca burası kendiliğinden dolar.",
+  "join.ask": "{{server}} bağlantı sunucusuna bağlanılsın mı?",
+  "join.detail": "Bu bilgisayar o sunucuya kaydedilecek. Bir yönetici onayladığında aynı sunucudaki bilgisayarlar birbirlerinin ekranını görebilir.",
+  "join.replace": "Bu bilgisayar şu an kullandığı sunucudan ({{current}}) ayrılacak.",
+  "join.bad": "Bu bağlantıdaki sunucu adresi kullanılamaz: {{server}}"
 }

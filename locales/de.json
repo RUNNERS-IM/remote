@@ -89,5 +89,16 @@
   "claude.security": "Dies ist ein Sicherheitsfenster von macOS und muss jedes Mal freigegeben werden.",
   "claude.allowOnce": "Einmal erlauben",
   "claude.allowApp": "Diese App immer erlauben",
-  "claude.deny": "Ablehnen"
+  "claude.deny": "Ablehnen",
+  "server.title": "Verbindungsserver",
+  "server.connect": "Verbinden",
+  "server.change": "Ändern",
+  "server.remove": "Server entfernen",
+  "server.cancel": "Abbrechen",
+  "server.bad": "Diese Adresse kann nicht verwendet werden. Gib eine https-Adresse ein.",
+  "server.hint": "Ein Link aus dem Büro trägt sie beim Anklicken ein.",
+  "join.ask": "Mit dem Verbindungsserver {{server}} verbinden?",
+  "join.detail": "Dieser Computer wird auf diesem Server angemeldet. Sobald ein Administrator ihn freigibt, können Computer am selben Server gegenseitig ihre Bildschirme sehen.",
+  "join.replace": "Dieser Computer verlässt den Server, den er jetzt nutzt ({{current}}).",
+  "join.bad": "Die Serveradresse in diesem Link kann nicht verwendet werden: {{server}}"
 }

@@ -12,7 +12,7 @@
 // starts and stops is the same code (libtailscale wraps exactly this) and builds for every OS with GOOS/GOARCH.
 //
 // Remote starts it with: remote-link --dir <state> --hostname <name> --control <url> [--authkey <key>]
-// --app 127.0.0.1:<port> --token <secret>. It prints one line {"port":N} when its local API is up, and quits when its
+// --app 127.0.0.1:<port>, and the secret in REMOTE_LINK_TOKEN. It prints one line {"port":N} when its local API is up, and quits when its
 // standard input closes, so it never outlives Remote.
 package main
 
@@ -59,10 +59,15 @@ func main() {
 	flag.StringVar(&o.control, "control", "", "coordination server (Headscale) address")
 	flag.StringVar(&o.authKey, "authkey", "", "pre-authorized key for joining without a browser")
 	flag.StringVar(&o.app, "app", "", "Remote's local server, host:port")
-	flag.StringVar(&o.token, "token", "", "secret shared with Remote for every local request")
+	flag.StringVar(&o.token, "token", "", "secret shared with Remote for every local request (default $REMOTE_LINK_TOKEN)")
 	flag.Parse()
+	// Why the environment: a program's arguments can be read by every account on the computer (ps), its environment
+	// only by the same account.
+	if o.token == "" {
+		o.token = os.Getenv("REMOTE_LINK_TOKEN")
+	}
 	if o.dir == "" || o.hostname == "" || o.control == "" || o.app == "" || len(o.token) < 16 {
-		fmt.Fprintln(os.Stderr, "remote-link: --dir, --hostname, --control, --app and --token (16+ chars) are required")
+		fmt.Fprintln(os.Stderr, "remote-link: --dir, --hostname, --control, --app and a token of 16+ chars (REMOTE_LINK_TOKEN) are required")
 		os.Exit(2)
 	}
 	if err := run(o); err != nil {

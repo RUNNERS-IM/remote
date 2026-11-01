@@ -18,6 +18,9 @@ const tag = process.env.REMOTE_TAG || "${version}";
 const version = require("./package.json").version;
 const [base, sameDay = "0"] = version.split("+");
 const buildVersion = `${base}.${sameDay}`;
+// The version people see in Finder and brew: the release tag (2.6.1030.3, or 2.6.1030 for the first of the day),
+// the same form Split shows. electron-updater compares app.getVersion() (package.json), not this.
+const shownVersion = sameDay === "0" ? base : buildVersion;
 
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
@@ -42,6 +45,9 @@ module.exports = {
   // Why: no npm package with native code ships; the one native module is built by cargo above.
   npmRebuild: false,
   mac: {
+    // Why: executableName also names the app bundle, so without this the Mac app would be "remote.app". Windows and
+    // Linux keep the lower-case "remote" command.
+    executableName: "Remote",
     category: "public.app-category.utilities",
     icon: "build/icon.icns",
     // Why: screen pictures use ScreenCaptureKit's screenshot call, which macOS 14 added.
@@ -60,6 +66,7 @@ module.exports = {
     extendInfo: {
       // Remote lives in the menu bar only: no Dock icon, no app menu.
       LSUIElement: true,
+      CFBundleShortVersionString: shownVersion,
     },
   },
   dmg: { artifactName: `Remote-${tag}-mac-\${arch}.\${ext}` },

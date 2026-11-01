@@ -51,6 +51,24 @@ Apple 실리콘 맥에서 인텔 맥용으로도 만들려면 `rustup target add
 
 지금까지는 macOS(Apple 실리콘)에서만 빌드하고 확인했습니다. 윈도우와 리눅스에서는 "Remote는 지금 macOS에서만 쓸 수 있습니다."만 띄웁니다.
 
+## 배포하기
+
+`release` 브랜치로 합치면 배포 판을 만들어 올립니다(`.github/workflows/release.yml`). 그 전에 이번 판의 바뀐 점을
+`RELEASE_NOTES.md` 에 적습니다. 이 글이 GitHub 릴리스 본문이 되고, 업데이트 창이 그 목록을 "바뀐 점" 아래에 보여 줍니다.
+
+```md
+## 한국어
+
+- 한 줄에 바뀐 점 하나씩, 합니다체로 씁니다.
+
+## English
+
+- One change per line.
+```
+
+한국어 화면은 `## 한국어` 목록을, 다른 언어는 모두 `## English` 목록을 읽습니다. 버전 올리기(`scripts/bump-release.sh`)는
+두 목록 중 하나가 비었거나 지난 판의 글 그대로면 멈춥니다.
+
 ## 지우는 방법
 
 1. 메뉴 막대에서 **Remote 종료** 를 고릅니다.

@@ -51,6 +51,25 @@ When run with `pnpm dev`, macOS asks for permissions on behalf of the terminal a
 
 So far Remote has been built and checked on macOS (Apple silicon) only. On Windows and Linux it only says that Remote works on macOS for now.
 
+## Releasing
+
+Merging into the `release` branch builds and publishes a release (`.github/workflows/release.yml`). Before that, write
+this release's changes in `RELEASE_NOTES.md`. It becomes the GitHub release text, and the update window shows its list
+under "What's new":
+
+```md
+## 한국어
+
+- 한 줄에 바뀐 점 하나씩, 합니다체로 씁니다.
+
+## English
+
+- One change per line.
+```
+
+Korean screens read the `## 한국어` list, every other language the `## English` one. The version bump
+(`scripts/bump-release.sh`) stops when either list is empty or the file is the same as the last release's.
+
 ## Uninstall
 
 1. Choose **Quit Remote** from the menu bar.

@@ -6,7 +6,7 @@ See the screens of the other computers in your office, one monitor at a time, an
 
 Remote is made by RUNNERS-IM for the computers in our office. It is written with [Electron](https://www.electronjs.org) and one Rust native module, like Monitor.
 
-**Remote is in early development and has no release yet.** Connecting computers needs our own coordination server (Headscale), which is not set up yet; until it is, Remote shows only the computer it runs on.
+**Remote is in early development.** The first release is 2.6.1102 ([Releases](https://github.com/RUNNERS-IM/remote/releases)). Connecting computers needs a coordination server (Headscale); until one is set under the computer tabs, Remote shows only the computer it runs on.
 
 ## What works now
 

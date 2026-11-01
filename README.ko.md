@@ -6,7 +6,7 @@
 
 Remote 는 RUNNERS-IM 이 사무실 컴퓨터를 위해 만드는 앱입니다. Monitor 처럼 [Electron](https://www.electronjs.org) 과 Rust 네이티브 모듈 하나로 짭니다.
 
-**Remote 는 아직 만드는 중이고 배포한 판이 없습니다.** 컴퓨터끼리 잇는 데 필요한 우리 연결 서버(Headscale)를 아직 세우지 않았습니다. 그 전까지 Remote 는 자기가 도는 컴퓨터만 보여 줍니다.
+**Remote 는 아직 만드는 중입니다.** 첫 공개 판은 2.6.1102 입니다([Releases](https://github.com/RUNNERS-IM/remote/releases)). 컴퓨터끼리 이으려면 연결 서버(Headscale)가 필요합니다. 컴퓨터 탭 아래 칸에 서버를 넣기 전까지 Remote 는 자기가 도는 컴퓨터만 보여 줍니다.
 
 ## 지금 되는 것
 

@@ -1,103 +1,59 @@
 // The connection (plan stage 3): other office computers see and click this one, and this one sees and clicks them.
 //
-// Two parts work together:
-//   - remote-link (link/main.go), a small program Remote starts. It joins the office network through our own
-//     coordination server (Headscale) and is the only thing reachable from other computers: port 7787 on the network
-//     address, never on the computer's own network cards. It tells us who is asking (the network vouches for the name).
-//   - The app server below, on 127.0.0.1 with a random port and a secret token. Only remote-link knows both, so only
-//     requests that came through the office network reach it.
+// Remote shares the computer's own Tailscale (electron/main/tailscale.ts) instead of joining a network of its own
+// (2026-11-02 decision "one network, Tailscale"):
+//   - It listens on port 7787 of this computer's Tailscale address only, never on its other network cards, so only
+//     computers in the same Tailscale network can reach it.
+//   - For each connection it asks Tailscale which computer is on the other end (whois) and turns the request away
+//     when Tailscale does not know it. The name in the log is that name, never one the request brings.
+//   - It reaches other computers on their Tailscale addresses, port 7787.
 //
 // Why seeing and clicking are separate switches: seeing is what a coworker asks for most ("look at this error"), and
 // clicking is a bigger trust step, so it starts off. Disconnect turns seeing off, which also stops clicking.
 import { app, shell } from "electron";
-import { spawn, type ChildProcess } from "node:child_process";
-import { randomBytes, timingSafeEqual } from "node:crypto";
-import { existsSync, mkdirSync } from "node:fs";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import type { AddressInfo } from "node:net";
-import { join } from "node:path";
-import { createInterface } from "node:readline";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { Socket } from "node:net";
 import type { Allow, Computer, Input, Link, LinkState, LogEntry, PeerInfo } from "../preload/api";
 import { native } from "./native";
 import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
+import * as tailscale from "./tailscale";
 
-/** Debug runs only: `REMOTE_LINK_SERVER`, `REMOTE_LINK_KEY` and `REMOTE_LINK_NAME` stand in for the settings, so two
- *  copies of Remote on one Mac can join a Headscale running on that Mac (link/README.md). */
-const DEV = !app.isPackaged;
+/** The port Remote answers on, on the Tailscale address. */
+export const PORT = 7787;
 
-const RESTART_MS = 5000;
+const REFRESH_MS = 5000;
 const LOG_KEEP = 200;
 const PEER_TIMEOUT_MS = 8000;
 const INPUT_BODY_MAX = 64 * 1024;
+/** How long a peer that answered (or did not answer) /info is remembered, so the computer list does not ask every
+ *  computer in the network at every refresh. */
+const PROBE_MS = 30_000;
 
-const TOKEN_HEADER = "x-remote-token";
-const PEER_HEADER = "x-remote-peer";
-
-let token = "";
-let appPort = 0;
-let child: ChildProcess | null = null;
-let linkPort = 0;
-let state: LinkState = "noServer";
+let state: LinkState = "starting";
 let error: string | null = null;
 let authUrl: string | null = null;
 let self: string | null = null;
+/** This computer's own node, for the trust rule (tailscale.trusted). */
+let selfNode: tailscale.Node | null = null;
 let computers: Computer[] = [];
-let quitting = false;
+/** Network name -> Tailscale IPv4 address, from the last status. Only names in this map can be reached. */
+let addresses = new Map<string, string>();
+/** Network name -> when it last answered as a Remote (or failed to), for the computer list. */
+const probes = new Map<string, { at: number; remote: boolean }>();
+let server: Server | null = null;
+let listeningOn: string | null = null;
+let refreshing: Promise<void> | null = null;
 const log: LogEntry[] = [];
+/** Who is on the far end of each connection, asked once per connection. */
+const peers = new WeakMap<Socket, Promise<string | null>>();
 
 function note(peer: string, what: LogEntry["what"]): void {
   log.unshift({ at: Date.now(), peer, what });
   log.length = Math.min(log.length, LOG_KEEP);
 }
 
-/** A typed or linked server address as the origin remote-link is given (`remote.example.com` ->
- *  `https://remote.example.com`), or null when it cannot be one. Why https only: the coordination server hands out
- *  who is in the network, so a plain-http address would let anyone on the way swap in their own computers. Debug runs
- *  also take http, for a Headscale on this Mac. */
-export function parseServer(text: string): string | null {
-  const typed = text.trim();
-  if (!typed) return null;
-  try {
-    const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(typed) ? typed : `https://${typed}`);
-    if (url.username || url.password || url.search || url.hash) return null;
-    if (url.protocol !== "https:" && !(DEV && url.protocol === "http:")) return null;
-    if (!url.hostname.includes(".") && url.hostname !== "localhost" && !DEV) return null;
-    return url.origin;
-  } catch {
-    return null;
-  }
-}
-
-function server(): { url: string; key: string | null } | null {
-  const settings = readSettings();
-  const url = (DEV && process.env.REMOTE_LINK_SERVER) || settings.linkServer;
-  if (!url) return null;
-  return { url, key: (DEV && process.env.REMOTE_LINK_KEY) || settings.linkKey };
-}
-
-/** The computer's name as a network name: lower case letters, digits and dashes ("RUNNERS Mac Studio" -> "runners-mac-studio"). */
-export function networkName(computer: string): string {
-  const name = computer
-    .normalize("NFKD")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 63);
-  return name || "remote";
-}
-
-function binary(): string {
-  const file = `remote-link-${process.platform}-${process.arch}${process.platform === "win32" ? ".exe" : ""}`;
-  return app.isPackaged ? join(process.resourcesPath, "link", file) : join(app.getAppPath(), "link", "bin.noindex", file);
-}
-
-// ---- The app server: what other computers reach through remote-link ----
-
-function sameToken(given: string | undefined): boolean {
-  if (!given || given.length !== token.length) return false;
-  return timingSafeEqual(Buffer.from(given), Buffer.from(token));
-}
+// ---- The app server: what other computers reach on port 7787 ----
 
 function reply(res: ServerResponse, code: number, body: string | Buffer, type = "text/plain; charset=utf-8"): void {
   res.writeHead(code, { "Content-Type": type, "Cache-Control": "no-store" });
@@ -143,9 +99,22 @@ function logKind(input: Input): LogEntry["what"] | null {
   return null;
 }
 
+function peerOf(req: IncomingMessage): Promise<string | null> {
+  const socket = req.socket;
+  let known = peers.get(socket);
+  if (!known) {
+    const address = (socket.remoteAddress ?? "").replace(/^::ffff:/, "");
+    known =
+      address && socket.remotePort
+        ? tailscale.whois(address, socket.remotePort).then((who) => (who && tailscale.trusted(who, selfNode) ? who.host : null))
+        : Promise.resolve(null);
+    peers.set(socket, known);
+  }
+  return known;
+}
+
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  if (!sameToken(req.headers[TOKEN_HEADER] as string | undefined)) return reply(res, 403, "forbidden");
-  const peer = String(req.headers[PEER_HEADER] || "");
+  const peer = await peerOf(req);
   if (!peer) return reply(res, 403, "forbidden");
   const url = new URL(req.url || "/", "http://remote");
   const settings = readSettings();
@@ -192,103 +161,102 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   return reply(res, 404, "not found");
 }
 
-function startAppServer(): Promise<void> {
-  const http = createServer((req, res) => {
+/** Listens on `address` (this computer's Tailscale IPv4), moving when the address changes. */
+function listenOn(address: string | null): void {
+  if (address === listeningOn) return;
+  server?.close();
+  server = null;
+  listeningOn = null;
+  if (!address) return;
+  const next = createServer((req, res) => {
     handle(req, res).catch((e) => reply(res, 500, String(e)));
   });
-  return new Promise((resolve) => {
-    http.listen(0, "127.0.0.1", () => {
-      appPort = (http.address() as AddressInfo).port;
-      resolve();
-    });
-  });
-}
-
-// ---- remote-link: starting it, and asking it things ----
-
-function startLink(): void {
-  const target = server();
-  if (!target) {
-    state = "noServer";
-    return;
-  }
-  const file = binary();
-  if (!existsSync(file)) {
+  next.on("error", (e) => {
+    if (server !== next) return;
+    server = null;
+    listeningOn = null;
     state = "failed";
-    error = "missing";
-    return;
+    error = e.message;
+  });
+  next.listen(PORT, address);
+  server = next;
+  listeningOn = address;
+}
+
+// ---- Tailscale: what the network looks like ----
+
+/** Whether a peer answers as a Remote, remembered for PROBE_MS. Offline peers and ones without an address are not
+ *  asked. Why ask at all: the Tailscale network also holds phones and computers without Remote, and a tab for them
+ *  would only fail. */
+function isRemote(node: tailscale.Node): boolean {
+  if (!node.online || !node.address) return false;
+  const known = probes.get(node.host);
+  if (!known || Date.now() - known.at > PROBE_MS) {
+    probes.set(node.host, { at: Date.now(), remote: known?.remote ?? false });
+    fetch(`http://${node.address}:${PORT}/info`, { signal: AbortSignal.timeout(PEER_TIMEOUT_MS) }).then(
+      (res) => probes.set(node.host, { at: Date.now(), remote: res.ok }),
+      () => probes.set(node.host, { at: Date.now(), remote: false }),
+    );
   }
-  // Why one folder per server: the network identity in it belongs to the server that approved it, so switching servers
-  // must not reuse it, and switching back finds the old approval again.
-  const dir = join(app.getPath("userData"), "link", new URL(target.url).host.replace(/[^a-z0-9.-]/gi, "_"));
-  mkdirSync(dir, { recursive: true });
-  const name = (DEV && process.env.REMOTE_LINK_NAME) || networkName(status.current().computer);
-  const args = ["--dir", dir, "--hostname", name, "--control", target.url, "--app", `127.0.0.1:${appPort}`];
-  if (target.key) args.push("--authkey", target.key);
-  state = "starting";
-  error = null;
-  // Why: stdin stays open as a pipe; remote-link quits when it closes, so it never outlives Remote.
-  // Why the token goes in the environment: other accounts on the computer can read a program's arguments (ps), not its
-  // environment.
-  const started = spawn(file, args, { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, REMOTE_LINK_TOKEN: token } });
-  child = started;
-  createInterface({ input: started.stdout! }).on("line", (line) => {
-    try {
-      const ready = JSON.parse(line) as { port?: number };
-      if (ready.port) linkPort = ready.port;
-    } catch {
-      // Not the ready line.
-    }
-  });
-  let lastError = "";
-  createInterface({ input: started.stderr! }).on("line", (line) => {
-    lastError = line;
-  });
-  started.on("exit", () => {
-    if (child !== started) return;
-    child = null;
-    linkPort = 0;
-    if (quitting) return;
-    state = "failed";
-    error = lastError.replace(/^\S+ \S+ /, "") || "stopped";
-    setTimeout(() => {
-      if (!child && !quitting) startLink();
-    }, RESTART_MS);
-  });
+  return probes.get(node.host)?.remote ?? false;
 }
 
-async function askLink(path: string, init: RequestInit = {}): Promise<Response> {
-  if (!linkPort) throw new Error("unreachable");
-  const headers = new Headers(init.headers);
-  headers.set("X-Remote-Token", token);
-  return fetch(`http://127.0.0.1:${linkPort}${path}`, { ...init, headers, signal: AbortSignal.timeout(PEER_TIMEOUT_MS) });
-}
-
-async function refresh(): Promise<void> {
-  if (!linkPort) return;
-  try {
-    const res = await askLink("/status");
-    const now = (await res.json()) as { state: string; authUrl: string; self: string; computers: Computer[] };
-    self = now.self || null;
-    computers = now.computers;
-    authUrl = now.authUrl || null;
-    state = now.state === "Running" ? "running" : now.state === "NeedsLogin" || now.state === "NeedsMachineAuth" ? "needsLogin" : "starting";
+async function refreshNow(): Promise<void> {
+  if (!tailscale.binary()) {
+    state = "noTailscale";
     error = null;
+    self = null;
+    selfNode = null;
+    computers = [];
+    addresses = new Map();
+    listenOn(null);
+    return;
+  }
+  try {
+    const now = await tailscale.status();
+    authUrl = now.authUrl || null;
+    self = now.self?.host ?? null;
+    selfNode = now.self;
+    if (now.state !== "Running") {
+      state = now.state === "Starting" || now.state === "NoState" ? "starting" : "needsLogin";
+      error = null;
+      computers = [];
+      addresses = new Map();
+      listenOn(null);
+      return;
+    }
+    listenOn(now.self?.address ?? null);
+    const mine = now.peers.filter((p) => tailscale.trusted(p, now.self));
+    addresses = new Map(mine.flatMap((p) => (p.address ? [[p.host, p.address] as [string, string]] : [])));
+    computers = mine
+      .filter((p) => isRemote(p))
+      .map((p) => ({ name: p.name, host: p.host, online: p.online, os: p.os }));
+    if (server) {
+      state = "running";
+      error = null;
+    }
   } catch (e) {
+    state = "failed";
     error = e instanceof Error ? e.message : String(e);
   }
 }
 
-/** Whether a coordination server is set, so the Allow switches mean something. */
+function refresh(): Promise<void> {
+  refreshing ??= refreshNow().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
+/** Whether this computer is in the network, so the Allow switches mean something. */
 export function hasServer(): boolean {
-  return server() !== null;
+  return state === "running";
 }
 
 export async function current(): Promise<Link> {
   await refresh();
   const settings = readSettings();
   return {
-    server: server()?.url ?? null,
     state,
     error,
     self,
@@ -299,26 +267,9 @@ export async function current(): Promise<Link> {
   };
 }
 
-/** The server this computer joins (null leaves the network): saved, and remote-link restarted for it. A key saved
- *  for the old server is dropped, since it only works there. */
-export function setServer(url: string | null): void {
-  const before = readSettings();
-  if (before.linkServer === url) return;
-  writeSettings({ linkServer: url, linkKey: null });
-  const old = child;
-  child = null;
-  old?.kill();
-  linkPort = 0;
-  self = null;
-  computers = [];
-  authUrl = null;
-  error = null;
-  startLink();
-}
-
 export function openLogin(): void {
-  // Why: the address comes from remote-link, never from the page, so a page cannot open anything else this way.
-  if (state === "needsLogin" && authUrl && /^https?:\/\//.test(authUrl)) void shell.openExternal(authUrl);
+  // Why: the address comes from Tailscale, never from the page, so a page cannot open anything else this way.
+  if (state === "needsLogin" && authUrl && /^https:\/\//.test(authUrl)) void shell.openExternal(authUrl);
 }
 
 export function setAllow(what: Allow, on: boolean): void {
@@ -331,37 +282,51 @@ export function disconnect(): void {
   setAllow("allowViewing", false);
 }
 
-/** Why: the name goes into a path, so only network names (letters, digits, dashes) are passed on. */
-function peerPath(host: string, path: string): string {
+// ---- Asking other computers ----
+
+/** Why: the name goes into an address, so only network names (letters, digits, dashes) known to Tailscale are used. */
+function peerUrl(host: string, path: string): string {
   if (!/^[a-z0-9-]{1,63}$/.test(host)) throw new Error("bad computer name");
-  return `/peer/${host}${path}`;
+  const address = addresses.get(host);
+  if (!address) throw new Error("unreachable");
+  return `http://${address}:${PORT}${path}`;
+}
+
+async function ask(host: string, path: string, init: RequestInit = {}): Promise<Response> {
+  if (addresses.size === 0) await refresh();
+  try {
+    return await fetch(peerUrl(host, path), { ...init, signal: AbortSignal.timeout(PEER_TIMEOUT_MS) });
+  } catch (e) {
+    if (e instanceof Error && e.message === "bad computer name") throw e;
+    throw new Error("unreachable");
+  }
 }
 
 async function failure(res: Response): Promise<Error> {
   const text = (await res.text()).trim();
-  return new Error(res.status === 502 ? "unreachable" : text || `HTTP ${res.status}`);
+  return new Error(text || `HTTP ${res.status}`);
 }
 
 export async function peerInfo(host: string): Promise<PeerInfo> {
-  const res = await askLink(peerPath(host, "/info"));
+  const res = await ask(host, "/info");
   if (!res.ok) throw await failure(res);
   return (await res.json()) as PeerInfo;
 }
 
 export async function peerCapture(host: string, display: number): Promise<Buffer> {
-  const res = await askLink(peerPath(host, `/frame?display=${Number(display)}`));
+  const res = await ask(host, `/frame?display=${Number(display)}`);
   if (!res.ok) throw await failure(res);
   return Buffer.from(await res.arrayBuffer());
 }
 
 export async function peerFront(host: string): Promise<{ bundleId: string; name: string } | null> {
-  const res = await askLink(peerPath(host, "/front"));
+  const res = await ask(host, "/front");
   if (!res.ok) throw await failure(res);
   return (await res.json()) as { bundleId: string; name: string } | null;
 }
 
 export async function peerInput(host: string, input: Input): Promise<void> {
-  const res = await askLink(peerPath(host, "/input"), {
+  const res = await ask(host, "/input", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -370,11 +335,9 @@ export async function peerInput(host: string, input: Input): Promise<void> {
 }
 
 export async function startConnection(): Promise<void> {
-  token = randomBytes(24).toString("hex");
-  await startAppServer();
-  startLink();
-  app.on("before-quit", () => {
-    quitting = true;
-    child?.kill();
-  });
+  await refresh();
+  // Why keep refreshing without a window open: the address can change (Tailscale restarted, logged in later), and
+  // other computers must still reach this one while nobody looks at Remote here.
+  setInterval(() => void refresh(), REFRESH_MS).unref();
+  app.on("before-quit", () => listenOn(null));
 }

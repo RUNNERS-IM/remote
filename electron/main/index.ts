@@ -2,10 +2,10 @@
 // a panel under the tray with the permissions, the connection switches and the shared menu lines, and a viewer window
 // that shows this computer's screens or another office computer's (link.ts) and can click and type into them.
 import { app, BrowserWindow, ipcMain, nativeTheme, shell, systemPreferences, type Tray } from "electron";
+import { writeFileSync } from "node:fs";
 import type { Allow, Input, PermissionKind, PressAt } from "../preload/api";
 import { startClaude } from "./claude";
 import * as input from "./input";
-import { linkIn, listenForLinks, openLink, startJoin } from "./join";
 import * as link from "./link";
 import * as login from "./login";
 import { buildMenu, forgetIcons, type Command, type MenuState } from "./menu";
@@ -191,13 +191,6 @@ function registerIpc(): void {
   ipcMain.on("remote:closeWindow", (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle("remote:link", () => link.current());
   ipcMain.handle("remote:openLinkLogin", () => link.openLogin());
-  ipcMain.handle("remote:setLinkServer", (_event, text: string) => {
-    const typed = String(text ?? "").trim();
-    const server = typed ? link.parseServer(typed) : null;
-    if (typed && !server) throw new Error("bad");
-    link.setServer(server);
-    return link.current();
-  });
   ipcMain.handle("remote:setAllow", (_event, what: Allow, on: boolean) => {
     if (what === "allowViewing" || what === "allowControl") link.setAllow(what, Boolean(on));
     return link.current();
@@ -225,6 +218,18 @@ function debugHooks(): void {
   if (which === "about") setTimeout(showAbout, 1500);
   if (which === "panel") setTimeout(showWithoutFocus, 1500);
   if (which === "viewer") setTimeout(openViewer, 1500);
+  // Why: `REMOTE_SHOT=<file.png>` saves the opened window as the app draws it, for the dark and light screenshots
+  // asked for before a release, without giving the terminal the screen recording permission.
+  const shot = process.env.REMOTE_SHOT;
+  if (shot && which) {
+    setTimeout(() => {
+      const window = BrowserWindow.getAllWindows().find((w) => w.isVisible());
+      void window
+        ?.capturePage()
+        .then((image) => writeFileSync(shot, image.toPNG()))
+        .then(() => console.log("shot:", shot));
+    }, 6000);
+  }
   if (which === "update" || which === "update-progress") {
     const ko = currentLocale() === "ko";
     const notes = ko
@@ -261,7 +266,7 @@ function start(): void {
     refreshLinuxMenu();
   });
   statusLoop();
-  void link.startConnection().then(() => startJoin(openViewer));
+  void link.startConnection();
   startClaude();
   startUpdates();
   if (DEV) debugHooks();
@@ -271,12 +276,7 @@ function start(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  listenForLinks();
-  app.on("second-instance", (_event, argv) => {
-    const href = linkIn(argv);
-    if (href) openLink(href);
-    else openViewer();
-  });
+  app.on("second-instance", () => openViewer());
   app.on("before-quit", allowClose);
   // Why: closing a window must not quit a tray app.
   app.on("window-all-closed", () => undefined);

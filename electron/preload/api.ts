@@ -12,7 +12,7 @@ export type MenuCommand =
   | "help"
   | "quit";
 
-/** `linked` is false until a coordination server is set; the two Allow lines show only after that. */
+/** `linked` is false until this computer is in the Tailscale network; the two Allow lines show only after that. */
 export type MenuState = {
   openAtLogin: boolean;
   autoUpdate: boolean;
@@ -67,20 +67,18 @@ export type Input =
   | { kind: "key"; code: number; modifiers: ("shift" | "control" | "option" | "command")[] }
   | { kind: "text"; text: string };
 
-/** One computer in the office network (link/main.go `Computer`). `host` is the address name used to reach it. */
+/** One computer in the Tailscale network that runs Remote. `host` is its network name, used to reach it. */
 export type Computer = { name: string; host: string; online: boolean; os: string };
 
-/** The connection: no coordination server set yet, starting, waiting for this computer to be approved, running, or
- *  failed (the reason is in `error`). */
-export type LinkState = "noServer" | "starting" | "needsLogin" | "running" | "failed";
+/** The connection: Tailscale is not installed, starting, waiting for this computer to log in to Tailscale, running,
+ *  or failed (the reason is in `error`). */
+export type LinkState = "noTailscale" | "starting" | "needsLogin" | "running" | "failed";
 
 /** One line of the connection log: who did what to this computer, and when (ms since 1970). `refused` is a request
  *  turned away because seeing or clicking was off. Typed text itself is never written down. */
 export type LogEntry = { at: number; peer: string; what: "view" | "click" | "key" | "text" | "refused" };
 
 export type Link = {
-  /** The coordination server this computer joins (`https://remote.example.com`), or null when none is set. */
-  server: string | null;
   state: LinkState;
   error: string | null;
   /** This computer's name in the network. */
@@ -124,10 +122,7 @@ export type RemoteApi = {
   sendInput: (input: Input, pressAt: PressAt | null) => Promise<SendResult>;
   /** The connection and the computers in the network. */
   link: () => Promise<Link>;
-  /** Saves the connection server typed in the viewer (an empty text removes it). Rejects with `bad` when the text
-   *  cannot be a server address. */
-  setLinkServer: (text: string) => Promise<Link>;
-  /** Opens the page where this computer is approved to join (only while the state is needsLogin). */
+  /** Opens Tailscale's login page for this computer (only while the state is needsLogin). */
   openLinkLogin: () => Promise<void>;
   /** Turns letting others see or click in this computer on or off. */
   setAllow: (what: Allow, on: boolean) => Promise<Link>;

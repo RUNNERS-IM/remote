@@ -87,6 +87,9 @@
   "grid.subtitle": "{{count}} Computer im selben Tailscale-Netzwerk mit geöffnetem Remote",
   "grid.back": "Alle Computer",
   "grid.monitors": "{{count}} Bildschirme",
-  "menu.log": "Verbindungsprotokoll …",
-  "log.subtitle": "Wer diesen Computer angesehen oder angeklickt hat. Eingegebener Text wird nie gespeichert, und das Protokoll verschwindet, wenn Remote beendet wird."
+  "log.subtitle": "Wer diesen Computer angesehen oder angeklickt hat. Eingegebener Text wird nie gespeichert, und das Protokoll verschwindet, wenn Remote beendet wird.",
+  "thisMac.title": "Dieser Mac",
+  "thisMac.summary": "Berechtigungen · Für andere Computer sichtbar · Verbindungsprotokoll · Allgemein",
+  "thisMac.sharing": "Andere Computer",
+  "thisMac.general": "Allgemein"
 }

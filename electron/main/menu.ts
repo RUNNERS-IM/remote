@@ -31,12 +31,6 @@ function icon(name: string): Electron.NativeImage {
 /** Why: "being viewed" is yellow, not green, because the screen is being seen and the user should notice. */
 const DOT = { off: "dot-grey", waiting: "dot-green", viewing: "dot-yellow" } as const;
 
-/** Why: a native check mark cannot sit next to an icon, and every line has a Lucide icon (shared spec), so a
- *  checked or empty Lucide square stands in for it. */
-function box(on: boolean): string {
-  return on ? "square-check" : "square";
-}
-
 export function buildMenu(status: Status, state: MenuState, run: (command: Command) => void): Menu {
   const line = (id: Command, key: string, iconName: string, accelerator?: string) =>
     new MenuItem({
@@ -47,6 +41,10 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
       registerAccelerator: false,
       click: () => run(id),
     });
+  // Why: on/off lines use the native check mark with no icon (decision 「[PROGRAM] 켬 끔 토글」 2A), like other Mac
+  // apps' menus; a check mark and an icon cannot share the slot.
+  const check = (id: Command, key: string, on: boolean) =>
+    new MenuItem({ id, label: t(key), type: "checkbox", checked: on, click: () => run(id) });
   const separator = () => new MenuItem({ type: "separator" });
   return Menu.buildFromTemplate([
     { label: statusLine(status), icon: icon(DOT[status.state]), enabled: false },
@@ -55,14 +53,13 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
     separator(),
     ...(state.linked
       ? [
-          line("allowViewing", "menu.allowViewing", box(state.allowViewing)),
-          line("allowControl", "menu.allowControl", box(state.allowControl)),
-          line("log", "menu.log", "history"),
+          check("allowViewing", "menu.allowViewing", state.allowViewing),
+          check("allowControl", "menu.allowControl", state.allowControl),
           separator(),
         ]
       : []),
-    line("login", "menu.openAtLogin", box(state.openAtLogin)),
-    line("autoUpdate", "menu.autoUpdate", box(state.autoUpdate)),
+    check("login", "menu.openAtLogin", state.openAtLogin),
+    check("autoUpdate", "menu.autoUpdate", state.autoUpdate),
     separator(),
     line("about", "menu.about", "info"),
     line("updates", "menu.checkUpdates", "refresh-cw"),

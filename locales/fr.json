@@ -87,6 +87,9 @@
   "grid.subtitle": "{{count}} ordinateurs du même réseau Tailscale avec Remote ouvert",
   "grid.back": "Tous les ordinateurs",
   "grid.monitors": "{{count}} écrans",
-  "menu.log": "Journal des connexions…",
-  "log.subtitle": "Qui a regardé ou cliqué sur cet ordinateur. Le texte saisi n’est jamais enregistré, et le journal disparaît quand Remote se ferme."
+  "log.subtitle": "Qui a regardé ou cliqué sur cet ordinateur. Le texte saisi n’est jamais enregistré, et le journal disparaît quand Remote se ferme.",
+  "thisMac.title": "Ce Mac",
+  "thisMac.summary": "Autorisations · Visible par les autres ordinateurs · Journal des connexions · Général",
+  "thisMac.sharing": "Autres ordinateurs",
+  "thisMac.general": "Général"
 }

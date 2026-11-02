@@ -28,17 +28,9 @@ const api = () => window.remote;
 
 export type { Allow, Computer, Display, Input, Link, LogEntry, PeerInfo, MenuCommand, MenuState, PermissionKind, Permissions, Status, UpdateOffer };
 
-/** Which window this page is: the tray panel, the viewer window, the About window, the update question or the log. */
-export const page: "panel" | "viewer" | "about" | "update" | "log" =
-  location.hash === "#about"
-    ? "about"
-    : location.hash === "#log"
-      ? "log"
-    : location.hash === "#viewer"
-      ? "viewer"
-      : location.hash === "#update"
-        ? "update"
-        : "panel";
+/** Which window this page is: the Remote window, the About window or the update question. */
+export const page: "viewer" | "about" | "update" =
+  location.hash === "#about" ? "about" : location.hash === "#update" ? "update" : "viewer";
 
 export const status = () => api().status();
 export const displays = () => api().displays();
@@ -81,8 +73,7 @@ export function applyWindowLook(): void {
     .accentColor()
     .then((color) => {
       if (!color) return;
-      // Why: the menu look (runners-menu.css) and the window look (runners-window.css) both follow the OS accent.
-      document.documentElement.style.setProperty("--rm-accent", color);
+      // Why: the window look (runners-window.css) follows the OS accent.
       document.documentElement.style.setProperty("--rw-accent", color);
     });
 }

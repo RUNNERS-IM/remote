@@ -87,6 +87,9 @@
   "grid.subtitle": "同じTailscaleネットワークでRemoteを開いているコンピュータ {{count}}台",
   "grid.back": "すべてのコンピュータ",
   "grid.monitors": "モニタ {{count}}台",
-  "menu.log": "接続履歴…",
-  "log.subtitle": "このコンピュータを誰が表示・クリックしたかを記録します。入力した文字の内容は記録せず、Remoteを終了すると消えます。"
+  "log.subtitle": "このコンピュータを誰が表示・クリックしたかを記録します。入力した文字の内容は記録せず、Remoteを終了すると消えます。",
+  "thisMac.title": "このMac",
+  "thisMac.summary": "権限 · ほかのコンピュータへの表示 · 接続履歴 · 一般",
+  "thisMac.sharing": "ほかのコンピュータから",
+  "thisMac.general": "一般"
 }

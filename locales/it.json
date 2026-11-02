@@ -87,6 +87,9 @@
   "grid.subtitle": "{{count}} computer nella stessa rete Tailscale con Remote aperto",
   "grid.back": "Tutti i computer",
   "grid.monitors": "{{count}} schermi",
-  "menu.log": "Registro connessioni…",
-  "log.subtitle": "Chi ha guardato o cliccato su questo computer. Il testo digitato non viene mai registrato e il registro sparisce alla chiusura di Remote."
+  "log.subtitle": "Chi ha guardato o cliccato su questo computer. Il testo digitato non viene mai registrato e il registro sparisce alla chiusura di Remote.",
+  "thisMac.title": "Questo Mac",
+  "thisMac.summary": "Permessi · Visibile ad altri computer · Registro connessioni · Generali",
+  "thisMac.sharing": "Altri computer",
+  "thisMac.general": "Generali"
 }

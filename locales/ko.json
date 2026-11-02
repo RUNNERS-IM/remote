@@ -87,6 +87,9 @@
   "grid.subtitle": "같은 Tailscale 망에서 Remote를 켠 컴퓨터 {{count}}대",
   "grid.back": "모든 컴퓨터",
   "grid.monitors": "모니터 {{count}}개",
-  "menu.log": "접속 기록…",
-  "log.subtitle": "이 컴퓨터를 누가 보거나 클릭했는지 남깁니다. 친 글자 내용은 적지 않고, Remote를 끄면 사라집니다."
+  "log.subtitle": "이 컴퓨터를 누가 보거나 클릭했는지 남깁니다. 친 글자 내용은 적지 않고, Remote를 끄면 사라집니다.",
+  "thisMac.title": "이 맥",
+  "thisMac.summary": "권한 · 다른 컴퓨터에 보이기 · 접속 기록 · 일반",
+  "thisMac.sharing": "다른 컴퓨터에서",
+  "thisMac.general": "일반"
 }

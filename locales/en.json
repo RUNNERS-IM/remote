@@ -87,6 +87,9 @@
   "grid.subtitle": "{{count}} computers in the same Tailscale network with Remote open",
   "grid.back": "All Computers",
   "grid.monitors": "{{count}} displays",
-  "menu.log": "Connection Log…",
-  "log.subtitle": "Who looked at or clicked this computer. Typed text is never written down, and the log is gone when Remote quits."
+  "log.subtitle": "Who looked at or clicked this computer. Typed text is never written down, and the log is gone when Remote quits.",
+  "thisMac.title": "This Mac",
+  "thisMac.summary": "Permissions · Seen by other computers · Connection log · General",
+  "thisMac.sharing": "Other Computers",
+  "thisMac.general": "General"
 }

@@ -87,6 +87,9 @@
   "grid.subtitle": "同一 Tailscale 网络中打开 Remote 的电脑 {{count}} 台",
   "grid.back": "所有电脑",
   "grid.monitors": "{{count}} 台显示器",
-  "menu.log": "连接记录…",
-  "log.subtitle": "记录谁查看或点击了此电脑。不记录输入的文字内容，退出 Remote 后记录会消失。"
+  "log.subtitle": "记录谁查看或点击了此电脑。不记录输入的文字内容，退出 Remote 后记录会消失。",
+  "thisMac.title": "这台 Mac",
+  "thisMac.summary": "权限 · 让其他电脑查看 · 连接记录 · 通用",
+  "thisMac.sharing": "其他电脑",
+  "thisMac.general": "通用"
 }

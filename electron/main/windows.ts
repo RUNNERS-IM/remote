@@ -1,23 +1,20 @@
-// The windows: the tray panel (frameless, OS blur, closes when focus leaves), the viewer window that shows this
-// computer's screen, the About window and the update question.
-import { app, BrowserWindow, nativeTheme, screen, type Tray } from "electron";
+// The windows: the Remote window (every computer, one computer, and this Mac's settings), the About window and the
+// update question. There is no tray panel (decision 「[REMOTE] 메뉴 막대 패널 정리」 1C): the menu bar keeps the status
+// picture and a short native menu, and the work happens in the window.
+import { app, BrowserWindow, nativeTheme } from "electron";
 import { join } from "node:path";
 import { t } from "./i18n";
 
-export const PANEL_WIDTH = 300;
 const ABOUT_WIDTH = 520;
 /** First height only; the page then fits the window to its content. */
 const ABOUT_HEIGHT = 560;
 const UPDATE_WIDTH = 400;
 /** Buttons and keys in the update window do nothing this long after it appears. */
 const UPDATE_GUARD_MS = 1000;
-/** Space between the menu bar (or taskbar) and the panel. */
-const GAP = 4;
-
-/** Whether the OS blurs what is behind the panel; the page draws a solid background when it does not. */
+/** Whether the OS blurs what is behind a window; the page draws a solid background when it does not. */
 export const TRANSLUCENT = process.platform === "darwin" || process.platform === "win32";
 
-function load(window: BrowserWindow, page: "panel" | "viewer" | "about" | "update" | "log"): void {
+function load(window: BrowserWindow, page: "viewer" | "about" | "update"): void {
   if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}#${page}`);
   else void window.loadFile(join(__dirname, "../renderer/index.html"), { hash: page });
 }
@@ -29,55 +26,6 @@ function blur(): Electron.BrowserWindowConstructorOptions {
   if (process.platform === "darwin") return { vibrancy: "menu", visualEffectState: "active", backgroundColor: "#00000000" };
   if (process.platform === "win32") return { backgroundMaterial: "acrylic", backgroundColor: "#00000000" };
   return { backgroundColor: nativeTheme.shouldUseDarkColors ? "#2a2a2a" : "#ececec" };
-}
-
-export function createPanel(): BrowserWindow {
-  const panel = new BrowserWindow({
-    width: PANEL_WIDTH,
-    height: 360,
-    useContentSize: true,
-    show: false,
-    frame: false,
-    resizable: false,
-    movable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    hasShadow: true,
-    roundedCorners: true,
-    title: "Remote",
-    ...blur(),
-    webPreferences: { preload, sandbox: true, contextIsolation: true, backgroundThrottling: false },
-  });
-  // Why: a menu shows over full-screen apps and on every Space, so the panel does too.
-  panel.setAlwaysOnTop(true, "pop-up-menu");
-  panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-  load(panel, "panel");
-  return panel;
-}
-
-/** Puts the panel just under the tray icon (above it on Windows), kept inside the screen the icon is on. */
-export function placeUnderTray(panel: BrowserWindow, tray: Tray | null): void {
-  const [width, height] = panel.getSize();
-  const icon = tray && !tray.isDestroyed() ? tray.getBounds() : null;
-  // Why: Linux trays do not report where the icon is, so the panel goes to the top-right corner there.
-  const anchor = icon && icon.width > 0 ? icon : null;
-  const display = anchor ? screen.getDisplayNearestPoint({ x: anchor.x, y: anchor.y }) : screen.getPrimaryDisplay();
-  const area = display.workArea;
-  let x: number;
-  let y: number;
-  if (anchor) {
-    x = Math.round(anchor.x + anchor.width / 2 - width / 2);
-    y = process.platform === "win32" ? anchor.y - height - GAP : anchor.y + anchor.height + GAP;
-  } else {
-    x = area.x + area.width - width - GAP;
-    y = area.y + GAP;
-  }
-  x = Math.min(Math.max(x, area.x + GAP), area.x + area.width - width - GAP);
-  y = Math.min(Math.max(y, area.y), area.y + area.height - height);
-  panel.setPosition(x, y, false);
 }
 
 let about: BrowserWindow | null = null;
@@ -120,46 +68,6 @@ export function showAbout(): void {
     about = null;
   });
   load(about, "about");
-}
-
-const LOG_WIDTH = 440;
-const LOG_HEIGHT = 420;
-
-let logWindow: BrowserWindow | null = null;
-
-/** The connection log of this computer (who looked or clicked, and when), from the panel's "Connection Log…" line
- *  (decision 「[REMOTE] 모든 컴퓨터 한눈에」 2A: this computer is no longer a tab of the viewer). */
-export function showLog(): void {
-  if (logWindow && !logWindow.isDestroyed()) {
-    logWindow.show();
-    logWindow.focus();
-    return;
-  }
-  logWindow = new BrowserWindow({
-    width: LOG_WIDTH,
-    height: LOG_HEIGHT,
-    minWidth: 360,
-    minHeight: 240,
-    show: false,
-    minimizable: false,
-    fullscreenable: false,
-    title: t("log.title"),
-    autoHideMenuBar: true,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1e1e1e" : "#ececec",
-    webPreferences: { preload, sandbox: true, contextIsolation: true },
-  });
-  logWindow.setMenu(null);
-  logWindow.on("page-title-updated", (event) => event.preventDefault());
-  logWindow.once("ready-to-show", () => {
-    logWindow?.center();
-    logWindow?.show();
-    // Why: Remote has no Dock icon, so without focus the window can open behind the app in front.
-    logWindow?.focus();
-  });
-  logWindow.on("closed", () => {
-    logWindow = null;
-  });
-  load(logWindow, "log");
 }
 
 const VIEWER_WIDTH = 960;

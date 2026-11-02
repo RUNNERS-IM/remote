@@ -87,6 +87,9 @@
   "grid.subtitle": "{{count}} komputerów w tej samej sieci Tailscale z otwartym Remote",
   "grid.back": "Wszystkie komputery",
   "grid.monitors": "Ekrany: {{count}}",
-  "menu.log": "Dziennik połączeń…",
-  "log.subtitle": "Kto oglądał ten komputer lub w nim klikał. Wpisany tekst nigdy nie jest zapisywany, a dziennik znika po zamknięciu Remote."
+  "log.subtitle": "Kto oglądał ten komputer lub w nim klikał. Wpisany tekst nigdy nie jest zapisywany, a dziennik znika po zamknięciu Remote.",
+  "thisMac.title": "Ten Mac",
+  "thisMac.summary": "Uprawnienia · Widoczny dla innych komputerów · Dziennik połączeń · Ogólne",
+  "thisMac.sharing": "Inne komputery",
+  "thisMac.general": "Ogólne"
 }

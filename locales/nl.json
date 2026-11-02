@@ -87,6 +87,9 @@
   "grid.subtitle": "{{count}} computers in hetzelfde Tailscale-netwerk met Remote open",
   "grid.back": "Alle computers",
   "grid.monitors": "{{count}} schermen",
-  "menu.log": "Verbindingslogboek…",
-  "log.subtitle": "Wie deze computer heeft bekeken of erop heeft geklikt. Getypte tekst wordt nooit opgeslagen en het logboek verdwijnt als Remote stopt."
+  "log.subtitle": "Wie deze computer heeft bekeken of erop heeft geklikt. Getypte tekst wordt nooit opgeslagen en het logboek verdwijnt als Remote stopt.",
+  "thisMac.title": "Deze Mac",
+  "thisMac.summary": "Rechten · Zichtbaar voor andere computers · Verbindingslogboek · Algemeen",
+  "thisMac.sharing": "Andere computers",
+  "thisMac.general": "Algemeen"
 }

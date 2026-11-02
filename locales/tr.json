@@ -87,6 +87,9 @@
   "grid.subtitle": "Aynı Tailscale ağında Remote’u açık {{count}} bilgisayar",
   "grid.back": "Tüm Bilgisayarlar",
   "grid.monitors": "{{count}} ekran",
-  "menu.log": "Bağlantı Günlüğü…",
-  "log.subtitle": "Bu bilgisayarı kimin görüntülediği veya tıkladığı. Yazılan metin asla kaydedilmez ve günlük Remote kapanınca silinir."
+  "log.subtitle": "Bu bilgisayarı kimin görüntülediği veya tıkladığı. Yazılan metin asla kaydedilmez ve günlük Remote kapanınca silinir.",
+  "thisMac.title": "Bu Mac",
+  "thisMac.summary": "İzinler · Diğer bilgisayarlara görünür · Bağlantı günlüğü · Genel",
+  "thisMac.sharing": "Diğer Bilgisayarlar",
+  "thisMac.general": "Genel"
 }

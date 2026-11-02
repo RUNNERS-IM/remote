@@ -1,6 +1,6 @@
-// Remote's main process: a tray app that shows whether this computer can be seen (off / waiting / being viewed),
-// a panel under the tray with the permissions, the connection switches and the shared menu lines, and a viewer window
-// that shows this computer's screens or another office computer's (link.ts) and can click and type into them.
+// Remote's main process: a menu bar app whose picture shows whether this computer can be seen (off / waiting / being
+// viewed), with a short native menu on right click, and the Remote window (opened by a click on the picture) that shows
+// every office computer, one computer's screens with clicks and typing, and this Mac's settings.
 import { app, BrowserWindow, ipcMain, nativeTheme, shell, systemPreferences, type Tray } from "electron";
 import { writeFileSync } from "node:fs";
 import type { Allow, Input, PermissionKind, PressAt } from "../preload/api";
@@ -15,7 +15,7 @@ import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
 import { createTray, showState } from "./tray";
 import { checkNow, displayVersion, startUpdates } from "./updates";
-import { allowClose, answerUpdate, askUpdate, createPanel, placeUnderTray, showAbout, showLog, showViewer, TRANSLUCENT, updateOffer } from "./windows";
+import { allowClose, answerUpdate, askUpdate, showAbout, showViewer, TRANSLUCENT, updateOffer } from "./windows";
 
 const ISSUES_URL = "https://github.com/RUNNERS-IM/remote/issues";
 const STATUS_EVERY_MS = 2000;
@@ -24,52 +24,22 @@ const SETTINGS_PAGE: Record<PermissionKind, string> = {
   screenRecording: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
   accessibility: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
 };
-// Why: the tray click that opens the panel can also send it a focus-lost event right away, so blur is ignored this long after opening.
-const BLUR_GRACE_MS = 400;
-// Why: clicking the tray while the panel is open first takes focus from the panel (which hides it); a click that
-// lands this soon after is the same click and must not open it again.
-const REOPEN_GUARD_MS = 300;
-
 /** Debug runs only: everything below that reads REMOTE_* is ignored in a packaged app. */
 const DEV = !app.isPackaged;
 
 let tray: Tray | null = null;
-let panel: BrowserWindow | null = null;
-let shownAt = 0;
-let hiddenByBlurAt = 0;
-
-function hidePanel(): void {
-  panel?.hide();
-  panel?.setFocusable(true);
-}
-
-/** Shows the panel without taking focus, under the tray (debug captures only). */
-function showWithoutFocus(): void {
-  if (!panel) return;
-  panel.setFocusable(false);
-  placeUnderTray(panel, tray);
-  panel.showInactive();
-}
-
-function togglePanel(): void {
-  if (!panel) return;
-  if (panel.isVisible()) {
-    hidePanel();
-    return;
-  }
-  if (Date.now() - hiddenByBlurAt < REOPEN_GUARD_MS) return;
-  panel.setFocusable(true);
-  placeUnderTray(panel, tray);
-  shownAt = Date.now();
-  panel.show();
-  panel.focus();
-  if (process.platform === "darwin") app.focus({ steal: true });
-}
-
+/** Opens the Remote window. While it is open Remote also shows in the Dock, so it can be found like any app's window;
+ *  closed, Remote is back to the menu bar only (2026-11-02: menu bar, plus the Dock while the window is open). */
 function openViewer(): void {
-  if (process.platform === "darwin") app.focus({ steal: true });
-  // Why: a hidden window must never keep clicking, so the switch turns off with it.
-  showViewer(() => input.setSendClicks(false));
+  if (process.platform === "darwin") {
+    void app.dock?.show();
+    app.focus({ steal: true });
+  }
+  showViewer(() => {
+    // Why: a hidden window must never keep clicking, so the switch turns off with it.
+    input.setSendClicks(false);
+    app.dock?.hide();
+  });
 }
 
 function menuState(): MenuState {
@@ -86,7 +56,6 @@ function menuState(): MenuState {
 function run(command: Command): void {
   switch (command) {
     case "open":
-      hidePanel();
       openViewer();
       break;
     case "allowViewing":
@@ -98,10 +67,6 @@ function run(command: Command): void {
     case "disconnect":
       link.disconnect();
       break;
-    case "log":
-      hidePanel();
-      showLog();
-      break;
     case "login":
       login.toggle();
       break;
@@ -109,15 +74,12 @@ function run(command: Command): void {
       writeSettings({ autoUpdate: !readSettings().autoUpdate });
       break;
     case "about":
-      hidePanel();
       showAbout();
       break;
     case "updates":
-      hidePanel();
       checkNow();
       break;
     case "help":
-      hidePanel();
       void shell.openExternal(ISSUES_URL);
       break;
     case "quit":
@@ -189,8 +151,6 @@ function registerIpc(): void {
     if (!window || !Number.isFinite(height) || height <= 0) return;
     const [width] = window.getContentSize();
     window.setContentSize(width, Math.ceil(height));
-    // Why: on Windows the panel hangs above the taskbar, so a taller panel must move up to stay attached.
-    if (window === panel && process.platform === "win32" && panel.isVisible()) placeUnderTray(panel, tray);
   });
   ipcMain.on("remote:closeWindow", (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle("remote:link", () => link.current());
@@ -212,18 +172,15 @@ function registerIpc(): void {
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
 
-/** Debug runs only: `REMOTE_OPEN=panel|viewer|about|update|update-progress` opens that window at launch, so it can be
+/** Debug runs only: `REMOTE_OPEN=viewer|about|update|update-progress` opens that window at launch, so it can be
  *  captured without clicking the tray (`update` / `update-progress` show the update question with made-up notes,
- *  downloaded or still downloading, and install nothing), and `REMOTE_THEME=dark|light` forces the look. The panel
- *  opens without focus, so it stays up. */
+ *  downloaded or still downloading, and install nothing), and `REMOTE_THEME=dark|light` forces the look. */
 function debugHooks(): void {
   const theme = process.env.REMOTE_THEME;
   if (theme === "dark" || theme === "light") nativeTheme.themeSource = theme;
   const which = process.env.REMOTE_OPEN;
   // Why: the tray icon needs a moment before it reports where it sits.
   if (which === "about") setTimeout(showAbout, 1500);
-  if (which === "log") setTimeout(showLog, 1500);
-  if (which === "panel") setTimeout(showWithoutFocus, 1500);
   if (which === "viewer") setTimeout(openViewer, 1500);
   // Why: `REMOTE_SHOT=<file.png>` saves the opened window as the app draws it, for the dark and light screenshots
   // asked for before a release, without giving the terminal the screen recording permission.
@@ -256,16 +213,10 @@ function start(): void {
   app.dock?.hide();
   registerIpc();
   login.applyDefault();
-  panel = createPanel();
-  panel.on("blur", () => {
-    if (Date.now() - shownAt < BLUR_GRACE_MS) return;
-    hiddenByBlurAt = Date.now();
-    hidePanel();
-  });
   tray = createTray(status.current().state);
   if (process.platform === "linux") refreshLinuxMenu();
   else {
-    tray.on("click", togglePanel);
+    tray.on("click", openViewer);
     tray.on("right-click", () => tray?.popUpContextMenu(buildMenu(status.current(), menuState(), run)));
   }
   nativeTheme.on("updated", () => {

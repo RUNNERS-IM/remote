@@ -3,14 +3,16 @@
 //     picture of that computer's main display, new every two seconds, or why it cannot be seen.
 //   - Pressing a tile opens that computer: a tab per display, its screen about five times a second, the Send Clicks
 //     switch, and keys and text going there. "All Computers" goes back.
-// This computer is not in the window: its permissions, the two Allow switches, Disconnect and the connection log are
-// in the menu bar panel (Panel.tsx, Log.tsx). On Windows and Linux it says Remote works on macOS only for now.
+//   - "This Mac" at the bottom of the grid opens this Mac's page: its permissions, the See This and Click and Type
+//     switches, Disconnect, the connection log and the two general settings (decision 「[REMOTE] 메뉴 막대 패널 정리」
+//     1C: there is no tray panel). While someone is watching, a bar with Disconnect sits on top of the grid.
+// On Windows and Linux it says Remote works on macOS only for now.
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { ChevronLeft, Monitor } from "lucide-react";
-import { t } from "./i18n";
+import { ChevronLeft, Eye, Laptop, Monitor, MousePointerClick, Power, RefreshCw, type LucideIcon } from "lucide-react";
+import { statusText, t } from "./i18n";
 import { keyInput } from "./keys";
 import * as native from "./native";
-import type { Computer, Display, Input, Link, PeerInfo, Status } from "./native";
+import type { Computer, Display, Input, Link, LogEntry, MenuState, PeerInfo, PermissionKind, Status } from "./native";
 import "./App.css";
 import "./runners-window.css";
 import "./Viewer.css";
@@ -79,6 +81,7 @@ export default function Viewer() {
   const [visible, setVisible] = useState(true);
   /** The computer opened from the grid, or null for the grid. */
   const [computer, setComputer] = useState<string | null>(null);
+  const [thisMac, setThisMac] = useState(false);
 
   // Why: closing the window only hides it, so pictures stop while it is hidden and start again when shown.
   useEffect(() => native.onViewerVisible(setVisible), []);
@@ -111,6 +114,10 @@ export default function Viewer() {
     );
   }
 
+  if (thisMac && status && link) {
+    return <ThisMac status={status} link={link} onChange={setLink} onBack={() => setThisMac(false)} />;
+  }
+
   if (computer !== null) {
     return (
       <Detail
@@ -128,6 +135,15 @@ export default function Viewer() {
         <div className="title">{t("grid.title")}</div>
         <div className="subtitle">{t("grid.subtitle", { count: computers.length })}</div>
       </header>
+      {status && status.viewers.length > 0 && (
+        <div className="watching">
+          <span className="state-dot viewing" aria-hidden />
+          <span>{t("status.viewers", { names: status.viewers.join(", ") })}</span>
+          <button type="button" className="button" onClick={() => void native.disconnect().then(setLink)}>
+            {t("menu.disconnect")}
+          </button>
+        </div>
+      )}
       <LinkNote link={link} />
       {computers.length > 0 && (
         <section className="grid" aria-label={t("grid.title")}>
@@ -135,6 +151,21 @@ export default function Viewer() {
             <Tile key={c.host} computer={c} visible={visible} onOpen={() => setComputer(c.host)} />
           ))}
         </section>
+      )}
+      {status && (
+        <button type="button" className="card this-mac" onClick={() => setThisMac(true)}>
+          <Laptop size={16} strokeWidth={1.5} aria-hidden />
+          <span className="this-mac-text">
+            <span className="switch-label">
+              {t("thisMac.title")} · {status.computer}
+            </span>
+            <span className="hint">
+              <span className={`state-dot ${status.state}`} aria-hidden /> {statusText(status.state, status.reason)}
+            </span>
+          </span>
+          <span className="hint">{t("thisMac.summary")}</span>
+          <ChevronLeft className="flip" size={14} strokeWidth={1.5} aria-hidden />
+        </button>
       )}
     </main>
   );
@@ -411,4 +442,131 @@ function LinkNote({ link }: { link: Link | null }) {
     );
   if (link.computers.length === 0) return <div className="hint link-note">{t("link.empty")}</div>;
   return null;
+}
+
+/** One on/off line: what it is for (a Lucide icon and a name) on the left, the shared toggle on the right
+ *  (decision 「[PROGRAM] 켬 끔 토글」 1B). */
+function ToggleRow(props: { icon: LucideIcon; label: string; on: boolean; disabled?: boolean; onChange: (on: boolean) => void }) {
+  const Glyph = props.icon;
+  return (
+    <label className={props.disabled ? "switch toggle-row disabled" : "switch toggle-row"}>
+      <Glyph size={16} strokeWidth={1.5} aria-hidden />
+      <span className="toggle-name">{props.label}</span>
+      <input
+        type="checkbox"
+        checked={props.on}
+        disabled={props.disabled}
+        onChange={(event) => props.onChange(event.target.checked)}
+      />
+      <span className="knob" aria-hidden />
+    </label>
+  );
+}
+
+function PermissionRow({ kind, on }: { kind: PermissionKind; on: boolean }) {
+  return (
+    <div className="permission">
+      <span className={on ? "dot on" : "dot off"} aria-hidden />
+      <div className="permission-text">
+        <div>{t(`permission.${kind}`)}</div>
+        <div className="hint">{t(`permission.${kind}Note`)}</div>
+      </div>
+      {on ? (
+        <span className="state">{t("permission.on")}</span>
+      ) : (
+        <button className="button" onClick={() => void native.requestPermission(kind)}>
+          {t("permission.allow")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function logLine(entry: LogEntry): string {
+  const time = new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `${time}  ${t(`log.${entry.what}`, { peer: entry.peer })}`;
+}
+
+/** This Mac's page: permissions, whether other computers may see and click it, the connection log, and the two
+ *  general settings. Everything the tray panel used to hold. */
+function ThisMac(props: { status: Status; link: Link; onChange: (link: Link) => void; onBack: () => void }) {
+  const { status, link } = props;
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  useEffect(() => {
+    void native.menuState().then(setMenu);
+  }, []);
+  const toggle = (name: "login" | "autoUpdate") => void native.command(name).then(setMenu);
+  const allow = (what: "allowViewing" | "allowControl", on: boolean) => void native.setAllow(what, on).then(props.onChange);
+
+  return (
+    <main className="viewer-window scroll">
+      <header>
+        <button type="button" className="button back" onClick={props.onBack}>
+          <ChevronLeft size={14} strokeWidth={1.5} aria-hidden />
+          <span>{t("grid.back")}</span>
+        </button>
+        <div className="title">
+          {t("thisMac.title")} · {status.computer}
+        </div>
+        <div className="subtitle">
+          <span className={`state-dot ${status.state}`} aria-hidden /> {statusText(status.state, status.reason)}
+        </div>
+      </header>
+
+      <section>
+        <h2 className="section-head">{t("permission.title")}</h2>
+        <div className="card">
+          <PermissionRow kind="screenRecording" on={status.permissions.screenRecording} />
+          <PermissionRow kind="accessibility" on={status.permissions.accessibility} />
+          {!status.permissions.screenRecording && <div className="hint">{t("permission.restartNote")}</div>}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="section-head">{t("thisMac.sharing")}</h2>
+        <div className="card">
+          <ToggleRow icon={Eye} label={t("menu.allowViewing")} on={link.allowViewing} onChange={(on) => allow("allowViewing", on)} />
+          <ToggleRow
+            icon={MousePointerClick}
+            label={t("menu.allowControl")}
+            on={link.allowControl}
+            disabled={!link.allowViewing}
+            onChange={(on) => allow("allowControl", on)}
+          />
+          {status.viewers.length > 0 && (
+            <div className="hint">{t("status.viewers", { names: status.viewers.join(", ") })}</div>
+          )}
+          <div>
+            <button className="button" disabled={!link.allowViewing} onClick={() => void native.disconnect().then(props.onChange)}>
+              {t("menu.disconnect")}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="section-head">{t("log.title")}</h2>
+        <div className="card">
+          <div className="hint">{t("log.subtitle")}</div>
+          {link.log.length === 0 ? (
+            <div className="hint">{t("log.empty")}</div>
+          ) : (
+            link.log.slice(0, 20).map((entry) => (
+              <div className="log-line" key={`${entry.at}-${entry.peer}-${entry.what}`}>
+                {logLine(entry)}
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="section-head">{t("thisMac.general")}</h2>
+        <div className="card">
+          <ToggleRow icon={Power} label={t("menu.openAtLogin")} on={menu?.openAtLogin ?? false} onChange={() => toggle("login")} />
+          <ToggleRow icon={RefreshCw} label={t("menu.autoUpdate")} on={menu?.autoUpdate ?? false} onChange={() => toggle("autoUpdate")} />
+        </div>
+      </section>
+    </main>
+  );
 }

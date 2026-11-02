@@ -87,6 +87,9 @@
   "grid.subtitle": "{{count}} tietokonetta samassa Tailscale-verkossa, joissa Remote on auki",
   "grid.back": "Kaikki tietokoneet",
   "grid.monitors": "{{count}} näyttöä",
-  "menu.log": "Yhteysloki…",
-  "log.subtitle": "Kuka on katsonut tätä tietokonetta tai klikannut siinä. Kirjoitettua tekstiä ei tallenneta, ja loki katoaa, kun Remote suljetaan."
+  "log.subtitle": "Kuka on katsonut tätä tietokonetta tai klikannut siinä. Kirjoitettua tekstiä ei tallenneta, ja loki katoaa, kun Remote suljetaan.",
+  "thisMac.title": "Tämä Mac",
+  "thisMac.summary": "Oikeudet · Näkyy muille tietokoneille · Yhteysloki · Yleiset",
+  "thisMac.sharing": "Muut tietokoneet",
+  "thisMac.general": "Yleiset"
 }

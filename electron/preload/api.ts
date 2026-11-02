@@ -5,7 +5,6 @@ export type MenuCommand =
   | "allowViewing"
   | "allowControl"
   | "disconnect"
-  | "log"
   | "login"
   | "autoUpdate"
   | "about"

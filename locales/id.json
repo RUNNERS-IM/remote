@@ -87,6 +87,9 @@
   "grid.subtitle": "{{count}} komputer di jaringan Tailscale yang sama dengan Remote terbuka",
   "grid.back": "Semua Komputer",
   "grid.monitors": "{{count}} layar",
-  "menu.log": "Log Koneksi…",
-  "log.subtitle": "Siapa yang melihat atau mengklik komputer ini. Teks yang diketik tidak pernah dicatat, dan log hilang saat Remote ditutup."
+  "log.subtitle": "Siapa yang melihat atau mengklik komputer ini. Teks yang diketik tidak pernah dicatat, dan log hilang saat Remote ditutup.",
+  "thisMac.title": "Mac Ini",
+  "thisMac.summary": "Izin · Terlihat oleh komputer lain · Log koneksi · Umum",
+  "thisMac.sharing": "Komputer Lain",
+  "thisMac.general": "Umum"
 }

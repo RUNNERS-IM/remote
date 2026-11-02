@@ -2,8 +2,7 @@
    1B): 28 outer padding, 24 between boxes, a small grey title 8 above each box, boxes 13/16 inside with radius 12,
    list rows at least 28 tall with 8 between them and 4 between a row's title and its description.
    Colours come from App.css. Why the scoped names: Vite puts every stylesheet into one file for all windows. */
-:root[data-window="viewer"],
-:root[data-window="log"] {
+:root[data-window="viewer"] {
   --window: var(--panel);
   --ok: #34c759;
   --off: #8e8e93;
@@ -12,17 +11,14 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root[data-window="viewer"],
-  :root[data-window="log"] {
+  :root[data-window="viewer"] {
     --ok: #30d158;
     --bad: #ff453a;
   }
 }
 
 :root[data-window="viewer"] body,
-:root[data-window="viewer"] #root,
-:root[data-window="log"] body,
-:root[data-window="log"] #root {
+:root[data-window="viewer"] #root {
   height: 100%;
   background: var(--window);
 }
@@ -245,8 +241,9 @@
   transition: transform 0.15s;
 }
 
+/* Why: on is the Mac's own accent colour (design standard A), #007aff when it cannot be read. */
 .switch input:checked + .knob {
-  background: var(--accent);
+  background: var(--rw-accent, var(--accent));
 }
 
 .switch input:checked + .knob::after {
@@ -254,7 +251,7 @@
 }
 
 .switch input:focus-visible + .knob {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--rw-accent, var(--accent));
   outline-offset: 2px;
 }
 
@@ -421,4 +418,77 @@
 
 .log-list {
   overflow-y: auto;
+}
+
+/* This Mac's line at the bottom of the grid, and its page. */
+.this-mac {
+  font: inherit;
+  color: var(--ink);
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.this-mac:hover {
+  border-color: var(--accent);
+}
+
+.this-mac-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.flip {
+  transform: scaleX(-1);
+  color: var(--sub);
+}
+
+.viewer-window.scroll {
+  overflow-y: auto;
+}
+
+.toggle-row {
+  min-height: 28px;
+  gap: 10px;
+}
+
+.toggle-name {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Why: the same three colours as the dots in the right-click menu; "being viewed" is yellow so it is noticed. */
+.state-dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+
+.state-dot.waiting {
+  background: var(--ok);
+}
+
+.state-dot.viewing {
+  background: #ffcc00;
+}
+
+.watching {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--rw-radius);
+  background: rgba(255, 204, 0, 0.16);
+}
+
+.watching > span:nth-child(2) {
+  flex: 1;
 }

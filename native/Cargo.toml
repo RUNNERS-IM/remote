@@ -1,6 +1,6 @@
 [package]
 name = "remote-native"
-version = "2.6.1030"
+version = "2.6.1102"
 description = "Remote's one native module: display capture, posted input, permission checks and the menu-bar picture"
 authors = ["RUNNERS-IM"]
 license-file = "../LICENSE.md"

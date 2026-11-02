@@ -1,8 +1,8 @@
 // The computer's own Tailscale, which Remote shares instead of joining a network of its own (2026-11-02 decision
 // "one network, Tailscale"). Remote asks its command line one thing, `tailscale status`: this computer's network
 // address and the other computers in the same network, with their addresses. Who is calling is found there by the
-// calling address, the same way Prompt does it (2026-11-02 decision: every computer of the same network is let in,
-// only computers shared in from another network are not).
+// calling address (2026-11-02 decision 「[REMOTE] 누구에게 화면을 보일까」 1A: every computer of the same network is
+// let in, only computers shared in from another network are not).
 //
 // Why the command line and not the local API socket: the socket's place differs between the Homebrew daemon, the Mac
 // App Store app, the standalone Mac app, Windows and Linux, and the command line already knows each of them.
@@ -75,10 +75,11 @@ export type Node = {
   sharedIn: boolean;
 };
 
-/** Who may see and click this computer, and which computers this one lists: the one rule Prompt and Remote share
- *  (2026-11-02 「[PROMPT] 태그 기기 허락 규칙」 1). Every computer of the same Tailscale network is let in (people's
- *  computers, tagged computers and phones); only a computer shared in from another network is not. Whose account a
- *  computer belongs to is not looked at. */
+/** Who may see and click this computer, and which computers this one lists (2026-11-02 「[REMOTE] 누구에게 화면을
+ *  보일까」 1A). Every computer of the same Tailscale network is let in (people's computers, tagged computers and
+ *  phones); only a computer shared in from another network is not. Whose account a computer belongs to is not looked
+ *  at. Why so wide: the computers people watch are mostly office Macs nobody sits at, so a rule that needs someone at
+ *  the Mac would lock them out; the See This and Click and Type switches on each Mac are the next doors. */
 export function trusted(peer: Node): boolean {
   return !peer.sharedIn;
 }
@@ -91,7 +92,7 @@ export function isTailnetAddress(address: string): boolean {
 }
 
 /** The computer at `address` among `status`'s peers if it may come in, or null (not from the network, this computer
- *  itself, not in the network, or shared in). The same checks and order as Prompt's decideTailnetPair. */
+ *  itself, not in the network, or shared in). */
 export function caller(address: string, now: Status): Node | null {
   if (!isTailnetAddress(address)) return null;
   if (now.self?.addresses.includes(address)) return null;

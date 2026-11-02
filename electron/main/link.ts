@@ -5,7 +5,7 @@
 //   - It listens on port 7787 of this computer's Tailscale address only, never on its other network cards, so only
 //     computers in the same Tailscale network can reach it.
 //   - For each connection it finds the calling address in `tailscale status` and turns the request away unless the
-//     caller may come in (tailscale.caller: the same rule as Prompt). The name in the log is the one Tailscale lists
+//     caller may come in (tailscale.caller). The name in the log is the one Tailscale lists
 //     for that address, never one the request brings.
 //   - It reaches other computers on their Tailscale addresses, port 7787.
 //

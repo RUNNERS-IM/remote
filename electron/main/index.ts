@@ -184,6 +184,15 @@ function debugHooks(): void {
   if (which === "viewer") setTimeout(openViewer, 1500);
   // Why: `REMOTE_SHOT=<file.png>` saves the opened window as the app draws it, for the dark and light screenshots
   // asked for before a release, without giving the terminal the screen recording permission.
+  // Why: `REMOTE_CLICK=<css selector>` presses that element in the opened window 3.5 s in, so pages reached by a click
+  // (a computer's page, This Mac) can be captured too.
+  const press = process.env.REMOTE_CLICK;
+  if (press && which) {
+    setTimeout(() => {
+      const window = BrowserWindow.getAllWindows().find((w) => w.isVisible());
+      void window?.webContents.executeJavaScript(`document.querySelector(${JSON.stringify(press)})?.click()`);
+    }, 3500);
+  }
   const shot = process.env.REMOTE_SHOT;
   if (shot && which) {
     setTimeout(() => {

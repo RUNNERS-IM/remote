@@ -5,6 +5,7 @@ export type MenuCommand =
   | "allowViewing"
   | "allowControl"
   | "disconnect"
+  | "log"
   | "login"
   | "autoUpdate"
   | "about"
@@ -130,8 +131,9 @@ export type RemoteApi = {
   disconnect: () => Promise<Link>;
   /** Another computer's name and displays. Rejects with `unreachable`, `off`, or a message. */
   peerInfo: (host: string) => Promise<PeerInfo>;
-  /** One JPEG picture of another computer's display. Rejects with `off`, `permission`, `display` or a message. */
-  peerCapture: (host: string, display: number) => Promise<Uint8Array>;
+  /** One JPEG picture of another computer's display; `width` asks for a narrower one (the grid of all computers).
+   *  Rejects with `off`, `permission`, `display` or a message. */
+  peerCapture: (host: string, display: number, width?: number) => Promise<Uint8Array>;
   /** One click or key into another computer. Rejects with `off`, `control`, `accessibility` or a message. */
   peerInput: (host: string, input: Input) => Promise<void>;
   /** Called with true when the viewer window is shown and false when it is hidden. */

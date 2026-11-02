@@ -15,7 +15,7 @@ import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
 import { createTray, showState } from "./tray";
 import { checkNow, displayVersion, startUpdates } from "./updates";
-import { allowClose, answerUpdate, askUpdate, createPanel, placeUnderTray, showAbout, showViewer, TRANSLUCENT, updateOffer } from "./windows";
+import { allowClose, answerUpdate, askUpdate, createPanel, placeUnderTray, showAbout, showLog, showViewer, TRANSLUCENT, updateOffer } from "./windows";
 
 const ISSUES_URL = "https://github.com/RUNNERS-IM/remote/issues";
 const STATUS_EVERY_MS = 2000;
@@ -97,6 +97,10 @@ function run(command: Command): void {
       break;
     case "disconnect":
       link.disconnect();
+      break;
+    case "log":
+      hidePanel();
+      showLog();
       break;
     case "login":
       login.toggle();
@@ -200,7 +204,9 @@ function registerIpc(): void {
     return link.current();
   });
   ipcMain.handle("remote:peerInfo", (_event, host: string) => link.peerInfo(String(host)));
-  ipcMain.handle("remote:peerCapture", (_event, host: string, display: number) => link.peerCapture(String(host), Number(display)));
+  ipcMain.handle("remote:peerCapture", (_event, host: string, display: number, width?: number) =>
+    link.peerCapture(String(host), Number(display), width === undefined ? undefined : Number(width)),
+  );
   ipcMain.handle("remote:peerInput", (_event, host: string, what: Input) => link.peerInput(String(host), what));
   ipcMain.handle("remote:updateOffer", () => updateOffer());
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
@@ -216,6 +222,7 @@ function debugHooks(): void {
   const which = process.env.REMOTE_OPEN;
   // Why: the tray icon needs a moment before it reports where it sits.
   if (which === "about") setTimeout(showAbout, 1500);
+  if (which === "log") setTimeout(showLog, 1500);
   if (which === "panel") setTimeout(showWithoutFocus, 1500);
   if (which === "viewer") setTimeout(openViewer, 1500);
   // Why: `REMOTE_SHOT=<file.png>` saves the opened window as the app draws it, for the dark and light screenshots

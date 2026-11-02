@@ -11,7 +11,7 @@
 //
 // Why seeing and clicking are separate switches: seeing is what a coworker asks for most ("look at this error"), and
 // clicking is a bigger trust step, so it starts off. Disconnect turns seeing off, which also stops clicking.
-import { app, shell } from "electron";
+import { app, nativeImage, shell } from "electron";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { Socket } from "node:net";
 import type { Allow, Computer, Input, Link, LinkState, LogEntry, PeerInfo } from "../preload/api";
@@ -31,6 +31,9 @@ const INPUT_BODY_MAX = 64 * 1024;
 /** How long a peer that answered (or did not answer) /info is remembered, so the computer list does not ask every
  *  computer in the network at every refresh. */
 const PROBE_MS = 30_000;
+/** Narrowest and widest picture a caller may ask for with `?width=`; the grid asks for small ones. */
+const MIN_WIDTH = 160;
+const MAX_WIDTH = 1280;
 
 let state: LinkState = "starting";
 let error: string | null = null;
@@ -93,6 +96,17 @@ function info(): PeerInfo {
   };
 }
 
+/** The picture made narrower when the caller asks for `?width=` (the grid of all computers shows each screen small,
+ *  and a full picture is about 300 KB). Without it, or when it is not narrower, the picture is sent as taken. */
+function shrink(jpeg: Buffer, asked: string | null): Buffer {
+  const width = Math.round(Number(asked));
+  if (!asked || !Number.isFinite(width)) return jpeg;
+  const image = nativeImage.createFromBuffer(jpeg);
+  const target = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width));
+  if (image.isEmpty() || image.getSize().width <= target) return jpeg;
+  return image.resize({ width: target, quality: "good" }).toJPEG(70);
+}
+
 /** What the input is, for the log; moves are left out so the log shows presses, not every mouse step. */
 function logKind(input: Input): LogEntry["what"] | null {
   if (input.kind === "click") return "click";
@@ -139,7 +153,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     try {
       const jpeg = await native.capture(Number(url.searchParams.get("display")));
       if (status.remoteFrameSent(peer)) note(peer, "view");
-      return reply(res, 200, jpeg, "image/jpeg");
+      return reply(res, 200, shrink(jpeg, url.searchParams.get("width")), "image/jpeg");
     } catch (e) {
       return reply(res, 500, e instanceof Error ? e.message : String(e));
     }
@@ -329,8 +343,9 @@ export async function peerInfo(host: string): Promise<PeerInfo> {
   return (await res.json()) as PeerInfo;
 }
 
-export async function peerCapture(host: string, display: number): Promise<Buffer> {
-  const res = await ask(host, `/frame?display=${Number(display)}`);
+export async function peerCapture(host: string, display: number, width?: number): Promise<Buffer> {
+  const size = width ? `&width=${Math.round(width)}` : "";
+  const res = await ask(host, `/frame?display=${Number(display)}${size}`);
   if (!res.ok) throw await failure(res);
   return Buffer.from(await res.arrayBuffer());
 }

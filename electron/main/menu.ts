@@ -57,6 +57,7 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
       ? [
           line("allowViewing", "menu.allowViewing", box(state.allowViewing)),
           line("allowControl", "menu.allowControl", box(state.allowControl)),
+          line("log", "menu.log", "history"),
           separator(),
         ]
       : []),

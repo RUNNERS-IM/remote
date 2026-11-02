@@ -17,7 +17,7 @@ const GAP = 4;
 /** Whether the OS blurs what is behind the panel; the page draws a solid background when it does not. */
 export const TRANSLUCENT = process.platform === "darwin" || process.platform === "win32";
 
-function load(window: BrowserWindow, page: "panel" | "viewer" | "about" | "update"): void {
+function load(window: BrowserWindow, page: "panel" | "viewer" | "about" | "update" | "log"): void {
   if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}#${page}`);
   else void window.loadFile(join(__dirname, "../renderer/index.html"), { hash: page });
 }
@@ -120,6 +120,46 @@ export function showAbout(): void {
     about = null;
   });
   load(about, "about");
+}
+
+const LOG_WIDTH = 440;
+const LOG_HEIGHT = 420;
+
+let logWindow: BrowserWindow | null = null;
+
+/** The connection log of this computer (who looked or clicked, and when), from the panel's "Connection Log…" line
+ *  (decision 「[REMOTE] 모든 컴퓨터 한눈에」 2A: this computer is no longer a tab of the viewer). */
+export function showLog(): void {
+  if (logWindow && !logWindow.isDestroyed()) {
+    logWindow.show();
+    logWindow.focus();
+    return;
+  }
+  logWindow = new BrowserWindow({
+    width: LOG_WIDTH,
+    height: LOG_HEIGHT,
+    minWidth: 360,
+    minHeight: 240,
+    show: false,
+    minimizable: false,
+    fullscreenable: false,
+    title: t("log.title"),
+    autoHideMenuBar: true,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1e1e1e" : "#ececec",
+    webPreferences: { preload, sandbox: true, contextIsolation: true },
+  });
+  logWindow.setMenu(null);
+  logWindow.on("page-title-updated", (event) => event.preventDefault());
+  logWindow.once("ready-to-show", () => {
+    logWindow?.center();
+    logWindow?.show();
+    // Why: Remote has no Dock icon, so without focus the window can open behind the app in front.
+    logWindow?.focus();
+  });
+  logWindow.on("closed", () => {
+    logWindow = null;
+  });
+  load(logWindow, "log");
 }
 
 const VIEWER_WIDTH = 960;

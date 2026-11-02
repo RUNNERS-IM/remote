@@ -28,10 +28,12 @@ const api = () => window.remote;
 
 export type { Allow, Computer, Display, Input, Link, LogEntry, PeerInfo, MenuCommand, MenuState, PermissionKind, Permissions, Status, UpdateOffer };
 
-/** Which window this page is: the tray panel, the viewer window, the About window or the update question. */
-export const page: "panel" | "viewer" | "about" | "update" =
+/** Which window this page is: the tray panel, the viewer window, the About window, the update question or the log. */
+export const page: "panel" | "viewer" | "about" | "update" | "log" =
   location.hash === "#about"
     ? "about"
+    : location.hash === "#log"
+      ? "log"
     : location.hash === "#viewer"
       ? "viewer"
       : location.hash === "#update"
@@ -49,7 +51,7 @@ export const openLinkLogin = () => api().openLinkLogin();
 export const setAllow = (what: Allow, on: boolean) => api().setAllow(what, on);
 export const disconnect = () => api().disconnect();
 export const peerInfo = (host: string) => api().peerInfo(host);
-export const peerCapture = (host: string, display: number) => api().peerCapture(host, display);
+export const peerCapture = (host: string, display: number, width?: number) => api().peerCapture(host, display, width);
 export const peerInput = (host: string, input: Input) => api().peerInput(host, input);
 export const onViewerVisible = (listener: (visible: boolean) => void) => api().onViewerVisible(listener);
 export const fitHeight = (height: number) => api().fitHeight(height);

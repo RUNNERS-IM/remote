@@ -2,7 +2,8 @@
    1B): 28 outer padding, 24 between boxes, a small grey title 8 above each box, boxes 13/16 inside with radius 12,
    list rows at least 28 tall with 8 between them and 4 between a row's title and its description.
    Colours come from App.css. Why the scoped names: Vite puts every stylesheet into one file for all windows. */
-:root[data-window="viewer"] {
+:root[data-window="viewer"],
+:root[data-window="log"] {
   --window: var(--panel);
   --ok: #34c759;
   --off: #8e8e93;
@@ -11,14 +12,17 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root[data-window="viewer"] {
+  :root[data-window="viewer"],
+  :root[data-window="log"] {
     --ok: #30d158;
     --bad: #ff453a;
   }
 }
 
 :root[data-window="viewer"] body,
-:root[data-window="viewer"] #root {
+:root[data-window="viewer"] #root,
+:root[data-window="log"] body,
+:root[data-window="log"] #root {
   height: 100%;
   background: var(--window);
 }
@@ -336,4 +340,85 @@
 .screen-box:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* The grid of all computers (decision 「[REMOTE] 모든 컴퓨터 한눈에」 1A): tiles at least 200 wide, as many per row as
+   fit, each a box like the others with the screen at the display's usual 16:10 and the name under it. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  align-content: start;
+  overflow-y: auto;
+}
+
+.tile {
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  padding: 8px;
+  border-radius: var(--rw-radius);
+  border: 0.5px solid var(--line);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.tile:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.tile:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.tile-screen {
+  aspect-ratio: 16 / 10;
+  border-radius: var(--rw-small-radius);
+  background: var(--screen);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-screen img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tile-screen .empty {
+  color: #c7c7cc;
+  font-size: 11px;
+  text-align: center;
+  padding: 8px;
+}
+
+.tile-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tile-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.log-list {
+  overflow-y: auto;
 }

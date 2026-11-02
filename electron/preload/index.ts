@@ -14,7 +14,7 @@ const api: RemoteApi = {
   setAllow: (what, on) => ipcRenderer.invoke("remote:setAllow", what, on),
   disconnect: () => ipcRenderer.invoke("remote:disconnect"),
   peerInfo: (host) => ipcRenderer.invoke("remote:peerInfo", host),
-  peerCapture: (host, display) => ipcRenderer.invoke("remote:peerCapture", host, display),
+  peerCapture: (host, display, width) => ipcRenderer.invoke("remote:peerCapture", host, display, width),
   peerInput: (host, input) => ipcRenderer.invoke("remote:peerInput", host, input),
   onViewerVisible: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, visible: boolean) => listener(visible);

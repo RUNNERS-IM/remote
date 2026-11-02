@@ -1,15 +1,16 @@
-// The viewer window ("Open Remote"): a tab per computer (this one first, then the office computers the connection
-// knows), a tab per display of the chosen computer, its screen about five times a second, and the Send Clicks switch.
-// On this computer it also shows the two permissions and who has looked at it (the connection log); on another
-// computer, keys typed while the screen is focused and the text box below it go there too.
-// Pictures of this computer taken here never count as "being viewed" (electron/main/status.ts). On Windows and Linux
-// it says Remote works on macOS only for now.
+// The viewer window ("Open Remote"), decision 「[REMOTE] 모든 컴퓨터 한눈에」 1A 2A:
+//   - First, every computer in the same Tailscale network that has Remote open, as a grid. Each tile shows a small
+//     picture of that computer's main display, new every two seconds, or why it cannot be seen.
+//   - Pressing a tile opens that computer: a tab per display, its screen about five times a second, the Send Clicks
+//     switch, and keys and text going there. "All Computers" goes back.
+// This computer is not in the window: its permissions, the two Allow switches, Disconnect and the connection log are
+// in the menu bar panel (Panel.tsx, Log.tsx). On Windows and Linux it says Remote works on macOS only for now.
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { Laptop, Monitor } from "lucide-react";
+import { ChevronLeft, Monitor } from "lucide-react";
 import { t } from "./i18n";
 import { keyInput } from "./keys";
 import * as native from "./native";
-import type { Display, Input, Link, LogEntry, PeerInfo, PermissionKind, Status } from "./native";
+import type { Computer, Display, Input, Link, PeerInfo, Status } from "./native";
 import "./App.css";
 import "./runners-window.css";
 import "./Viewer.css";
@@ -18,17 +19,24 @@ import "./Viewer.css";
 const FRAME_MS = 200;
 const RETRY_MS = 1000;
 const STATUS_EVERY_MS = 2000;
-const LOG_LINES = 5;
-
-/** The tab for this computer; every other tab is a network name. */
-const HERE = "";
+/** How often each tile of the grid gets a new picture, and how wide that picture is asked for (twice the tile). */
+const TILE_MS = 2000;
+const TILE_WIDTH = 480;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Turns the short error codes from the native module or another computer into a sentence. */
-function captureError(error: unknown, here: boolean): string {
+/** Why another computer cannot be seen right now, from what it says about itself, or null when it can. */
+function peerProblem(info: PeerInfo): string | null {
+  if (info.viewing) return null;
+  if (info.reason === "screenRecording") return t("peer.noPermission");
+  if (info.reason === "platform") return t("status.note.platform");
+  return t("peer.off");
+}
+
+/** Turns the short error codes from another computer into a sentence. */
+function captureError(error: unknown): string {
   const code = native.errorCode(error);
-  if (code === "permission") return here ? t("view.noPermission") : t("peer.noPermission");
+  if (code === "permission") return t("peer.noPermission");
   if (code === "display") return t("view.noDisplay");
   if (code === "unsupported") return t("status.note.platform");
   if (code === "off") return t("peer.off");
@@ -36,9 +44,9 @@ function captureError(error: unknown, here: boolean): string {
   return t("view.failed", { error: code });
 }
 
-function inputError(error: unknown, here: boolean): string {
+function inputError(error: unknown): string {
   const code = native.errorCode(error);
-  if (code === "accessibility") return here ? t("clickTest.needAccessibility") : t("peer.noAccessibility");
+  if (code === "accessibility") return t("peer.noAccessibility");
   if (code === "control") return t("peer.noControl");
   if (code === "off") return t("peer.off");
   if (code === "unreachable") return t("peer.unreachable");
@@ -49,68 +57,31 @@ function displayLabel(display: Display, index: number): string {
   return display.name || t("display.fallback", { n: index + 1 });
 }
 
-function logLine(entry: LogEntry): string {
-  const time = new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return `${time}  ${t(`log.${entry.what}`, { peer: entry.peer })}`;
+/** Keeps one object URL for the latest picture, freeing the one before. */
+function usePicture(): [string | null, (bytes: Uint8Array | null) => void] {
+  const [url, setUrl] = useState<string | null>(null);
+  const current = useRef<string | null>(null);
+  const set = useCallback((bytes: Uint8Array | null) => {
+    const next = bytes ? URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "image/jpeg" })) : null;
+    if (current.current) URL.revokeObjectURL(current.current);
+    current.current = next;
+    setUrl(next);
+  }, []);
+  useEffect(() => () => {
+    if (current.current) URL.revokeObjectURL(current.current);
+  }, []);
+  return [url, set];
 }
 
 export default function Viewer() {
   const [status, setStatus] = useState<Status | null>(null);
   const [link, setLink] = useState<Link | null>(null);
-  const [computer, setComputer] = useState(HERE);
-  const [peer, setPeer] = useState<PeerInfo | null>(null);
-  const [displays, setDisplays] = useState<Display[]>([]);
-  const [chosen, setChosen] = useState<number | null>(null);
-  const [frame, setFrame] = useState<string | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
-  const [fps, setFps] = useState(0);
   const [visible, setVisible] = useState(true);
-  const [sendClicks, setSendClicks] = useState(false);
-  const [clickError, setClickError] = useState<string | null>(null);
-  const [text, setText] = useState("");
-  const frameUrl = useRef<string | null>(null);
-  /** A click is on its way; presses meanwhile are dropped so one press never sends two clicks. */
-  const sending = useRef(false);
-  const here = computer === HERE;
+  /** The computer opened from the grid, or null for the grid. */
+  const [computer, setComputer] = useState<string | null>(null);
 
-  const loadDisplays = useCallback(async () => {
-    let list: Display[] = [];
-    if (here) {
-      list = await native.displays();
-      setPeer(null);
-    } else {
-      try {
-        const info = await native.peerInfo(computer);
-        setPeer(info);
-        list = info.displays;
-        setProblem(info.viewing ? null : t("peer.off"));
-      } catch (error) {
-        setPeer(null);
-        setProblem(captureError(error, false));
-      }
-    }
-    setDisplays(list);
-    setChosen((current) => (current !== null && list.some((d) => d.id === current) ? current : (list[0]?.id ?? null)));
-  }, [here, computer]);
-
-  useEffect(() => {
-    setDisplays([]);
-    setChosen(null);
-    setSendClicks(false);
-    void loadDisplays();
-  }, [loadDisplays]);
-
-  // Why: closing the window only hides it, so these events stop and restart the pictures.
-  useEffect(
-    () =>
-      native.onViewerVisible((shown) => {
-        setVisible(shown);
-        if (shown) void loadDisplays();
-        // Why: the main process turns sending off when the window hides; the switch shows the same.
-        else setSendClicks(false);
-      }),
-    [loadDisplays],
-  );
+  // Why: closing the window only hides it, so pictures stop while it is hidden and start again when shown.
+  useEffect(() => native.onViewerVisible(setVisible), []);
 
   useEffect(() => {
     if (!visible) return;
@@ -124,101 +95,8 @@ export default function Viewer() {
   }, [visible]);
 
   const supported = status?.supported ?? true;
-  const peerViewable = here || (peer?.viewing ?? false);
-
-  // The picture loop: one capture at a time, then a short wait, so a slow capture never piles up requests.
-  useEffect(() => {
-    if (!visible || !supported || chosen === null || !peerViewable) return;
-    let running = true;
-    const times: number[] = [];
-    setFrame(null);
-    setProblem(null);
-    void (async () => {
-      while (running) {
-        const started = performance.now();
-        try {
-          const bytes = here ? await native.capture(chosen) : await native.peerCapture(computer, chosen);
-          if (!running) break;
-          const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "image/jpeg" }));
-          if (frameUrl.current) URL.revokeObjectURL(frameUrl.current);
-          frameUrl.current = url;
-          setFrame(url);
-          setProblem(null);
-          times.push(performance.now());
-          while (times.length > 0 && times[0] < performance.now() - 2000) times.shift();
-          setFps(Math.round(times.length / 2));
-          await wait(Math.max(0, FRAME_MS - (performance.now() - started)));
-        } catch (error) {
-          if (!running) break;
-          setProblem(captureError(error, here));
-          setFps(0);
-          await wait(RETRY_MS);
-        }
-      }
-    })();
-    return () => {
-      running = false;
-    };
-  }, [visible, supported, chosen, here, computer, peerViewable]);
-
-  useEffect(() => {
-    // Why: the switch on this computer guards clicks into this computer; clicks to another one are guarded there.
-    if (here) void native.setSendClicks(sendClicks);
-    else void native.setSendClicks(false);
-    setClickError(null);
-  }, [sendClicks, here]);
-
-  const send = (input: Input) => {
-    if (here) return Promise.reject(new Error("off"));
-    return native.peerInput(computer, input);
-  };
-
-  const sendClick = (event: MouseEvent<HTMLImageElement>) => {
-    if (!sendClicks || chosen === null || sending.current) return;
-    // Why: the picture is drawn at exactly its own box, so the spot inside the box is the spot on the display.
-    const box = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - box.left) / box.width;
-    const y = (event.clientY - box.top) / box.height;
-    const click: Input = { kind: "click", display: chosen, x, y, button: "left", count: 1 };
-    sending.current = true;
-    (here
-      ? // Why: where the press was on the screen, so the app can tell its own click landing on this picture again.
-        native.sendInput(click, { x: event.screenX, y: event.screenY }).then(() => undefined)
-      : send(click)
-    )
-      .then(() => setClickError(null))
-      .catch((error) => setClickError(inputError(error, here)))
-      .finally(() => {
-        sending.current = false;
-      });
-  };
-
-  // Why: keys typed on this computer's own picture would land in this window again, so typing goes to others only.
-  const sendKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (here || !sendClicks) return;
-    const input = keyInput(event.nativeEvent);
-    if (!input) return;
-    event.preventDefault();
-    send(input)
-      .then(() => setClickError(null))
-      .catch((error) => setClickError(inputError(error, false)));
-  };
-
-  const sendText = (event: FormEvent) => {
-    event.preventDefault();
-    if (!text) return;
-    send({ kind: "text", text })
-      .then(() => {
-        setText("");
-        setClickError(null);
-      })
-      .catch((error) => setClickError(inputError(error, false)));
-  };
-
-  const display = displays.find((d) => d.id === chosen);
-  const canClick = here ? (status?.permissions.accessibility ?? false) : (peer?.control ?? false);
-  const others = link?.computers ?? [];
-  const title = here ? status?.computer : (others.find((c) => c.host === computer)?.name ?? computer);
+  const computers = link?.computers ?? [];
+  const opened = computers.find((c) => c.host === computer);
 
   if (!supported) {
     return (
@@ -233,59 +111,217 @@ export default function Viewer() {
     );
   }
 
+  if (computer !== null) {
+    return (
+      <Detail
+        host={computer}
+        name={opened?.name ?? computer}
+        visible={visible}
+        onBack={() => setComputer(null)}
+      />
+    );
+  }
+
   return (
     <main className="viewer-window">
       <header>
-        <div className="title">{title}</div>
-        <div className="subtitle">{here ? t("window.subtitle") : t("window.subtitlePeer")}</div>
+        <div className="title">{t("grid.title")}</div>
+        <div className="subtitle">{t("grid.subtitle", { count: computers.length })}</div>
       </header>
-
-      <section>
-        <h2 className="section-head">{t("computer.title")}</h2>
-        <div className="tabs" role="tablist" aria-label={t("computer.title")}>
-          <button
-            role="tab"
-            aria-selected={here}
-            className={here ? "tab chosen" : "tab"}
-            onClick={() => setComputer(HERE)}
-          >
-            <Laptop size={14} strokeWidth={1.5} />
-            <span>{t("computer.this")}</span>
-          </button>
-          {others.map((c) => (
-            <button
-              key={c.host}
-              role="tab"
-              aria-selected={c.host === computer}
-              className={c.host === computer ? "tab chosen" : "tab"}
-              disabled={!c.online}
-              onClick={() => setComputer(c.host)}
-            >
-              <Laptop size={14} strokeWidth={1.5} />
-              <span>{c.name}</span>
-              {!c.online && <span className="tab-badge">{t("computer.offline")}</span>}
-            </button>
+      <LinkNote link={link} />
+      {computers.length > 0 && (
+        <section className="grid" aria-label={t("grid.title")}>
+          {computers.map((c) => (
+            <Tile key={c.host} computer={c} visible={visible} onOpen={() => setComputer(c.host)} />
           ))}
-        </div>
-        <LinkNote link={link} />
-      </section>
-
-      {here && (
-        <section>
-          <h2 className="section-head">{t("permission.title")}</h2>
-          <div className="card">
-            <PermissionRow
-              kind="screenRecording"
-              note={t("permission.screenRecordingNote")}
-              on={status?.permissions.screenRecording}
-            />
-            <PermissionRow kind="accessibility" note={t("permission.accessibilityNote")} on={status?.permissions.accessibility} />
-            {status && !status.permissions.screenRecording && <div className="hint">{t("permission.restartNote")}</div>}
-          </div>
         </section>
       )}
+    </main>
+  );
+}
 
-      {here && link && link.state === "running" && <ConnectionLog link={link} />}
+/** One computer in the grid: a small picture of its main display, its name, and a word when it cannot be seen. */
+function Tile({ computer, visible, onOpen }: { computer: Computer; visible: boolean; onOpen: () => void }) {
+  const [info, setInfo] = useState<PeerInfo | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [picture, setPicture] = usePicture();
+
+  useEffect(() => {
+    if (!visible || !computer.online) return;
+    let running = true;
+    void (async () => {
+      while (running) {
+        try {
+          const now = await native.peerInfo(computer.host);
+          if (!running) break;
+          setInfo(now);
+          const why = peerProblem(now);
+          const main = now.displays.find((d) => d.main) ?? now.displays[0];
+          if (why || !main) {
+            setProblem(why ?? t("view.noDisplay"));
+            setPicture(null);
+          } else {
+            const bytes = await native.peerCapture(computer.host, main.id, TILE_WIDTH);
+            if (!running) break;
+            setPicture(bytes);
+            setProblem(null);
+          }
+        } catch (error) {
+          if (!running) break;
+          setProblem(captureError(error));
+          setPicture(null);
+        }
+        await wait(TILE_MS);
+      }
+    })();
+    return () => {
+      running = false;
+    };
+  }, [visible, computer.host, computer.online, setPicture]);
+
+  const shown = computer.online ? problem : t("computer.offline");
+  const monitors = info?.displays.length ?? 0;
+  return (
+    <button type="button" className="tile" disabled={!computer.online} onClick={onOpen}>
+      <div className="tile-screen">
+        {picture && !shown ? (
+          <img src={picture} alt="" draggable={false} />
+        ) : (
+          <div className="empty">{shown ?? t("view.loading")}</div>
+        )}
+      </div>
+      <div className="tile-label">
+        <span className="tile-name">{computer.name}</span>
+        {monitors > 1 && <span className="tab-badge">{t("grid.monitors", { count: monitors })}</span>}
+      </div>
+    </button>
+  );
+}
+
+/** One computer opened from the grid: its displays as tabs, the screen, and sending clicks, keys and text. */
+function Detail({ host, name, visible, onBack }: { host: string; name: string; visible: boolean; onBack: () => void }) {
+  const [peer, setPeer] = useState<PeerInfo | null>(null);
+  const [displays, setDisplays] = useState<Display[]>([]);
+  const [chosen, setChosen] = useState<number | null>(null);
+  const [frame, setFrame] = usePicture();
+  const [problem, setProblem] = useState<string | null>(null);
+  const [fps, setFps] = useState(0);
+  const [sendClicks, setSendClicks] = useState(false);
+  const [clickError, setClickError] = useState<string | null>(null);
+  const [text, setText] = useState("");
+  /** A click is on its way; presses meanwhile are dropped so one press never sends two clicks. */
+  const sending = useRef(false);
+
+  const loadDisplays = useCallback(async () => {
+    let list: Display[] = [];
+    try {
+      const info = await native.peerInfo(host);
+      setPeer(info);
+      list = info.displays;
+      setProblem(peerProblem(info));
+    } catch (error) {
+      setPeer(null);
+      setProblem(captureError(error));
+    }
+    setDisplays(list);
+    setChosen((current) => (current !== null && list.some((d) => d.id === current) ? current : (list[0]?.id ?? null)));
+  }, [host]);
+
+  useEffect(() => {
+    if (!visible) {
+      // Why: the main process turns sending off when the window hides; the switch shows the same.
+      setSendClicks(false);
+      return;
+    }
+    void loadDisplays();
+  }, [visible, loadDisplays]);
+
+  const viewable = peer?.viewing ?? false;
+
+  // The picture loop: one capture at a time, then a short wait, so a slow capture never piles up requests.
+  useEffect(() => {
+    if (!visible || chosen === null || !viewable) return;
+    let running = true;
+    const times: number[] = [];
+    setFrame(null);
+    void (async () => {
+      while (running) {
+        const started = performance.now();
+        try {
+          const bytes = await native.peerCapture(host, chosen);
+          if (!running) break;
+          setFrame(bytes);
+          setProblem(null);
+          times.push(performance.now());
+          while (times.length > 0 && times[0] < performance.now() - 2000) times.shift();
+          setFps(Math.round(times.length / 2));
+          await wait(Math.max(0, FRAME_MS - (performance.now() - started)));
+        } catch (error) {
+          if (!running) break;
+          setProblem(captureError(error));
+          setFps(0);
+          await wait(RETRY_MS);
+        }
+      }
+    })();
+    return () => {
+      running = false;
+    };
+  }, [visible, chosen, host, viewable, setFrame]);
+
+  useEffect(() => setClickError(null), [sendClicks]);
+
+  const send = (input: Input) => native.peerInput(host, input);
+
+  const sendClick = (event: MouseEvent<HTMLImageElement>) => {
+    if (!sendClicks || chosen === null || sending.current) return;
+    // Why: the picture is drawn at exactly its own box, so the spot inside the box is the spot on the display.
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - box.left) / box.width;
+    const y = (event.clientY - box.top) / box.height;
+    sending.current = true;
+    send({ kind: "click", display: chosen, x, y, button: "left", count: 1 })
+      .then(() => setClickError(null))
+      .catch((error) => setClickError(inputError(error)))
+      .finally(() => {
+        sending.current = false;
+      });
+  };
+
+  const sendKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!sendClicks) return;
+    const input = keyInput(event.nativeEvent);
+    if (!input) return;
+    event.preventDefault();
+    send(input)
+      .then(() => setClickError(null))
+      .catch((error) => setClickError(inputError(error)));
+  };
+
+  const sendText = (event: FormEvent) => {
+    event.preventDefault();
+    if (!text) return;
+    send({ kind: "text", text })
+      .then(() => {
+        setText("");
+        setClickError(null);
+      })
+      .catch((error) => setClickError(inputError(error)));
+  };
+
+  const display = displays.find((d) => d.id === chosen);
+  const canClick = peer?.control ?? false;
+
+  return (
+    <main className="viewer-window">
+      <header>
+        <button type="button" className="button back" onClick={onBack}>
+          <ChevronLeft size={14} strokeWidth={1.5} aria-hidden />
+          <span>{t("grid.back")}</span>
+        </button>
+        <div className="title">{name}</div>
+        <div className="subtitle">{t("window.subtitlePeer")}</div>
+      </header>
 
       <section className="viewer-section">
         <h2 className="section-head">{t("display.title")}</h2>
@@ -305,7 +341,7 @@ export default function Viewer() {
           ))}
         </div>
 
-        <div className="screen-box card" tabIndex={here ? undefined : 0} onKeyDown={sendKey}>
+        <div className="screen-box card" tabIndex={0} onKeyDown={sendKey}>
           {frame && !problem ? (
             <img
               className={sendClicks ? "screen clickable" : "screen"}
@@ -330,15 +366,7 @@ export default function Viewer() {
             <span className="knob" aria-hidden />
             <span className="switch-text">
               <span className="switch-label">{t("clickTest.label")}</span>
-              <span className="hint">
-                {here
-                  ? canClick
-                    ? t("clickTest.note")
-                    : t("clickTest.needAccessibility")
-                  : canClick
-                    ? t("peer.typeNote")
-                    : t("peer.noControl")}
-              </span>
+              <span className="hint">{canClick ? t("peer.typeNote") : t("peer.noControl")}</span>
             </span>
           </label>
           <div className="meta">
@@ -348,7 +376,7 @@ export default function Viewer() {
           </div>
         </div>
 
-        {!here && sendClicks && (
+        {sendClicks && (
           <form className="type-row" onSubmit={sendText}>
             <input
               className="type-box"
@@ -366,7 +394,7 @@ export default function Viewer() {
   );
 }
 
-/** One line under the computer tabs saying why only this computer is listed, or how the connection is doing. */
+/** One line under the title saying how the connection is doing, or why no other computer is listed. */
 function LinkNote({ link }: { link: Link | null }) {
   if (!link) return null;
   if (link.state === "noTailscale") return <div className="hint link-note">{t("link.noTailscale")}</div>;
@@ -381,74 +409,6 @@ function LinkNote({ link }: { link: Link | null }) {
         </button>
       </div>
     );
-  return (
-    <div className="hint link-note">
-      {link.computers.length === 0 ? t("link.empty") : t("link.running", { self: link.self ?? "" })}
-    </div>
-  );
-}
-
-/** Who looked at or clicked this computer lately, newest first, with the two switches and Disconnect. */
-function ConnectionLog({ link }: { link: Link }) {
-  const [now, setNow] = useState(link);
-  useEffect(() => setNow(link), [link]);
-  const lines = now.log.slice(0, LOG_LINES);
-  return (
-    <section>
-      <h2 className="section-head">{t("log.title")}</h2>
-      <div className="card">
-        <div className="log-switches">
-          <label className="switch">
-            <input
-              type="checkbox"
-              checked={now.allowViewing}
-              onChange={(event) => void native.setAllow("allowViewing", event.target.checked).then(setNow)}
-            />
-            <span className="knob" aria-hidden />
-            <span className="switch-label">{t("menu.allowViewing")}</span>
-          </label>
-          <label className={now.allowViewing ? "switch" : "switch disabled"}>
-            <input
-              type="checkbox"
-              checked={now.allowControl}
-              disabled={!now.allowViewing}
-              onChange={(event) => void native.setAllow("allowControl", event.target.checked).then(setNow)}
-            />
-            <span className="knob" aria-hidden />
-            <span className="switch-label">{t("menu.allowControl")}</span>
-          </label>
-          <button className="button" disabled={!now.allowViewing} onClick={() => void native.disconnect().then(setNow)}>
-            {t("menu.disconnect")}
-          </button>
-        </div>
-        {lines.length === 0 ? (
-          <div className="hint">{t("log.empty")}</div>
-        ) : (
-          lines.map((entry) => (
-            <div className="log-line" key={`${entry.at}-${entry.peer}-${entry.what}`}>
-              {logLine(entry)}
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
-
-function PermissionRow(props: { kind: PermissionKind; note: string; on: boolean | undefined }) {
-  return (
-    <div className="permission">
-      <span className={props.on ? "dot on" : "dot off"} aria-hidden />
-      <div className="permission-text">
-        <div>{t(`permission.${props.kind}`)}</div>
-        <div className="hint">{props.note}</div>
-      </div>
-      <span className="state">{props.on ? t("permission.on") : t("permission.off")}</span>
-      {props.on === false && (
-        <button className="button" onClick={() => void native.requestPermission(props.kind)}>
-          {t("permission.allow")}
-        </button>
-      )}
-    </div>
-  );
+  if (link.computers.length === 0) return <div className="hint link-note">{t("link.empty")}</div>;
+  return null;
 }

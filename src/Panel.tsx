@@ -3,7 +3,7 @@
 // Disconnect while someone is looking, Open Remote, the two Allow switches once connected, the two settings,
 // About / Check for Updates… / Help & Feedback, then Quit. The right-click native menu holds the same lines.
 import { useEffect, useRef, useState } from "react";
-import { AppWindow, CircleHelp, Info, RefreshCw, Square, SquareCheck, SquareX, Unplug, type LucideIcon } from "lucide-react";
+import { AppWindow, CircleHelp, History, Info, RefreshCw, Square, SquareCheck, SquareX, Unplug, type LucideIcon } from "lucide-react";
 import { statusText, t } from "./i18n";
 import * as native from "./native";
 import type { MenuCommand, MenuState, PermissionKind, Status } from "./native";
@@ -85,6 +85,7 @@ function Commands({ viewing }: { viewing: boolean }) {
         <>
           {line("allowViewing", state.allowViewing ? SquareCheck : Square, t("menu.allowViewing"))}
           {line("allowControl", state.allowControl ? SquareCheck : Square, t("menu.allowControl"))}
+          {line("log", History, t("menu.log"))}
           <div className="rm-separator" />
         </>
       )}

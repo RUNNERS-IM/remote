@@ -49,7 +49,7 @@
   "link.approve": "Zaloguj się do Tailscale…",
   "link.failed": "Nie udało się połączyć: {{error}}",
   "link.running": "Połączono jako „{{self}}”.",
-  "link.empty": "Żaden inny komputer z tego samego konta Tailscale nie ma jeszcze otwartego Remote.",
+  "link.empty": "Żaden inny komputer w tej samej sieci Tailscale nie ma jeszcze otwartego Remote.",
   "peer.off": "Ten komputer jest teraz ustawiony tak, by nie pokazywać ekranu innym.",
   "peer.unreachable": "Nie można połączyć się z tym komputerem. Może być wyłączony albo Remote nie jest na nim otwarty.",
   "peer.noPermission": "Na tamtym komputerze nagrywanie ekranu jest wyłączone.",

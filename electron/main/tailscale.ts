@@ -1,7 +1,8 @@
 // The computer's own Tailscale, which Remote shares instead of joining a network of its own (2026-11-02 decision
-// "one network, Tailscale"). Remote only asks it two things through its command line:
-//   - status: this computer's network address and the other computers in the same network
-//   - whois: which computer an incoming connection comes from, as the network itself vouches for it
+// "one network, Tailscale"). Remote asks its command line one thing, `tailscale status`: this computer's network
+// address and the other computers in the same network, with their addresses. Who is calling is found there by the
+// calling address, the same way Prompt does it (2026-11-02 decision: every computer of the same network is let in,
+// only computers shared in from another network are not).
 //
 // Why the command line and not the local API socket: the socket's place differs between the Homebrew daemon, the Mac
 // App Store app, the standalone Mac app, Windows and Linux, and the command line already knows each of them.
@@ -46,8 +47,8 @@ function run(args: string[]): Promise<string> {
 /** The parts of `tailscale status --json` Remote reads. */
 type RawNode = {
   HostName: string;
-  UserID: number;
-  Tags?: string[] | null;
+  /** True for a computer another network shared into this one. */
+  ShareeNode?: boolean;
   DNSName: string;
   OS: string;
   Online: boolean;
@@ -58,27 +59,44 @@ type RawStatus = {
   AuthURL: string;
   Self: RawNode | null;
   Peer: Record<string, RawNode> | null;
-  User: Record<string, { LoginName: string }> | null;
 };
 
-/** One computer in the network. `host` is its network name (the first part of its MagicDNS name, `m2-pro-1`), the
- *  same name whois gives, and `address` is the IPv4 address Remote connects to (MagicDNS may be off). */
+/** One computer in the network. `host` is its network name (the first part of its MagicDNS name, `m2-pro-1`). */
 export type Node = {
   name: string;
   host: string;
   os: string;
   online: boolean;
+  /** The IPv4 address Remote connects to (MagicDNS may be off). */
   address: string | null;
-  /** The Tailscale account the computer belongs to (`sun@runners.im`); empty for a tagged computer. */
-  login: string;
-  tags: string[];
+  /** Every Tailscale address of the computer, IPv4 and IPv6, to find a caller by. */
+  addresses: string[];
+  /** Shared in from another Tailscale network. */
+  sharedIn: boolean;
 };
 
 /** Who may see and click this computer, and which computers this one lists: the one rule Prompt and Remote share
- *  (2026-11-02). Today it is "the same Tailscale account as this computer". When the tag question
- *  (「[PROMPT] 태그 기기 허락 규칙」) is answered, the tag goes here and nowhere else. */
-export function trusted(peer: { login: string; tags: string[] }, self: { login: string } | null): boolean {
-  return Boolean(self?.login) && peer.login === self!.login;
+ *  (2026-11-02 「[PROMPT] 태그 기기 허락 규칙」 1). Every computer of the same Tailscale network is let in (people's
+ *  computers, tagged computers and phones); only a computer shared in from another network is not. Whose account a
+ *  computer belongs to is not looked at. */
+export function trusted(peer: Node): boolean {
+  return !peer.sharedIn;
+}
+
+/** Tailscale hands out 100.64.0.0/10 and fd7a:115c:a1e0::/48. Anything else never came over the network. */
+export function isTailnetAddress(address: string): boolean {
+  const v4 = /^100\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(address);
+  if (v4) return Number(v4[1]) >= 64 && Number(v4[1]) <= 127;
+  return address.toLowerCase().startsWith("fd7a:115c:a1e0:");
+}
+
+/** The computer at `address` among `status`'s peers if it may come in, or null (not from the network, this computer
+ *  itself, not in the network, or shared in). The same checks and order as Prompt's decideTailnetPair. */
+export function caller(address: string, now: Status): Node | null {
+  if (!isTailnetAddress(address)) return null;
+  if (now.self?.addresses.includes(address)) return null;
+  const peer = now.peers.find((p) => p.addresses.includes(address));
+  return peer && trusted(peer) ? peer : null;
 }
 
 export type Status = {
@@ -96,10 +114,10 @@ export function hostOf(dnsName: string): string {
   return (dot > 0 ? name.slice(0, dot) : name).toLowerCase();
 }
 
-function node(raw: RawNode, users: RawStatus["User"]): Node {
+function node(raw: RawNode): Node {
   return {
-    login: users?.[String(raw.UserID)]?.LoginName ?? "",
-    tags: raw.Tags ?? [],
+    addresses: raw.TailscaleIPs ?? [],
+    sharedIn: raw.ShareeNode === true,
     name: raw.HostName,
     host: hostOf(raw.DNSName || raw.HostName),
     os: raw.OS,
@@ -110,25 +128,7 @@ function node(raw: RawNode, users: RawStatus["User"]): Node {
 
 export async function status(): Promise<Status> {
   const raw = JSON.parse(await run(["status", "--json"])) as RawStatus;
-  const peers = Object.values(raw.Peer ?? {}).map((p) => node(p, raw.User));
+  const peers = Object.values(raw.Peer ?? {}).map(node);
   peers.sort((a, b) => a.name.localeCompare(b.name));
-  return { state: raw.BackendState, authUrl: raw.AuthURL, self: raw.Self ? node(raw.Self, raw.User) : null, peers };
-}
-
-/** The computer behind `address:port` (a connection's far end), or null when the network does not know it. Why the
- *  network and never the request: a request could claim any name. */
-export async function whois(address: string, port: number): Promise<{ host: string; login: string; tags: string[] } | null> {
-  try {
-    const raw = JSON.parse(await run(["whois", "--json", `${address}:${port}`])) as {
-      Node?: { Name?: string; Tags?: string[] | null };
-      UserProfile?: { LoginName?: string };
-    };
-    if (!raw.Node?.Name) return null;
-    const tags = raw.Node.Tags ?? [];
-    // Why: Tailscale shows a tagged computer's owner as "tagged-devices", which is no one's account.
-    const login = tags.length ? "" : (raw.UserProfile?.LoginName ?? "");
-    return { host: hostOf(raw.Node.Name), login, tags };
-  } catch {
-    return null;
-  }
+  return { state: raw.BackendState, authUrl: raw.AuthURL, self: raw.Self ? node(raw.Self) : null, peers };
 }

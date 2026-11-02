@@ -49,7 +49,7 @@
   "link.approve": "Log In to Tailscale…",
   "link.failed": "Could not connect: {{error}}",
   "link.running": "Connected as “{{self}}”.",
-  "link.empty": "No other computer on the same Tailscale account has Remote open yet.",
+  "link.empty": "No other computer in the same Tailscale network has Remote open yet.",
   "peer.off": "This computer is set not to show its screen to other computers right now.",
   "peer.unreachable": "Could not reach this computer. It may be off, or Remote may not be open on it.",
   "peer.noPermission": "Screen Recording is off on that computer.",

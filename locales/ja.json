@@ -49,7 +49,7 @@
   "link.approve": "Tailscaleにログイン…",
   "link.failed": "接続できませんでした: {{error}}",
   "link.running": "「{{self}}」として接続しています。",
-  "link.empty": "同じTailscaleアカウントでRemoteを開いているほかのコンピュータはまだありません。",
+  "link.empty": "同じTailscaleネットワークでRemoteを開いているほかのコンピュータはまだありません。",
   "peer.off": "このコンピュータは現在、ほかのコンピュータに画面を見せない設定です。",
   "peer.unreachable": "このコンピュータに接続できません。電源が切れているか、Remote が開いていない可能性があります。",
   "peer.noPermission": "そのコンピュータで画面収録がオフになっています。",

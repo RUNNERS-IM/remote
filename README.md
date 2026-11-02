@@ -6,7 +6,7 @@ See the screens of the other computers in your office, one monitor at a time, an
 
 Remote is made by RUNNERS-IM for the computers in our office. It is written with [Electron](https://www.electronjs.org) and one Rust native module, like Monitor.
 
-**Remote is in early development.** The first release is 2.6.1102 ([Releases](https://github.com/RUNNERS-IM/remote/releases)). Connecting computers needs both of them in Tailscale under the same Tailscale account; until then, Remote shows only the computer it runs on.
+**Remote is in early development.** The first release is 2.6.1102 ([Releases](https://github.com/RUNNERS-IM/remote/releases)). Connecting computers needs both of them in the same Tailscale network (tailnet); until then, Remote shows only the computer it runs on.
 
 ## What works now
 
@@ -17,7 +17,7 @@ Remote is made by RUNNERS-IM for the computers in our office. It is written with
   - **Screen Recording**, to take pictures of the screen
   - **Accessibility**, to send clicks and keystrokes
 - Clicks are posted with CGEvent, at positions mapped to the chosen display. In the window this is behind a switch labelled **Send Clicks**, which is off at launch and turns off again when the window closes. While it is off, clicking the picture does nothing.
-- **Other computers** (stages 2 and 3): Remote shares the Tailscale already on the computer (`electron/main/tailscale.ts`). Every computer on the same Tailscale account that has Remote open gets a tab in the Remote window; choosing one shows its monitors and screen the same way, and with **Send Clicks** on, clicking the picture clicks there and keys typed after clicking go there (a text box sends Korean and other composed text). Remote listens only on port 7787 of this computer's Tailscale address, asks `tailscale whois` which computer each connection comes from, and answers only computers of the same Tailscale account. The names in the connection log are the ones Tailscale vouches for.
+- **Other computers** (stages 2 and 3): Remote shares the Tailscale already on the computer (`electron/main/tailscale.ts`). Every computer in the same Tailscale network that has Remote open gets a tab in the Remote window; choosing one shows its monitors and screen the same way, and with **Send Clicks** on, clicking the picture clicks there and keys typed after clicking go there (a text box sends Korean and other composed text). Remote listens only on port 7787 of this computer's Tailscale address, finds each calling address in `tailscale status`, and answers only computers of the same network: people's computers, tagged computers and phones alike; only computers shared in from another network are turned away (the same rule as Prompt). The names in the connection log are the ones Tailscale vouches for.
 - **Tailscale**: without Tailscale, a line under the computer tabs says so; when Tailscale needs a login, a **Log In to Tailscale…** button shows. Remote finds the `tailscale` command of the Homebrew build (`/opt/homebrew/bin/tailscale`), the Mac app, and the Windows and Linux builds.
 - On the computer being looked at: **Let Other Computers See This** (on by default) and **Let Other Computers Click and Type** (off by default) in the panel and the menu, the yellow **Being Viewed** state with who is looking, **Disconnect Now**, which turns seeing off at once, and a connection log in the Remote window (who started viewing, clicked, pressed keys or typed; never what was typed).
 - **Claude** (stage 4): `resources/mcp/remote-mcp.mjs` is an MCP server with six tools: `remote_computers`, `remote_displays`, `remote_screenshot`, `remote_click`, `remote_type`, `remote_key`. Looking needs no approval (the other computer's switch decides). Clicking and typing follow the allow list: in an app on it Claude acts at once; in any other app a person at the computer Claude runs on approves first and can add the app to the list; in a macOS security window (password prompts, System Settings) a person approves every time. Claude cannot click a computer whose **Click and Type** switch is off, and nobody is asked in that case.
@@ -58,7 +58,7 @@ For an Intel Mac build on Apple silicon, also run `pnpm native --target x86_64-a
 
 - `electron/main/` is the main process (tray, panel, viewer and About windows, status, updates), `electron/preload/` the bridge the page talks through, `src/` the panel, viewer and About pages.
 - `native/` is the one native module (napi-rs): display capture, posted clicks, the app in front, permission checks and the tray picture.
-- `electron/main/tailscale.ts` asks the computer's `tailscale` command for the network and for who is calling, and keeps the one rule for whom to answer (`trusted`). `electron/main/link.ts` serves other computers and asks them; `electron/main/claude.ts` serves the MCP script.
+- `electron/main/tailscale.ts` asks the computer's `tailscale` command for the network, and keeps the one rule for whom to answer (`trusted`). `electron/main/link.ts` serves other computers and asks them; `electron/main/claude.ts` serves the MCP script.
 - Screen text lives in `locales/`, with `ko.json` as the source; the page and the main process read the same files.
 - Debug runs take `REMOTE_OPEN=panel|viewer|about` `REMOTE_THEME=dark|light`, and `REMOTE_SHOT=<file.png>` to save the opened window as a picture. A packaged app ignores them.
 

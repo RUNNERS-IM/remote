@@ -29,15 +29,15 @@ Automatically** stops the daily check. Choosing **Check for Updates…** does th
 ### Office connection
 
 Remote does not join a network of its own. It uses the Tailscale already on the computer: it asks the `tailscale`
-command for this computer's network address and the other computers in the same network, and, for each connection,
-which computer it comes from. Remote sends nothing to Tailscale itself; what Tailscale collects is in Tailscale's own
+command for this computer's network address and the other computers in the same network, , and finds each incoming
+connection's computer in that list. Remote sends nothing to Tailscale itself; what Tailscale collects is in Tailscale's own
 privacy policy. Screens, clicks and keys go directly between the two computers through Tailscale, encrypted
 (WireGuard), or through Tailscale's encrypted relay when a direct path is not possible.
 
 - Another computer in the network sees this one only while **Let Other Computers See This** is on, and can click and
   type only while **Let Other Computers Click and Type** is also on. **Disconnect Now** turns seeing off at once.
 - Remote listens only on the Tailscale address, so computers outside that network cannot reach it, and it answers
-  only computers of the same Tailscale account.
+  only computers of the same network (not ones shared in from another network).
 - The connection log (who viewed, clicked or typed, and when; never the text typed) stays in memory on this computer
   and is gone when Remote quits.
 - Pictures sent to another computer are not saved on either computer.
@@ -84,14 +84,14 @@ Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연
 ### 사무실 연결
 
 Remote 는 따로 망에 들어가지 않고, 컴퓨터에 이미 깔린 Tailscale 을 같이 씁니다. `tailscale` 명령에 이 컴퓨터의 망
-주소와 같은 망의 다른 컴퓨터를 묻고, 연결이 들어올 때마다 어느 컴퓨터에서 왔는지 묻습니다. Remote 가 Tailscale 에 따로
+주소와 같은 망의 다른 컴퓨터를 묻고, 연결이 들어오면 그 목록에서 어느 컴퓨터인지 찾습니다. Remote 가 Tailscale 에 따로
 보내는 것은 없습니다. Tailscale 이 모으는 것은 Tailscale 의 개인정보 처리방침에 있습니다. 화면 · 클릭 · 키는 Tailscale 을
 통해 두 컴퓨터 사이를 암호화(WireGuard)해 바로 오가며, 바로 갈 길이 없을 때만 Tailscale 의 암호화된 중계 서버를 거칩니다.
 
 - 같은 망의 다른 컴퓨터는 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 이 컴퓨터를 보고, **다른 컴퓨터의 클릭 ·
   키 입력 허용** 까지 켜져 있을 때만 클릭 · 입력합니다. **지금 끊기** 는 보기를 바로 끕니다.
-- Remote 는 Tailscale 주소에서만 연결을 받으므로 그 망 밖의 컴퓨터는 닿을 수 없고, 같은 Tailscale 계정의 컴퓨터에만
-  답합니다.
+- Remote 는 Tailscale 주소에서만 연결을 받으므로 그 망 밖의 컴퓨터는 닿을 수 없고, 같은 망의 컴퓨터에만 답합니다
+  (다른 망에서 공유받은 기기는 거절).
 - 접속 기록(누가 언제 보거나 클릭 · 입력했는지. 친 글자 내용은 적지 않습니다)은 이 컴퓨터 메모리에만 있고 Remote 를
   끄면 사라집니다.
 - 다른 컴퓨터로 보낸 화면은 어느 쪽 컴퓨터에도 저장하지 않습니다.

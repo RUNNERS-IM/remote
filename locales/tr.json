@@ -49,7 +49,7 @@
   "link.approve": "Tailscale’e Giriş Yap…",
   "link.failed": "Bağlanılamadı: {{error}}",
   "link.running": "“{{self}}” adıyla bağlı.",
-  "link.empty": "Aynı Tailscale hesabındaki başka hiçbir bilgisayar henüz Remote’u açmadı.",
+  "link.empty": "Aynı Tailscale ağındaki başka hiçbir bilgisayar henüz Remote’u açmadı.",
   "peer.off": "Bu bilgisayar şu anda ekranını başkalarına göstermeyecek şekilde ayarlı.",
   "peer.unreachable": "Bu bilgisayara ulaşılamıyor. Kapalı olabilir ya da Remote açık olmayabilir.",
   "peer.noPermission": "O bilgisayarda ekran kaydı kapalı.",

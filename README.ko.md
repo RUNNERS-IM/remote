@@ -6,7 +6,7 @@
 
 Remote 는 RUNNERS-IM 이 사무실 컴퓨터를 위해 만드는 앱입니다. Monitor 처럼 [Electron](https://www.electronjs.org) 과 Rust 네이티브 모듈 하나로 짭니다.
 
-**Remote 는 아직 만드는 중입니다.** 첫 공개 판은 2.6.1102 입니다([Releases](https://github.com/RUNNERS-IM/remote/releases)). 컴퓨터끼리 이으려면 두 컴퓨터 모두 같은 Tailscale 계정으로 Tailscale 에 들어가 있어야 합니다. 그 전까지 Remote 는 자기가 도는 컴퓨터만 보여 줍니다.
+**Remote 는 아직 만드는 중입니다.** 첫 공개 판은 2.6.1102 입니다([Releases](https://github.com/RUNNERS-IM/remote/releases)). 컴퓨터끼리 이으려면 두 컴퓨터 모두 같은 Tailscale 망(tailnet)에 들어가 있어야 합니다. 그 전까지 Remote 는 자기가 도는 컴퓨터만 보여 줍니다.
 
 ## 지금 되는 것
 
@@ -17,7 +17,7 @@ Remote 는 RUNNERS-IM 이 사무실 컴퓨터를 위해 만드는 앱입니다. 
   - **화면 기록**: 화면을 찍는 데 필요합니다
   - **손쉬운 사용**: 클릭과 키 입력을 넣는 데 필요합니다
 - 클릭은 CGEvent 로 넣고, 위치는 고른 모니터 기준으로 바꿔 계산합니다. 창에서는 **클릭 보내기** 스위치를 켰을 때만 동작합니다. 이 스위치는 켤 때마다 꺼진 상태로 시작하고, 창을 닫으면 다시 꺼집니다. 꺼져 있으면 화면을 눌러도 아무 일도 일어나지 않습니다.
-- **다른 컴퓨터 보기**(2 · 3단계): Remote 는 컴퓨터에 깔린 Tailscale 을 같이 씁니다(`electron/main/tailscale.ts`). 같은 Tailscale 계정에서 Remote 를 켠 컴퓨터가 있으면 Remote 창에 컴퓨터마다 탭이 생기고, 고르면 그 컴퓨터의 모니터와 화면이 똑같이 나옵니다. **클릭 보내기** 를 켜면 화면을 누른 자리를 그 컴퓨터에서 클릭하고, 누른 뒤 치는 키도 그 컴퓨터로 갑니다(한글처럼 조합하는 글자는 아래 글자 칸으로 보냅니다). Remote 는 이 컴퓨터의 Tailscale 주소 7787 번 포트에서만 연결을 받고, 연결마다 `tailscale whois` 로 보낸 컴퓨터를 확인해 같은 Tailscale 계정일 때만 답합니다. 접속 기록의 이름도 Tailscale 이 확인해 준 이름입니다.
+- **다른 컴퓨터 보기**(2 · 3단계): Remote 는 컴퓨터에 깔린 Tailscale 을 같이 씁니다(`electron/main/tailscale.ts`). 같은 Tailscale 망에서 Remote 를 켠 컴퓨터가 있으면 Remote 창에 컴퓨터마다 탭이 생기고, 고르면 그 컴퓨터의 모니터와 화면이 똑같이 나옵니다. **클릭 보내기** 를 켜면 화면을 누른 자리를 그 컴퓨터에서 클릭하고, 누른 뒤 치는 키도 그 컴퓨터로 갑니다(한글처럼 조합하는 글자는 아래 글자 칸으로 보냅니다). Remote 는 이 컴퓨터의 Tailscale 주소 7787 번 포트에서만 연결을 받고, 연결마다 부른 주소를 `tailscale status` 목록에서 찾아 같은 망의 컴퓨터일 때만 답합니다. 사람 계정 · 태그 기기 · 폰 모두 받고, 다른 망에서 공유받은 기기만 거절합니다(Prompt 와 같은 규칙). 접속 기록의 이름도 Tailscale 이 확인해 준 이름입니다.
 - **Tailscale**: Tailscale 이 없으면 컴퓨터 탭 아래에 그 사실을 적고, 로그인이 필요하면 **Tailscale 로그인…** 버튼을 보여 줍니다. Homebrew 판(`/opt/homebrew/bin/tailscale`), 맥 앱, 윈도우 · 리눅스 판의 `tailscale` 명령을 찾아 씁니다.
 - 보이는 쪽 컴퓨터: 패널과 메뉴의 **다른 컴퓨터에 이 화면 보이기**(처음엔 켜짐), **다른 컴퓨터의 클릭 · 키 입력 허용**(처음엔 꺼짐), 누가 보는지 함께 나오는 노란 **보는 중** 상태, 보기를 바로 끄는 **지금 끊기**, Remote 창의 접속 기록(누가 보기 시작 · 클릭 · 키 입력 · 글자 입력을 했는지. 친 글자 내용은 적지 않습니다).
 - **Claude**(4단계): `resources/mcp/remote-mcp.mjs` 는 도구 여섯 개를 주는 MCP 서버입니다: `remote_computers`, `remote_displays`, `remote_screenshot`, `remote_click`, `remote_type`, `remote_key`. 보기는 승인이 필요 없습니다(보이는 쪽 스위치가 정합니다). 클릭 · 입력은 허용 목록을 따릅니다: 목록에 있는 앱이면 바로 하고, 다른 앱이면 Claude 가 도는 컴퓨터 앞의 사람이 먼저 승인하며 그때 그 앱을 목록에 넣을 수 있습니다. 맥 보안 창(암호 입력 창, 시스템 설정)은 매번 사람이 승인합니다. 상대 컴퓨터의 **클릭 · 키 입력 허용** 이 꺼져 있으면 아무에게도 묻지 않고 거절합니다.
@@ -28,7 +28,7 @@ Remote 는 RUNNERS-IM 이 사무실 컴퓨터를 위해 만드는 앱입니다. 
 
 1. macOS 받는 쪽: 모니터별 화면 찍기, 클릭 · 키 입력 받기 (끝)
 2. 보는 쪽: 컴퓨터 목록, 모니터 탭, 화면 보기 · 누르기 · 입력 (끝)
-3. 연결: 컴퓨터에 깔린 Tailscale 을 같이 쓰기, 접속 기록, "보는 중" 표시, 한 번에 끊는 버튼 (받기와 보낸 컴퓨터 확인은 2026-11-02 사무실 맥 세 대로 시험. 두 대에 Remote 를 깔고 서로 화면 보기는 아직 시험하지 않음)
+3. 연결: 컴퓨터에 깔린 Tailscale 을 같이 쓰기, 접속 기록, "보는 중" 표시, 한 번에 끊는 버튼 (받기와 부른 컴퓨터 확인은 2026-11-02 사무실 맥 세 대로 시험. 두 대에 Remote 를 깔고 서로 화면 보기는 아직 시험하지 않음)
 4. Claude 세션용 MCP 도구와 승인 (끝)
 5. 윈도우 · 리눅스 받는 쪽, 보는 쪽 휴대폰 앱 (시작 안 함. 윈도우 · 리눅스 판은 다른 컴퓨터를 볼 수는 있지만 보여질 수는 없습니다)
 
@@ -58,7 +58,7 @@ Apple 실리콘 맥에서 인텔 맥용으로도 만들려면 `rustup target add
 
 - `electron/main/` 은 메인 프로세스(메뉴 막대 아이콘, 패널 · 화면 보기 · 정보 창, 상태, 업데이트), `electron/preload/` 는 화면이 메인 프로세스와 말하는 다리, `src/` 는 패널 · 화면 보기 · 정보 화면입니다.
 - `native/` 는 네이티브 모듈 하나(napi-rs)입니다: 화면 찍기, 클릭 넣기, 앞에 있는 앱 알아내기, 권한 확인, 메뉴 막대 그림.
-- `electron/main/tailscale.ts` 는 컴퓨터의 `tailscale` 명령에 망 상태와 보낸 컴퓨터를 묻고, 누구에게 답할지 정하는 규칙(`trusted`)을 한 곳에 둡니다. `electron/main/link.ts` 가 다른 컴퓨터의 요청을 받고 다른 컴퓨터에 묻으며, `electron/main/claude.ts` 가 MCP 스크립트의 요청을 받습니다.
+- `electron/main/tailscale.ts` 는 컴퓨터의 `tailscale` 명령에 망 상태를 묻고, 누구에게 답할지 정하는 규칙(`trusted`)을 한 곳에 둡니다. `electron/main/link.ts` 가 다른 컴퓨터의 요청을 받고 다른 컴퓨터에 묻으며, `electron/main/claude.ts` 가 MCP 스크립트의 요청을 받습니다.
 - 화면 글자는 `locales/` 에 있고 `ko.json` 이 기준입니다. 화면과 메인 프로세스가 같은 파일을 읽습니다.
 - 개발 실행에서는 `REMOTE_OPEN=panel|viewer|about`, `REMOTE_THEME=dark|light`, 연 창을 그림으로 저장하는 `REMOTE_SHOT=<파일.png>` 를 씁니다. 설치한 앱은 이 값을 무시합니다.
 

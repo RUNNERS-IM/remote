@@ -4,8 +4,9 @@
 // (2026-11-02 decision "one network, Tailscale"):
 //   - It listens on port 7787 of this computer's Tailscale address only, never on its other network cards, so only
 //     computers in the same Tailscale network can reach it.
-//   - For each connection it asks Tailscale which computer is on the other end (whois) and turns the request away
-//     when Tailscale does not know it. The name in the log is that name, never one the request brings.
+//   - For each connection it finds the calling address in `tailscale status` and turns the request away unless the
+//     caller may come in (tailscale.caller: the same rule as Prompt). The name in the log is the one Tailscale lists
+//     for that address, never one the request brings.
 //   - It reaches other computers on their Tailscale addresses, port 7787.
 //
 // Why seeing and clicking are separate switches: seeing is what a coworker asks for most ("look at this error"), and
@@ -23,6 +24,7 @@ import * as tailscale from "./tailscale";
 export const PORT = 7787;
 
 const REFRESH_MS = 5000;
+const FORCED_REFRESH_MS = 5000;
 const LOG_KEEP = 200;
 const PEER_TIMEOUT_MS = 8000;
 const INPUT_BODY_MAX = 64 * 1024;
@@ -34,8 +36,8 @@ let state: LinkState = "starting";
 let error: string | null = null;
 let authUrl: string | null = null;
 let self: string | null = null;
-/** This computer's own node, for the trust rule (tailscale.trusted). */
-let selfNode: tailscale.Node | null = null;
+/** The last `tailscale status`, to find who is calling. */
+let lastStatus: tailscale.Status | null = null;
 let computers: Computer[] = [];
 /** Network name -> Tailscale IPv4 address, from the last status. Only names in this map can be reached. */
 let addresses = new Map<string, string>();
@@ -99,15 +101,21 @@ function logKind(input: Input): LogEntry["what"] | null {
   return null;
 }
 
+/** The network name of the computer on the far end of this connection, or null when it may not come in. A caller
+ *  missing from the last status (it just joined) makes Remote read the status again once. */
+async function callerOf(address: string): Promise<string | null> {
+  const found = lastStatus && tailscale.caller(address, lastStatus);
+  if (found) return found.host;
+  await refresh(true);
+  return (lastStatus && tailscale.caller(address, lastStatus))?.host ?? null;
+}
+
 function peerOf(req: IncomingMessage): Promise<string | null> {
   const socket = req.socket;
   let known = peers.get(socket);
   if (!known) {
     const address = (socket.remoteAddress ?? "").replace(/^::ffff:/, "");
-    known =
-      address && socket.remotePort
-        ? tailscale.whois(address, socket.remotePort).then((who) => (who && tailscale.trusted(who, selfNode) ? who.host : null))
-        : Promise.resolve(null);
+    known = address ? callerOf(address) : Promise.resolve(null);
     peers.set(socket, known);
   }
   return known;
@@ -206,7 +214,7 @@ async function refreshNow(): Promise<void> {
     state = "noTailscale";
     error = null;
     self = null;
-    selfNode = null;
+    lastStatus = null;
     computers = [];
     addresses = new Map();
     listenOn(null);
@@ -216,7 +224,7 @@ async function refreshNow(): Promise<void> {
     const now = await tailscale.status();
     authUrl = now.authUrl || null;
     self = now.self?.host ?? null;
-    selfNode = now.self;
+    lastStatus = now;
     if (now.state !== "Running") {
       state = now.state === "Starting" || now.state === "NoState" ? "starting" : "needsLogin";
       error = null;
@@ -226,7 +234,7 @@ async function refreshNow(): Promise<void> {
       return;
     }
     listenOn(now.self?.address ?? null);
-    const mine = now.peers.filter((p) => tailscale.trusted(p, now.self));
+    const mine = now.peers.filter((p) => tailscale.trusted(p));
     addresses = new Map(mine.flatMap((p) => (p.address ? [[p.host, p.address] as [string, string]] : [])));
     computers = mine
       .filter((p) => isRemote(p))
@@ -241,7 +249,15 @@ async function refreshNow(): Promise<void> {
   }
 }
 
-function refresh(): Promise<void> {
+let lastForced = 0;
+
+/** `forced` is a refresh for an unknown caller; at most one every few seconds, so a stranger knocking repeatedly
+ *  cannot make Remote run `tailscale status` without end. */
+function refresh(forced = false): Promise<void> {
+  if (forced) {
+    if (Date.now() - lastForced < FORCED_REFRESH_MS) return refreshing ?? Promise.resolve();
+    lastForced = Date.now();
+  }
   refreshing ??= refreshNow().finally(() => {
     refreshing = null;
   });

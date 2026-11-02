@@ -49,7 +49,7 @@
   "link.approve": "Đăng nhập Tailscale…",
   "link.failed": "Không kết nối được: {{error}}",
   "link.running": "Đã kết nối với tên “{{self}}”.",
-  "link.empty": "Chưa có máy tính nào khác cùng tài khoản Tailscale mở Remote.",
+  "link.empty": "Chưa có máy tính nào khác trong cùng mạng Tailscale mở Remote.",
   "peer.off": "Máy tính này hiện được đặt không cho máy khác xem màn hình.",
   "peer.unreachable": "Không liên lạc được máy tính này. Có thể máy đang tắt hoặc Remote chưa mở.",
   "peer.noPermission": "Ghi màn hình đang tắt trên máy tính đó.",

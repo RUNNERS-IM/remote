@@ -49,7 +49,7 @@
   "link.approve": "Kirjaudu Tailscaleen…",
   "link.failed": "Yhteys epäonnistui: {{error}}",
   "link.running": "Yhdistetty nimellä ”{{self}}”.",
-  "link.empty": "Millään muulla saman Tailscale-tilin tietokoneella ei ole vielä Remotea auki.",
+  "link.empty": "Millään muulla saman Tailscale-verkon tietokoneella ei ole vielä Remotea auki.",
   "peer.off": "Tämä tietokone on asetettu olemaan näyttämättä näyttöään muille juuri nyt.",
   "peer.unreachable": "Tietokoneeseen ei saada yhteyttä. Se voi olla pois päältä, tai Remote ei ole auki.",
   "peer.noPermission": "Näytön tallennus on pois päältä siinä tietokoneessa.",

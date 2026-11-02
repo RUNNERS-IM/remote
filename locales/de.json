@@ -49,7 +49,7 @@
   "link.approve": "Bei Tailscale anmelden …",
   "link.failed": "Verbindung fehlgeschlagen: {{error}}",
   "link.running": "Verbunden als „{{self}}“.",
-  "link.empty": "Noch kein anderer Computer mit demselben Tailscale-Konto hat Remote geöffnet.",
+  "link.empty": "Noch kein anderer Computer im selben Tailscale-Netzwerk hat Remote geöffnet.",
   "peer.off": "Dieser Computer zeigt seinen Bildschirm anderen Computern derzeit nicht.",
   "peer.unreachable": "Dieser Computer ist nicht erreichbar. Er ist vielleicht aus, oder Remote ist dort nicht geöffnet.",
   "peer.noPermission": "Auf diesem Computer ist die Bildschirmaufnahme aus.",

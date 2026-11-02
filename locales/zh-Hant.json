@@ -49,7 +49,7 @@
   "link.approve": "登入 Tailscale…",
   "link.failed": "無法連線：{{error}}",
   "link.running": "已用「{{self}}」的名稱連線。",
-  "link.empty": "同一 Tailscale 帳號中還沒有其他電腦開啟 Remote。",
+  "link.empty": "同一 Tailscale 網路中還沒有其他電腦開啟 Remote。",
   "peer.off": "這台電腦目前設定為不向其他電腦顯示螢幕。",
   "peer.unreachable": "無法連到這台電腦。它可能已關機，或沒有打開 Remote。",
   "peer.noPermission": "那台電腦的螢幕錄製已關閉。",

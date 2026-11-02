@@ -49,7 +49,7 @@
   "link.approve": "Inloggen bij Tailscale…",
   "link.failed": "Kan geen verbinding maken: {{error}}",
   "link.running": "Verbonden als ‘{{self}}’.",
-  "link.empty": "Nog geen andere computer met hetzelfde Tailscale-account heeft Remote geopend.",
+  "link.empty": "Nog geen andere computer in hetzelfde Tailscale-netwerk heeft Remote geopend.",
   "peer.off": "Deze computer toont zijn scherm nu niet aan andere computers.",
   "peer.unreachable": "Kan deze computer niet bereiken. Hij staat misschien uit of Remote is er niet open.",
   "peer.noPermission": "Schermopname staat uit op die computer.",

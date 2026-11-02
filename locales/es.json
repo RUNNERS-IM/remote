@@ -49,7 +49,7 @@
   "link.approve": "Iniciar sesión en Tailscale…",
   "link.failed": "No se pudo conectar: {{error}}",
   "link.running": "Conectado como «{{self}}».",
-  "link.empty": "Aún no hay otro ordenador de la misma cuenta de Tailscale con Remote abierto.",
+  "link.empty": "Aún no hay otro ordenador de la misma red de Tailscale con Remote abierto.",
   "peer.off": "Este ordenador está configurado para no mostrar su pantalla a otros ahora mismo.",
   "peer.unreachable": "No se puede llegar a este ordenador. Puede estar apagado o sin Remote abierto.",
   "peer.noPermission": "La grabación de pantalla está desactivada en ese ordenador.",

@@ -49,7 +49,7 @@
   "link.approve": "Se connecter à Tailscale…",
   "link.failed": "Connexion impossible : {{error}}",
   "link.running": "Connecté sous le nom « {{self}} ».",
-  "link.empty": "Aucun autre ordinateur du même compte Tailscale n’a encore ouvert Remote.",
+  "link.empty": "Aucun autre ordinateur du même réseau Tailscale n’a encore ouvert Remote.",
   "peer.off": "Cet ordinateur est réglé pour ne pas montrer son écran aux autres en ce moment.",
   "peer.unreachable": "Impossible de joindre cet ordinateur. Il est peut-être éteint, ou Remote n’y est pas ouvert.",
   "peer.noPermission": "L’enregistrement de l’écran est désactivé sur cet ordinateur.",

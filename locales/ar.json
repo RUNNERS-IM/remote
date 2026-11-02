@@ -49,7 +49,7 @@
   "link.approve": "تسجيل الدخول إلى Tailscale…",
   "link.failed": "تعذّر الاتصال: {{error}}",
   "link.running": "متصل باسم «{{self}}».",
-  "link.empty": "لم يفتح أي كمبيوتر آخر على حساب Tailscale نفسه تطبيق Remote بعد.",
+  "link.empty": "لم يفتح أي كمبيوتر آخر في شبكة Tailscale نفسها تطبيق Remote بعد.",
   "peer.off": "هذا الجهاز مضبوط حاليًا على عدم إظهار شاشته للآخرين.",
   "peer.unreachable": "تعذّر الوصول إلى هذا الجهاز. قد يكون مطفأً أو أن Remote غير مفتوح عليه.",
   "peer.noPermission": "تسجيل الشاشة متوقف على ذلك الجهاز.",

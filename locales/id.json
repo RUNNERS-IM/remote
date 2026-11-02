@@ -49,7 +49,7 @@
   "link.approve": "Masuk ke Tailscale…",
   "link.failed": "Tidak dapat terhubung: {{error}}",
   "link.running": "Terhubung sebagai “{{self}}”.",
-  "link.empty": "Belum ada komputer lain di akun Tailscale yang sama yang membuka Remote.",
+  "link.empty": "Belum ada komputer lain di jaringan Tailscale yang sama yang membuka Remote.",
   "peer.off": "Komputer ini sedang diatur agar tidak menampilkan layarnya ke komputer lain.",
   "peer.unreachable": "Tidak dapat menjangkau komputer ini. Mungkin mati, atau Remote tidak terbuka di sana.",
   "peer.noPermission": "Perekaman Layar mati di komputer itu.",

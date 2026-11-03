@@ -1,113 +1,87 @@
-// The connection (plan stage 3): other office computers see and click this one, and this one sees and clicks them.
-//
-// Remote shares the computer's own Tailscale (electron/main/tailscale.ts) instead of joining a network of its own
-// (2026-11-02 decision "one network, Tailscale"):
-//   - It listens on port 7787 of this computer's Tailscale address only, never on its other network cards, so only
-//     computers in the same Tailscale network can reach it.
-//   - For each connection it finds the calling address in `tailscale status` and turns the request away unless the
-//     caller may come in (tailscale.caller). The name in the log is the one Tailscale lists
-//     for that address, never one the request brings.
-//   - It reaches other computers on their Tailscale addresses, port 7787.
+// The connection (2026-11-03 decision 「네 앱 컴퓨터판 · 휴대폰판 개발 방식」, Remote: WebRTC): computers and phones of
+// the same RUNNERS account see and click each other.
+//   - The relay (relay.ts) lists who is online and carries the WebRTC signals.
+//   - The WebRTC connections live in the Remote window's page (src/peer.ts), which is made at launch and only hidden,
+//     so this computer can be seen while nobody has the window open. Screens go there as video; questions (info,
+//     a still picture, a click) go over a data channel.
+//   - Whatever another device asks of this computer comes here (hostRequest), where the See This and Click and Type
+//     switches and the permissions decide. The name in the log is the one the relay lists for that device.
+//   - Claude's questions about other computers go the other way (peerInfo …): from here to the page, which asks over
+//     its connection to that computer.
 //
 // Why seeing and clicking are separate switches: seeing is what a coworker asks for most ("look at this error"), and
 // clicking is a bigger trust step, so it starts off. Disconnect turns seeing off, which also stops clicking.
-import { app, nativeImage, shell } from "electron";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import type { Socket } from "node:net";
-import type { Allow, Computer, Input, Link, LinkState, LogEntry, PeerInfo } from "../preload/api";
+import { app, desktopCapturer, ipcMain, nativeImage, type WebContents } from "electron";
+import { randomUUID } from "node:crypto";
+import type { Allow, Computer, Input, Link, LogEntry, PeerInfo } from "../preload/api";
+import * as account from "./account";
 import { native } from "./native";
+import * as relay from "./relay";
 import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
-import * as tailscale from "./tailscale";
 
-/** The port Remote answers on, on the Tailscale address. */
-export const PORT = 7787;
-
-const REFRESH_MS = 5000;
-const FORCED_REFRESH_MS = 5000;
+const DEV = !app.isPackaged;
 const LOG_KEEP = 200;
-const PEER_TIMEOUT_MS = 8000;
-const INPUT_BODY_MAX = 64 * 1024;
-/** How long a peer that answered (or did not answer) /info is remembered, so the computer list does not ask every
- *  computer in the network at every refresh. */
-const PROBE_MS = 30_000;
-/** Narrowest and widest picture a caller may ask for with `?width=`; the grid asks for small ones. */
+const ASK_TIMEOUT_MS = 15_000;
+/** Narrowest and widest still picture a caller may ask for with `width`; the grid asks for small ones. */
 const MIN_WIDTH = 160;
 const MAX_WIDTH = 1280;
+/** Debug runs only: REMOTE_FAKE_SCREEN=1 sends a drawn test picture instead of the screen, so two copies on one Mac can
+ *  be tried without the Screen Recording permission and without anyone's screen leaving the window. */
+const FAKE_SCREEN = DEV && process.env.REMOTE_FAKE_SCREEN === "1";
 
-let state: LinkState = "starting";
-let error: string | null = null;
-let authUrl: string | null = null;
-let self: string | null = null;
-/** The last `tailscale status`, to find who is calling. */
-let lastStatus: tailscale.Status | null = null;
-let computers: Computer[] = [];
-/** Network name -> Tailscale IPv4 address, from the last status. Only names in this map can be reached. */
-let addresses = new Map<string, string>();
-/** Network name -> when it last answered as a Remote (or failed to), for the computer list. */
-const probes = new Map<string, { at: number; remote: boolean }>();
-let server: Server | null = null;
-let listeningOn: string | null = null;
-let refreshing: Promise<void> | null = null;
 const log: LogEntry[] = [];
-/** Who is on the far end of each connection, asked once per connection. */
-const peers = new WeakMap<Socket, Promise<string | null>>();
+let page: () => WebContents | null = () => null;
 
 function note(peer: string, what: LogEntry["what"]): void {
   log.unshift({ at: Date.now(), peer, what });
   log.length = Math.min(log.length, LOG_KEEP);
 }
 
-// ---- The app server: what other computers reach on port 7787 ----
-
-function reply(res: ServerResponse, code: number, body: string | Buffer, type = "text/plain; charset=utf-8"): void {
-  res.writeHead(code, { "Content-Type": type, "Cache-Control": "no-store" });
-  res.end(body);
-}
-
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let size = 0;
-    const parts: Buffer[] = [];
-    req.on("data", (part: Buffer) => {
-      size += part.length;
-      if (size > INPUT_BODY_MAX) {
-        reject(new Error("too large"));
-        req.destroy();
-        return;
-      }
-      parts.push(part);
-    });
-    req.on("end", () => resolve(Buffer.concat(parts).toString("utf8")));
-    req.on("error", reject);
-  });
-}
+// ---- What other devices ask of this computer ----
 
 function info(): PeerInfo {
   const now = status.current();
   const settings = readSettings();
+  const shown = settings.allowViewing && (now.supported || FAKE_SCREEN);
   return {
     computer: now.computer,
     // Why: with seeing off, even the monitor names stay private.
-    displays: now.supported && settings.allowViewing ? JSON.parse(native.displays()) : [],
-    viewing: settings.allowViewing && now.reason === null,
+    displays: shown ? JSON.parse(native.displays()) : [],
+    viewing: settings.allowViewing && (now.reason === null || FAKE_SCREEN),
     control: settings.allowViewing && settings.allowControl && now.permissions.accessibility,
-    reason: now.reason,
+    reason: FAKE_SCREEN ? null : now.reason,
   };
 }
 
-/** The picture made narrower when the caller asks for `?width=` (the grid of all computers shows each screen small,
- *  and a full picture is about 300 KB). Without it, or when it is not narrower, the picture is sent as taken. */
-function shrink(jpeg: Buffer, asked: string | null): Buffer {
+/** The still picture made narrower when the caller asks for a width (the grid shows each screen small, and a full
+ *  picture is about 300 KB). Without one, or when it is not narrower, the picture is sent as taken. */
+function shrink(jpeg: Buffer, asked: unknown): Buffer {
   const width = Math.round(Number(asked));
-  if (!asked || !Number.isFinite(width)) return jpeg;
+  if (asked === undefined || asked === null || !Number.isFinite(width)) return jpeg;
   const image = nativeImage.createFromBuffer(jpeg);
   const target = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width));
   if (image.isEmpty() || image.getSize().width <= target) return jpeg;
   return image.resize({ width: target, quality: "good" }).toJPEG(70);
 }
 
-/** What the input is, for the log; moves are left out so the log shows presses, not every mouse step. */
+/** The debug test picture: a colour that changes every second, so a still picture visibly moves, under speckles that
+ *  make the JPEG large enough (over 100 KB) to be sent in parts like a real screen. */
+function fakePicture(): Buffer {
+  const width = 1280;
+  const height = 800;
+  const pixels = Buffer.alloc(width * height * 4);
+  const shade = (Math.floor(Date.now() / 1000) * 40) % 256;
+  for (let i = 0; i < pixels.length; i += 4) {
+    const speck = (i * 2654435761) >>> 24;
+    pixels[i] = (shade + speck) & 255;
+    pixels[i + 1] = 120;
+    pixels[i + 2] = (255 - shade + speck) & 255;
+    pixels[i + 3] = 255;
+  }
+  return nativeImage.createFromBitmap(pixels, { width, height }).toJPEG(70);
+}
+
 function logKind(input: Input): LogEntry["what"] | null {
   if (input.kind === "click") return "click";
   if (input.kind === "key") return "key";
@@ -115,181 +89,124 @@ function logKind(input: Input): LogEntry["what"] | null {
   return null;
 }
 
-/** The network name of the computer on the far end of this connection, or null when it may not come in. A caller
- *  missing from the last status (it just joined) makes Remote read the status again once. */
-async function callerOf(address: string): Promise<string | null> {
-  const found = lastStatus && tailscale.caller(address, lastStatus);
-  if (found) return found.host;
-  await refresh(true);
-  return (lastStatus && tailscale.caller(address, lastStatus))?.host ?? null;
+/** The capture source Chromium needs for a display (macOS gives both the same display id). */
+async function sourceFor(display: number): Promise<string> {
+  const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } });
+  const source = sources.find((s) => s.display_id === String(display)) ?? (display === 0 ? sources[0] : undefined);
+  if (!source) throw new Error("display");
+  return source.id;
 }
 
-function peerOf(req: IncomingMessage): Promise<string | null> {
-  const socket = req.socket;
-  let known = peers.get(socket);
-  if (!known) {
-    const address = (socket.remoteAddress ?? "").replace(/^::ffff:/, "");
-    known = address ? callerOf(address) : Promise.resolve(null);
-    peers.set(socket, known);
-  }
-  return known;
-}
-
-async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const peer = await peerOf(req);
-  if (!peer) return reply(res, 403, "forbidden");
-  const url = new URL(req.url || "/", "http://remote");
+/** One question from another device. Throws a short code the asking side turns into text: forbidden, off, control,
+ *  accessibility, unsupported, permission, display, or a message. */
+async function hostRequest(peerId: string, method: string, params: Record<string, unknown>): Promise<unknown> {
+  const peer = relay.device(peerId);
+  if (!peer) throw new Error("forbidden");
   const settings = readSettings();
+  const now = status.current();
 
-  if (req.method === "GET" && url.pathname === "/info") {
-    return reply(res, 200, JSON.stringify(info()), "application/json");
+  if (method === "info") return info();
+  if (!settings.allowViewing) {
+    if (method === "frame" || method === "watch" || method === "input") note(peer.name, "refused");
+    throw new Error("off");
   }
-  if (req.method === "GET" && url.pathname === "/frame") {
-    if (!settings.allowViewing) {
-      note(peer, "refused");
-      return reply(res, 403, "off");
-    }
-    if (!status.SUPPORTED) return reply(res, 501, "unsupported");
-    try {
-      const jpeg = await native.capture(Number(url.searchParams.get("display")));
-      if (status.remoteFrameSent(peer)) note(peer, "view");
-      return reply(res, 200, shrink(jpeg, url.searchParams.get("width")), "image/jpeg");
-    } catch (e) {
-      return reply(res, 500, e instanceof Error ? e.message : String(e));
-    }
+  if (method === "front") return status.SUPPORTED ? JSON.parse(native.frontApp()) : null;
+  if (method === "viewing") {
+    if (status.remoteFrameSent(peer.name)) note(peer.name, "view");
+    return true;
   }
-  if (req.method === "GET" && url.pathname === "/front") {
-    if (!settings.allowViewing) return reply(res, 403, "off");
-    return reply(res, 200, status.SUPPORTED ? native.frontApp() : "null", "application/json");
+  if (method === "frame") {
+    if (FAKE_SCREEN) return shrink(fakePicture(), params.width);
+    if (!status.SUPPORTED) throw new Error("unsupported");
+    const jpeg = await native.capture(Number(params.display));
+    if (status.remoteFrameSent(peer.name)) note(peer.name, "view");
+    return shrink(jpeg, params.width);
   }
-  if (req.method === "POST" && url.pathname === "/input") {
-    if (!settings.allowViewing) return reply(res, 403, "off");
+  if (method === "watch") {
+    if (FAKE_SCREEN) return { fake: true };
+    if (!status.SUPPORTED) throw new Error("unsupported");
+    if (!now.permissions.screenRecording) throw new Error("permission");
+    if (status.remoteFrameSent(peer.name)) note(peer.name, "view");
+    return { sourceId: await sourceFor(Number(params.display)) };
+  }
+  if (method === "input") {
     if (!settings.allowControl) {
-      note(peer, "refused");
-      return reply(res, 403, "control");
+      note(peer.name, "refused");
+      throw new Error("control");
     }
-    if (!status.SUPPORTED) return reply(res, 501, "unsupported");
-    if (!status.permissions().accessibility) return reply(res, 403, "accessibility");
-    try {
-      const input = JSON.parse(await readBody(req)) as Input;
-      native.sendInput(JSON.stringify(input));
-      const kind = logKind(input);
-      if (kind) note(peer, kind);
-      return reply(res, 200, "sent");
-    } catch (e) {
-      return reply(res, 400, e instanceof Error ? e.message : String(e));
-    }
+    if (!status.SUPPORTED) throw new Error("unsupported");
+    if (!now.permissions.accessibility) throw new Error("accessibility");
+    const input = params.input as Input;
+    native.sendInput(JSON.stringify(input));
+    const kind = logKind(input);
+    if (kind) note(peer.name, kind);
+    return "sent";
   }
-  return reply(res, 404, "not found");
+  throw new Error(`unknown method ${method}`);
 }
 
-/** Listens on `address` (this computer's Tailscale IPv4), moving when the address changes. */
-function listenOn(address: string | null): void {
-  if (address === listeningOn) return;
-  server?.close();
-  server = null;
-  listeningOn = null;
-  if (!address) return;
-  const next = createServer((req, res) => {
-    handle(req, res).catch((e) => reply(res, 500, String(e)));
+// ---- Asking other computers (for Claude), through the page ----
+
+const waiting = new Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+
+function askPage(host: string, method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+  const target = page();
+  if (!target) return Promise.reject(new Error("unreachable"));
+  if (relay.device(host)?.role !== "host") return Promise.reject(new Error("unreachable"));
+  const rid = randomUUID();
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      waiting.delete(rid);
+      reject(new Error("unreachable"));
+    }, ASK_TIMEOUT_MS);
+    waiting.set(rid, {
+      resolve: (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      reject: (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    });
+    target.send("remote:clientRequest", { rid, device: host, method, params });
   });
-  next.on("error", (e) => {
-    if (server !== next) return;
-    server = null;
-    listeningOn = null;
-    state = "failed";
-    error = e.message;
-  });
-  next.listen(PORT, address);
-  server = next;
-  listeningOn = address;
 }
 
-// ---- Tailscale: what the network looks like ----
-
-/** Whether a peer answers as a Remote, remembered for PROBE_MS. Offline peers and ones without an address are not
- *  asked. Why ask at all: the Tailscale network also holds phones and computers without Remote, and a tab for them
- *  would only fail. */
-function isRemote(node: tailscale.Node): boolean {
-  if (!node.online || !node.address) return false;
-  const known = probes.get(node.host);
-  if (!known || Date.now() - known.at > PROBE_MS) {
-    probes.set(node.host, { at: Date.now(), remote: known?.remote ?? false });
-    fetch(`http://${node.address}:${PORT}/info`, { signal: AbortSignal.timeout(PEER_TIMEOUT_MS) }).then(
-      (res) => probes.set(node.host, { at: Date.now(), remote: res.ok }),
-      () => probes.set(node.host, { at: Date.now(), remote: false }),
-    );
-  }
-  return probes.get(node.host)?.remote ?? false;
+export async function peerInfo(host: string): Promise<PeerInfo> {
+  return (await askPage(host, "info")) as PeerInfo;
 }
 
-async function refreshNow(): Promise<void> {
-  if (!tailscale.binary()) {
-    state = "noTailscale";
-    error = null;
-    self = null;
-    lastStatus = null;
-    computers = [];
-    addresses = new Map();
-    listenOn(null);
-    return;
-  }
-  try {
-    const now = await tailscale.status();
-    authUrl = now.authUrl || null;
-    self = now.self?.host ?? null;
-    lastStatus = now;
-    if (now.state !== "Running") {
-      state = now.state === "Starting" || now.state === "NoState" ? "starting" : "needsLogin";
-      error = null;
-      computers = [];
-      addresses = new Map();
-      listenOn(null);
-      return;
-    }
-    listenOn(now.self?.address ?? null);
-    const mine = now.peers.filter((p) => tailscale.trusted(p));
-    addresses = new Map(mine.flatMap((p) => (p.address ? [[p.host, p.address] as [string, string]] : [])));
-    computers = mine
-      .filter((p) => isRemote(p))
-      .map((p) => ({ name: p.name, host: p.host, online: p.online, os: p.os }));
-    if (server) {
-      state = "running";
-      error = null;
-    }
-  } catch (e) {
-    state = "failed";
-    error = e instanceof Error ? e.message : String(e);
-  }
+export async function peerCapture(host: string, display: number, width?: number): Promise<Buffer> {
+  const bytes = (await askPage(host, "frame", { display, width })) as Uint8Array;
+  return Buffer.from(bytes);
 }
 
-let lastForced = 0;
-
-/** `forced` is a refresh for an unknown caller; at most one every few seconds, so a stranger knocking repeatedly
- *  cannot make Remote run `tailscale status` without end. */
-function refresh(forced = false): Promise<void> {
-  if (forced) {
-    if (Date.now() - lastForced < FORCED_REFRESH_MS) return refreshing ?? Promise.resolve();
-    lastForced = Date.now();
-  }
-  refreshing ??= refreshNow().finally(() => {
-    refreshing = null;
-  });
-  return refreshing;
+export async function peerFront(host: string): Promise<{ bundleId: string; name: string } | null> {
+  return (await askPage(host, "front")) as { bundleId: string; name: string } | null;
 }
 
-/** Whether this computer is in the network, so the Allow switches mean something. */
+export async function peerInput(host: string, input: Input): Promise<void> {
+  await askPage(host, "input", { input });
+}
+
+// ---- State for the window and the menu ----
+
+/** Whether this computer is on the relay, so the Allow switches mean something. */
 export function hasServer(): boolean {
-  return state === "running";
+  return relay.current().state === "running";
 }
 
 export async function current(): Promise<Link> {
-  await refresh();
+  const now = relay.current();
   const settings = readSettings();
+  const computers: Computer[] = now.devices
+    .filter((d) => d.role === "host")
+    .map((d) => ({ name: d.name, host: d.deviceId, online: true, os: "" }));
   return {
-    state,
-    error,
-    self,
+    state: now.state,
+    error: now.error,
+    account: account.email(),
     computers,
     allowViewing: settings.allowViewing,
     allowControl: settings.allowControl,
@@ -297,14 +214,13 @@ export async function current(): Promise<Link> {
   };
 }
 
-export function openLogin(): void {
-  // Why: the address comes from Tailscale, never from the page, so a page cannot open anything else this way.
-  if (state === "needsLogin" && authUrl && /^https:\/\//.test(authUrl)) void shell.openExternal(authUrl);
-}
-
 export function setAllow(what: Allow, on: boolean): void {
   writeSettings({ [what]: on });
-  if (what === "allowViewing" && !on) status.forgetViewers();
+  if (what === "allowViewing" && !on) {
+    status.forgetViewers();
+    // Why: turning seeing off must also end the video already going out, not only refuse new questions.
+    page()?.send("remote:dropHosted");
+  }
 }
 
 /** Disconnect: nobody sees or clicks this computer until seeing is turned on again. */
@@ -312,63 +228,40 @@ export function disconnect(): void {
   setAllow("allowViewing", false);
 }
 
-// ---- Asking other computers ----
-
-/** Why: the name goes into an address, so only network names (letters, digits, dashes) known to Tailscale are used. */
-function peerUrl(host: string, path: string): string {
-  if (!/^[a-z0-9-]{1,63}$/.test(host)) throw new Error("bad computer name");
-  const address = addresses.get(host);
-  if (!address) throw new Error("unreachable");
-  return `http://${address}:${PORT}${path}`;
+export async function signIn(mode: "login" | "signup", email: string, password: string): Promise<Link> {
+  await account.signIn(mode, email, password);
+  relay.connect();
+  return current();
 }
 
-async function ask(host: string, path: string, init: RequestInit = {}): Promise<Response> {
-  if (addresses.size === 0) await refresh();
-  try {
-    return await fetch(peerUrl(host, path), { ...init, signal: AbortSignal.timeout(PEER_TIMEOUT_MS) });
-  } catch (e) {
-    if (e instanceof Error && e.message === "bad computer name") throw e;
-    throw new Error("unreachable");
-  }
+export async function signOut(): Promise<Link> {
+  page()?.send("remote:dropAll");
+  await account.signOut();
+  relay.connect();
+  return current();
 }
 
-async function failure(res: Response): Promise<Error> {
-  const text = (await res.text()).trim();
-  return new Error(text || `HTTP ${res.status}`);
-}
-
-export async function peerInfo(host: string): Promise<PeerInfo> {
-  const res = await ask(host, "/info");
-  if (!res.ok) throw await failure(res);
-  return (await res.json()) as PeerInfo;
-}
-
-export async function peerCapture(host: string, display: number, width?: number): Promise<Buffer> {
-  const size = width ? `&width=${Math.round(width)}` : "";
-  const res = await ask(host, `/frame?display=${Number(display)}${size}`);
-  if (!res.ok) throw await failure(res);
-  return Buffer.from(await res.arrayBuffer());
-}
-
-export async function peerFront(host: string): Promise<{ bundleId: string; name: string } | null> {
-  const res = await ask(host, "/front");
-  if (!res.ok) throw await failure(res);
-  return (await res.json()) as { bundleId: string; name: string } | null;
-}
-
-export async function peerInput(host: string, input: Input): Promise<void> {
-  const res = await ask(host, "/input", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+/** `contents` gives the page that holds the WebRTC connections (the Remote window, made hidden at launch). */
+export function startConnection(contents: () => WebContents | null): void {
+  page = contents;
+  ipcMain.handle("remote:hostRequest", async (_event, peerId: string, method: string, params: Record<string, unknown>) =>
+    hostRequest(String(peerId), String(method), params ?? {}),
+  );
+  ipcMain.on("remote:sendSignal", (_event, to: string, payload: Record<string, unknown>) => {
+    // Why: only devices the relay listed for this account are signalled, and only an offer, answer or candidate.
+    if (!relay.device(String(to))) return;
+    relay.send({ type: "signal", to: String(to), sdp: payload?.sdp, candidate: payload?.candidate });
   });
-  if (!res.ok) throw await failure(res);
-}
-
-export async function startConnection(): Promise<void> {
-  await refresh();
-  // Why keep refreshing without a window open: the address can change (Tailscale restarted, logged in later), and
-  // other computers must still reach this one while nobody looks at Remote here.
-  setInterval(() => void refresh(), REFRESH_MS).unref();
-  app.on("before-quit", () => listenOn(null));
+  ipcMain.on("remote:clientReply", (_event, rid: string, ok: boolean, value: unknown) => {
+    const pending = waiting.get(String(rid));
+    if (!pending) return;
+    waiting.delete(String(rid));
+    if (ok) pending.resolve(value);
+    else pending.reject(new Error(String(value)));
+  });
+  ipcMain.handle("remote:deviceId", () => account.deviceId());
+  relay.start({
+    signal: (signal) => page()?.send("remote:signal", signal),
+    left: (deviceId) => page()?.send("remote:peerLeft", deviceId),
+  });
 }

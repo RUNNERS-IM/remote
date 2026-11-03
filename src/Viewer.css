@@ -492,3 +492,46 @@
 .watching > span:nth-child(2) {
   flex: 1;
 }
+
+/* The RUNNERS account form, shown in place of the grid while signed out. */
+.sign-in {
+  margin-top: var(--rw-section-gap);
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sign-in .type-box {
+  flex: none;
+  padding: 6px 8px;
+}
+
+.sign-in-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.link-button {
+  font: inherit;
+  font-size: 11px;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-row .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

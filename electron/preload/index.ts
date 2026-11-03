@@ -2,6 +2,13 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { RemoteApi, UpdateOffer } from "./api";
 
+/** Subscribes to one message from the main process; returns the way to stop. */
+function listen<T>(channel: string, listener: (value: T) => void): () => void {
+  const handler = (_event: Electron.IpcRendererEvent, value: T) => listener(value);
+  ipcRenderer.on(channel, handler);
+  return () => ipcRenderer.removeListener(channel, handler);
+}
+
 const api: RemoteApi = {
   status: () => ipcRenderer.invoke("remote:status"),
   displays: () => ipcRenderer.invoke("remote:displays"),
@@ -10,12 +17,19 @@ const api: RemoteApi = {
   setSendClicks: (on) => ipcRenderer.invoke("remote:setSendClicks", on),
   sendInput: (input, pressAt) => ipcRenderer.invoke("remote:sendInput", input, pressAt),
   link: () => ipcRenderer.invoke("remote:link"),
-  openLinkLogin: () => ipcRenderer.invoke("remote:openLinkLogin"),
+  signIn: (mode, email, password) => ipcRenderer.invoke("remote:signIn", mode, email, password),
+  signOut: () => ipcRenderer.invoke("remote:signOut"),
   setAllow: (what, on) => ipcRenderer.invoke("remote:setAllow", what, on),
   disconnect: () => ipcRenderer.invoke("remote:disconnect"),
-  peerInfo: (host) => ipcRenderer.invoke("remote:peerInfo", host),
-  peerCapture: (host, display, width) => ipcRenderer.invoke("remote:peerCapture", host, display, width),
-  peerInput: (host, input) => ipcRenderer.invoke("remote:peerInput", host, input),
+  deviceId: () => ipcRenderer.invoke("remote:deviceId"),
+  sendSignal: (to, payload) => ipcRenderer.send("remote:sendSignal", to, payload),
+  onSignal: (listener) => listen("remote:signal", listener),
+  onPeerLeft: (listener) => listen("remote:peerLeft", listener),
+  hostRequest: (peer, method, params) => ipcRenderer.invoke("remote:hostRequest", peer, method, params),
+  onDropHosted: (listener) => listen("remote:dropHosted", listener),
+  onDropAll: (listener) => listen("remote:dropAll", listener),
+  onClientRequest: (listener) => listen("remote:clientRequest", listener),
+  clientReply: (rid, ok, value) => ipcRenderer.send("remote:clientReply", rid, ok, value),
   onViewerVisible: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, visible: boolean) => listener(visible);
     ipcRenderer.on("remote:viewerVisible", handler);

@@ -1,24 +1,26 @@
 // The viewer window ("Open Remote"), decision 「[REMOTE] 모든 컴퓨터 한눈에」 1A 2A:
-//   - First, every computer in the same Tailscale network that has Remote open, as a grid. Each tile shows a small
-//     picture of that computer's main display, new every two seconds, or why it cannot be seen.
-//   - Pressing a tile opens that computer: a tab per display, its screen about five times a second, the Send Clicks
-//     switch, and keys and text going there. "All Computers" goes back.
+//   - Signed out, it asks for the RUNNERS account first: computers and phones of the same account see each other.
+//   - Then every computer of the account that has Remote open, as a grid. Each tile shows a small still picture of
+//     that computer's main display, new every two seconds, or why it cannot be seen.
+//   - Pressing a tile opens that computer: a tab per display, its screen as WebRTC video, the Send Clicks switch, and
+//     keys and text going there. "All Computers" goes back.
+// The page also holds the WebRTC connections (./peer), which is why the window is made at launch and only hidden.
 //   - "This Mac" at the bottom of the grid opens this Mac's page: its permissions, the See This and Click and Type
 //     switches, Disconnect, the connection log and the two general settings (decision 「[REMOTE] 메뉴 막대 패널 정리」
 //     1C: there is no tray panel). While someone is watching, a bar with Disconnect sits on top of the grid.
 // On Windows and Linux it says Remote works on macOS only for now.
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { ChevronLeft, Eye, Laptop, Monitor, MousePointerClick, Power, RefreshCw, type LucideIcon } from "lucide-react";
+import type { SignMode } from "../electron/preload/api";
+import { ChevronLeft, Eye, Laptop, LogOut, Monitor, MousePointerClick, Power, RefreshCw, type LucideIcon } from "lucide-react";
 import { statusText, t } from "./i18n";
 import { keyInput } from "./keys";
 import * as native from "./native";
+import * as peer from "./peer";
 import type { Computer, Display, Input, Link, LogEntry, MenuState, PeerInfo, PermissionKind, Status } from "./native";
 import "./App.css";
 import "./runners-window.css";
 import "./Viewer.css";
 
-// Why: about five pictures a second is enough to find and press a dialog button, and keeps the CPU quiet.
-const FRAME_MS = 200;
 const RETRY_MS = 1000;
 const STATUS_EVERY_MS = 2000;
 /** How often each tile of the grid gets a new picture, and how wide that picture is asked for (twice the tile). */
@@ -26,6 +28,8 @@ const TILE_MS = 2000;
 const TILE_WIDTH = 480;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+if (native.page === "viewer") peer.startPeers();
 
 /** Why another computer cannot be seen right now, from what it says about itself, or null when it can. */
 function peerProblem(info: PeerInfo): string | null {
@@ -78,7 +82,8 @@ function usePicture(): [string | null, (bytes: Uint8Array | null) => void] {
 export default function Viewer() {
   const [status, setStatus] = useState<Status | null>(null);
   const [link, setLink] = useState<Link | null>(null);
-  const [visible, setVisible] = useState(true);
+  // Why false: the window is made hidden at launch (it holds the connections) and says when it is first shown.
+  const [visible, setVisible] = useState(false);
   /** The computer opened from the grid, or null for the grid. */
   const [computer, setComputer] = useState<string | null>(null);
   const [thisMac, setThisMac] = useState(false);
@@ -123,6 +128,7 @@ export default function Viewer() {
       <Detail
         host={computer}
         name={opened?.name ?? computer}
+        online={opened !== undefined}
         visible={visible}
         onBack={() => setComputer(null)}
       />
@@ -144,7 +150,7 @@ export default function Viewer() {
           </button>
         </div>
       )}
-      <LinkNote link={link} />
+      <LinkNote link={link} onChange={setLink} />
       {computers.length > 0 && (
         <section className="grid" aria-label={t("grid.title")}>
           {computers.map((c) => (
@@ -183,7 +189,7 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
     void (async () => {
       while (running) {
         try {
-          const now = await native.peerInfo(computer.host);
+          const now = (await peer.ask(computer.host, "info")) as PeerInfo;
           if (!running) break;
           setInfo(now);
           const why = peerProblem(now);
@@ -192,7 +198,7 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
             setProblem(why ?? t("view.noDisplay"));
             setPicture(null);
           } else {
-            const bytes = await native.peerCapture(computer.host, main.id, TILE_WIDTH);
+            const bytes = await peer.frame(computer.host, main.id, TILE_WIDTH);
             if (!running) break;
             setPicture(bytes);
             setProblem(null);
@@ -230,11 +236,13 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
 }
 
 /** One computer opened from the grid: its displays as tabs, the screen, and sending clicks, keys and text. */
-function Detail({ host, name, visible, onBack }: { host: string; name: string; visible: boolean; onBack: () => void }) {
-  const [peer, setPeer] = useState<PeerInfo | null>(null);
+function Detail(props: { host: string; name: string; online: boolean; visible: boolean; onBack: () => void }) {
+  const { host, name, online, visible, onBack } = props;
+  const [info, setInfo] = useState<PeerInfo | null>(null);
   const [displays, setDisplays] = useState<Display[]>([]);
   const [chosen, setChosen] = useState<number | null>(null);
-  const [frame, setFrame] = usePicture();
+  const [playing, setPlaying] = useState(false);
+  const video = useRef<HTMLVideoElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [fps, setFps] = useState(0);
   const [sendClicks, setSendClicks] = useState(false);
@@ -246,47 +254,73 @@ function Detail({ host, name, visible, onBack }: { host: string; name: string; v
   const loadDisplays = useCallback(async () => {
     let list: Display[] = [];
     try {
-      const info = await native.peerInfo(host);
-      setPeer(info);
-      list = info.displays;
-      setProblem(peerProblem(info));
+      const now = (await peer.ask(host, "info")) as PeerInfo;
+      setInfo(now);
+      list = now.displays;
+      setProblem(peerProblem(now));
     } catch (error) {
-      setPeer(null);
+      setInfo(null);
       setProblem(captureError(error));
     }
     setDisplays(list);
     setChosen((current) => (current !== null && list.some((d) => d.id === current) ? current : (list[0]?.id ?? null)));
   }, [host]);
 
+  /** The connection the video came over; a new one (the other side dropped it) means asking for the video again. */
+  const [serial, setSerial] = useState(0);
+
+  // Why ask again every few seconds: the other computer can turn seeing off or go away at any time, and the video by
+  // itself would just stop on its last picture.
   useEffect(() => {
     if (!visible) {
       // Why: the main process turns sending off when the window hides; the switch shows the same.
       setSendClicks(false);
       return;
     }
-    void loadDisplays();
-  }, [visible, loadDisplays]);
+    if (!online) {
+      // Why: the relay already said it left, so nobody waits for a connection that cannot come.
+      setInfo(null);
+      setProblem(t("computer.offline"));
+      return;
+    }
+    const check = () => void loadDisplays().then(() => setSerial(peer.serial(host)));
+    check();
+    const timer = setInterval(check, STATUS_EVERY_MS);
+    return () => clearInterval(timer);
+  }, [visible, online, loadDisplays, host]);
 
-  const viewable = peer?.viewing ?? false;
+  const viewable = online && (info?.viewing ?? false);
 
-  // The picture loop: one capture at a time, then a short wait, so a slow capture never piles up requests.
+  // The video: asked for once per display; the other computer sends only what changes. Pictures a second are counted
+  // as they are drawn. A failed start is tried again after a moment.
   useEffect(() => {
     if (!visible || chosen === null || !viewable) return;
     let running = true;
+    let counter = 0;
     const times: number[] = [];
-    setFrame(null);
+    setPlaying(false);
+    const count = () => {
+      const element = video.current;
+      if (!running || !element) return;
+      times.push(performance.now());
+      while (times.length > 0 && times[0] < performance.now() - 2000) times.shift();
+      setFps(Math.round(times.length / 2));
+      setPlaying(true);
+      counter = element.requestVideoFrameCallback(count);
+    };
     void (async () => {
       while (running) {
-        const started = performance.now();
         try {
-          const bytes = await native.peerCapture(host, chosen);
+          const stream = await peer.watch(host, chosen);
           if (!running) break;
-          setFrame(bytes);
+          const element = video.current;
+          if (element) {
+            element.srcObject = stream;
+            void element.play().catch(() => undefined);
+            counter = element.requestVideoFrameCallback(count);
+          }
           setProblem(null);
-          times.push(performance.now());
-          while (times.length > 0 && times[0] < performance.now() - 2000) times.shift();
-          setFps(Math.round(times.length / 2));
-          await wait(Math.max(0, FRAME_MS - (performance.now() - started)));
+          break;
         } catch (error) {
           if (!running) break;
           setProblem(captureError(error));
@@ -297,19 +331,26 @@ function Detail({ host, name, visible, onBack }: { host: string; name: string; v
     })();
     return () => {
       running = false;
+      video.current?.cancelVideoFrameCallback(counter);
+      void peer.unwatch(host);
     };
-  }, [visible, chosen, host, viewable, setFrame]);
+  }, [visible, chosen, host, viewable, serial]);
 
   useEffect(() => setClickError(null), [sendClicks]);
 
-  const send = (input: Input) => native.peerInput(host, input);
+  const send = (input: Input) => peer.ask(host, "input", { input });
 
-  const sendClick = (event: MouseEvent<HTMLImageElement>) => {
-    if (!sendClicks || chosen === null || sending.current) return;
-    // Why: the picture is drawn at exactly its own box, so the spot inside the box is the spot on the display.
-    const box = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - box.left) / box.width;
-    const y = (event.clientY - box.top) / box.height;
+  const sendClick = (event: MouseEvent<HTMLVideoElement>) => {
+    const element = event.currentTarget;
+    if (!sendClicks || chosen === null || sending.current || !element.videoWidth) return;
+    // Why: the video may sit letterboxed inside its box, so the spot is measured on the picture itself.
+    const box = element.getBoundingClientRect();
+    const scale = Math.min(box.width / element.videoWidth, box.height / element.videoHeight);
+    const width = element.videoWidth * scale;
+    const height = element.videoHeight * scale;
+    const x = (event.clientX - box.left - (box.width - width) / 2) / width;
+    const y = (event.clientY - box.top - (box.height - height) / 2) / height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return;
     sending.current = true;
     send({ kind: "click", display: chosen, x, y, button: "left", count: 1 })
       .then(() => setClickError(null))
@@ -341,7 +382,7 @@ function Detail({ host, name, visible, onBack }: { host: string; name: string; v
   };
 
   const display = displays.find((d) => d.id === chosen);
-  const canClick = peer?.control ?? false;
+  const canClick = info?.control ?? false;
 
   return (
     <main className="viewer-window">
@@ -373,17 +414,16 @@ function Detail({ host, name, visible, onBack }: { host: string; name: string; v
         </div>
 
         <div className="screen-box card" tabIndex={0} onKeyDown={sendKey}>
-          {frame && !problem ? (
-            <img
-              className={sendClicks ? "screen clickable" : "screen"}
-              src={frame}
-              alt={display ? displayLabel(display, displays.indexOf(display)) : ""}
-              draggable={false}
-              onClick={sendClick}
-            />
-          ) : (
-            <div className="empty">{problem ?? t("view.loading")}</div>
-          )}
+          <video
+            ref={video}
+            className={sendClicks ? "screen clickable" : "screen"}
+            hidden={!playing || problem !== null}
+            aria-label={display ? displayLabel(display, displays.indexOf(display)) : ""}
+            muted
+            playsInline
+            onClick={sendClick}
+          />
+          {(!playing || problem !== null) && <div className="empty">{problem ?? t("view.loading")}</div>}
         </div>
 
         <div className="toolbar">
@@ -403,7 +443,7 @@ function Detail({ host, name, visible, onBack }: { host: string; name: string; v
           <div className="meta">
             {clickError && <span className="error">{clickError}</span>}
             {display && <span>{t("display.size", { width: display.width, height: display.height })}</span>}
-            {frame && !problem && <span>{t("view.rate", { fps })}</span>}
+            {playing && !problem && <span>{t("view.rate", { fps })}</span>}
           </div>
         </div>
 
@@ -426,22 +466,72 @@ function Detail({ host, name, visible, onBack }: { host: string; name: string; v
 }
 
 /** One line under the title saying how the connection is doing, or why no other computer is listed. */
-function LinkNote({ link }: { link: Link | null }) {
+function LinkNote({ link, onChange }: { link: Link | null; onChange: (link: Link) => void }) {
   if (!link) return null;
-  if (link.state === "noTailscale") return <div className="hint link-note">{t("link.noTailscale")}</div>;
+  if (link.state === "signedOut") return <SignIn onChange={onChange} />;
   if (link.state === "starting") return <div className="hint link-note">{t("link.starting")}</div>;
   if (link.state === "failed") return <div className="hint link-note error">{t("link.failed", { error: link.error ?? "" })}</div>;
-  if (link.state === "needsLogin")
-    return (
-      <div className="hint link-note">
-        {t("link.needsLogin")}{" "}
-        <button className="button" onClick={() => void native.openLinkLogin()}>
-          {t("link.approve")}
-        </button>
-      </div>
-    );
   if (link.computers.length === 0) return <div className="hint link-note">{t("link.empty")}</div>;
   return null;
+}
+
+/** The RUNNERS account form: email and password, signing in or making the account. */
+function SignIn({ onChange }: { onChange: (link: Link) => void }) {
+  const [mode, setMode] = useState<SignMode>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!email || !password || busy) return;
+    setBusy(true);
+    setProblem(null);
+    native
+      .signIn(mode, email, password)
+      .then((link) => {
+        setPassword("");
+        onChange(link);
+      })
+      .catch((error) => {
+        const code = native.errorCode(error);
+        setProblem(t(code === "bad" || code === "exists" ? `account.${code}` : "account.network"));
+      })
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <form className="card sign-in" onSubmit={submit}>
+      <div className="switch-label">{t("account.title")}</div>
+      <div className="hint">{t("account.intro")}</div>
+      <input
+        className="type-box"
+        type="email"
+        autoComplete="email"
+        placeholder={t("account.email")}
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+      />
+      <input
+        className="type-box"
+        type="password"
+        autoComplete={mode === "login" ? "current-password" : "new-password"}
+        placeholder={t("account.password")}
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+      />
+      {problem && <div className="hint error">{problem}</div>}
+      <div className="sign-in-row">
+        <button className="button" type="submit" disabled={!email || !password || busy}>
+          {t(mode === "login" ? "account.signIn" : "account.signUp")}
+        </button>
+        <button className="link-button" type="button" onClick={() => setMode(mode === "login" ? "signup" : "login")}>
+          {t(mode === "login" ? "account.toSignUp" : "account.toSignIn")}
+        </button>
+      </div>
+    </form>
+  );
 }
 
 /** One on/off line: what it is for (a Lucide icon and a name) on the left, the shared toggle on the right
@@ -521,6 +611,19 @@ function ThisMac(props: { status: Status; link: Link; onChange: (link: Link) => 
           {!status.permissions.screenRecording && <div className="hint">{t("permission.restartNote")}</div>}
         </div>
       </section>
+
+      {link.account && (
+        <section>
+          <h2 className="section-head">{t("account.title")}</h2>
+          <div className="card account-row">
+            <span>{t("account.signedInAs", { email: link.account })}</span>
+            <button className="button" onClick={() => void native.signOut().then(props.onChange)}>
+              <LogOut size={14} strokeWidth={1.5} aria-hidden />
+              <span>{t("account.signOut")}</span>
+            </button>
+          </div>
+        </section>
+      )}
 
       <section>
         <h2 className="section-head">{t("thisMac.sharing")}</h2>

@@ -1,7 +1,7 @@
 // The windows: the Remote window (every computer, one computer, and this Mac's settings), the About window and the
 // update question. There is no tray panel (decision 「[REMOTE] 메뉴 막대 패널 정리」 1C): the menu bar keeps the status
 // picture and a short native menu, and the work happens in the window.
-import { app, BrowserWindow, nativeTheme } from "electron";
+import { app, BrowserWindow, nativeTheme, type WebContents } from "electron";
 import { join } from "node:path";
 import { t } from "./i18n";
 
@@ -75,55 +75,65 @@ const VIEWER_HEIGHT = 680;
 
 let viewer: BrowserWindow | null = null;
 let quitting = false;
+let shownOnce = false;
 
 /** Lets the viewer window really close when Remote quits; until then closing only hides it. */
 export function allowClose(): void {
   quitting = true;
 }
 
-/** Opens the viewer window, or brings it to the front. Closing it only hides it, and the page is told either way so
- *  it stops taking pictures and turns Send Clicks off while hidden. */
+/** Makes the Remote window without showing it. It holds the WebRTC connections (src/peer.ts), so it is made at launch
+ *  and closing it only hides it: other devices keep seeing this computer while nobody has the window open. The page is
+ *  told when it is shown or hidden, so it stops its own pictures and turns Send Clicks off while hidden. */
+export function prepareViewer(onHide: () => void): BrowserWindow {
+  if (viewer && !viewer.isDestroyed()) return viewer;
+  viewer = new BrowserWindow({
+    width: VIEWER_WIDTH,
+    height: VIEWER_HEIGHT,
+    minWidth: 520,
+    minHeight: 400,
+    useContentSize: true,
+    show: false,
+    title: "Remote",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1e1e20" : "#f6f6f6",
+    autoHideMenuBar: true,
+    // Why: a hidden page is slowed down by default, which would stall the video other devices are watching.
+    webPreferences: { preload, sandbox: true, contextIsolation: true, backgroundThrottling: false },
+  });
+  viewer.setMenu(null);
+  const window = viewer;
+  window.on("close", (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    window.hide();
+  });
+  window.on("hide", () => {
+    onHide();
+    window.webContents.send("remote:viewerVisible", false);
+  });
+  window.on("show", () => window.webContents.send("remote:viewerVisible", true));
+  window.on("closed", () => {
+    viewer = null;
+  });
+  load(window, "viewer");
+  return window;
+}
+
+/** The page holding the WebRTC connections, or null before it is made or after Remote quit. */
+export function viewerContents(): WebContents | null {
+  return viewer && !viewer.isDestroyed() ? viewer.webContents : null;
+}
+
+/** Shows the Remote window and brings it to the front. */
 export function showViewer(onHide: () => void): BrowserWindow {
-  if (!viewer || viewer.isDestroyed()) {
-    viewer = new BrowserWindow({
-      width: VIEWER_WIDTH,
-      height: VIEWER_HEIGHT,
-      minWidth: 520,
-      minHeight: 400,
-      useContentSize: true,
-      show: false,
-      title: "Remote",
-      backgroundColor: nativeTheme.shouldUseDarkColors ? "#1e1e20" : "#f6f6f6",
-      autoHideMenuBar: true,
-      webPreferences: { preload, sandbox: true, contextIsolation: true },
-    });
-    viewer.setMenu(null);
-    const window = viewer;
-    window.on("close", (event) => {
-      if (quitting) return;
-      event.preventDefault();
-      window.hide();
-    });
-    window.on("hide", () => {
-      onHide();
-      window.webContents.send("remote:viewerVisible", false);
-    });
-    window.on("show", () => window.webContents.send("remote:viewerVisible", true));
-    window.on("closed", () => {
-      viewer = null;
-    });
-    window.once("ready-to-show", () => {
-      window.center();
-      window.show();
-      window.focus();
-    });
-    load(window, "viewer");
-    return window;
-  }
-  viewer.show();
-  if (viewer.isMinimized()) viewer.restore();
-  viewer.focus();
-  return viewer;
+  const window = prepareViewer(onHide);
+  const first = !window.isVisible() && !shownOnce;
+  shownOnce = true;
+  if (first) window.center();
+  window.show();
+  if (window.isMinimized()) window.restore();
+  window.focus();
+  return window;
 }
 
 /** What the update window shows: the new version (as people see it), its "What's new" lines (null hides the box) and,

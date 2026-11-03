@@ -39,12 +39,10 @@ export const requestPermission = (kind: PermissionKind) => api().requestPermissi
 export const setSendClicks = (on: boolean) => api().setSendClicks(on);
 export const sendInput = (input: Input, pressAt: PressAt | null) => api().sendInput(input, pressAt);
 export const link = () => api().link();
-export const openLinkLogin = () => api().openLinkLogin();
+export const signIn = (mode: "login" | "signup", email: string, password: string) => api().signIn(mode, email, password);
+export const signOut = () => api().signOut();
 export const setAllow = (what: Allow, on: boolean) => api().setAllow(what, on);
 export const disconnect = () => api().disconnect();
-export const peerInfo = (host: string) => api().peerInfo(host);
-export const peerCapture = (host: string, display: number, width?: number) => api().peerCapture(host, display, width);
-export const peerInput = (host: string, input: Input) => api().peerInput(host, input);
 export const onViewerVisible = (listener: (visible: boolean) => void) => api().onViewerVisible(listener);
 export const fitHeight = (height: number) => api().fitHeight(height);
 export const version = () => api().version();

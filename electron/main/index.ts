@@ -15,7 +15,7 @@ import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
 import { createTray, showState } from "./tray";
 import { checkNow, displayVersion, startUpdates } from "./updates";
-import { allowClose, answerUpdate, askUpdate, showAbout, showViewer, TRANSLUCENT, updateOffer } from "./windows";
+import { allowClose, answerUpdate, askUpdate, prepareViewer, showAbout, showViewer, TRANSLUCENT, updateOffer, viewerContents } from "./windows";
 
 const ISSUES_URL = "https://github.com/RUNNERS-IM/remote/issues";
 const STATUS_EVERY_MS = 2000;
@@ -30,16 +30,18 @@ const DEV = !app.isPackaged;
 let tray: Tray | null = null;
 /** Opens the Remote window. While it is open Remote also shows in the Dock, so it can be found like any app's window;
  *  closed, Remote is back to the menu bar only (2026-11-02: menu bar, plus the Dock while the window is open). */
+function viewerHidden(): void {
+  // Why: a hidden window must never keep clicking, so the switch turns off with it.
+  input.setSendClicks(false);
+  app.dock?.hide();
+}
+
 function openViewer(): void {
   if (process.platform === "darwin") {
     void app.dock?.show();
     app.focus({ steal: true });
   }
-  showViewer(() => {
-    // Why: a hidden window must never keep clicking, so the switch turns off with it.
-    input.setSendClicks(false);
-    app.dock?.hide();
-  });
+  showViewer(viewerHidden);
 }
 
 function menuState(): MenuState {
@@ -154,7 +156,10 @@ function registerIpc(): void {
   });
   ipcMain.on("remote:closeWindow", (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle("remote:link", () => link.current());
-  ipcMain.handle("remote:openLinkLogin", () => link.openLogin());
+  ipcMain.handle("remote:signIn", (_event, mode: unknown, email: unknown, password: unknown) =>
+    link.signIn(mode === "signup" ? "signup" : "login", String(email), String(password)),
+  );
+  ipcMain.handle("remote:signOut", () => link.signOut());
   ipcMain.handle("remote:setAllow", (_event, what: Allow, on: boolean) => {
     if (what === "allowViewing" || what === "allowControl") link.setAllow(what, Boolean(on));
     return link.current();
@@ -163,11 +168,6 @@ function registerIpc(): void {
     link.disconnect();
     return link.current();
   });
-  ipcMain.handle("remote:peerInfo", (_event, host: string) => link.peerInfo(String(host)));
-  ipcMain.handle("remote:peerCapture", (_event, host: string, display: number, width?: number) =>
-    link.peerCapture(String(host), Number(display), width === undefined ? undefined : Number(width)),
-  );
-  ipcMain.handle("remote:peerInput", (_event, host: string, what: Input) => link.peerInput(String(host), what));
   ipcMain.handle("remote:updateOffer", () => updateOffer());
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
@@ -233,7 +233,8 @@ function start(): void {
     refreshLinuxMenu();
   });
   statusLoop();
-  void link.startConnection();
+  link.startConnection(viewerContents);
+  prepareViewer(viewerHidden);
   startClaude();
   startUpdates();
   if (DEV) debugHooks();

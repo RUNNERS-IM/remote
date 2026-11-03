@@ -28,16 +28,19 @@ Automatically** stops the daily check. Choosing **Check for Updates…** does th
 
 ### Office connection
 
-Remote does not join a network of its own. It uses the Tailscale already on the computer: it asks the `tailscale`
-command for this computer's network address and the other computers in the same network, , and finds each incoming
-connection's computer in that list. Remote sends nothing to Tailscale itself; what Tailscale collects is in Tailscale's own
-privacy policy. Screens, clicks and keys go directly between the two computers through Tailscale, encrypted
-(WireGuard), or through Tailscale's encrypted relay when a direct path is not possible.
+Computers and phones connect through the RUNNERS account you sign in with in the Remote window. Remote sends the
+account's email and password to the RUNNERS system server (`server.system.runners.im`) to sign in; the password is sent
+as its SHA-256, never as typed. The server returns two tokens, which Remote keeps encrypted by the operating system in
+its own folder, and nothing else about you is kept. While signed in, Remote keeps one connection open to the server's
+relay, which tells it which computers and phones of the same account are online (each one's name and a random device
+id) and passes the short messages that set up a connection between two of them. Screens, clicks and keys do not pass
+through the server: they go directly between the two devices over WebRTC, encrypted (DTLS-SRTP). To find a direct path
+each device asks a public STUN server (`stun.l.google.com`) for its own internet address; nothing else is sent to it.
 
-- Another computer in the network sees this one only while **Let Other Computers See This** is on, and can click and
+- Another computer or phone of the same account sees this one only while **Let Other Computers See This** is on, and can click and
   type only while **Let Other Computers Click and Type** is also on. **Disconnect Now** turns seeing off at once.
-- Remote listens only on the Tailscale address, so computers outside that network cannot reach it, and it answers
-  only computers of the same network (not ones shared in from another network).
+- Remote answers only devices the relay lists for the same account; Remote does not listen on any port of this
+  computer. **Sign Out** in the window ends the relay connection and every connection to another device.
 - The connection log (who viewed, clicked or typed, and when; never the text typed) stays in memory on this computer
   and is gone when Remote quits.
 - Pictures sent to another computer are not saved on either computer.
@@ -83,15 +86,19 @@ Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연
 
 ### 사무실 연결
 
-Remote 는 따로 망에 들어가지 않고, 컴퓨터에 이미 깔린 Tailscale 을 같이 씁니다. `tailscale` 명령에 이 컴퓨터의 망
-주소와 같은 망의 다른 컴퓨터를 묻고, 연결이 들어오면 그 목록에서 어느 컴퓨터인지 찾습니다. Remote 가 Tailscale 에 따로
-보내는 것은 없습니다. Tailscale 이 모으는 것은 Tailscale 의 개인정보 처리방침에 있습니다. 화면 · 클릭 · 키는 Tailscale 을
-통해 두 컴퓨터 사이를 암호화(WireGuard)해 바로 오가며, 바로 갈 길이 없을 때만 Tailscale 의 암호화된 중계 서버를 거칩니다.
+컴퓨터와 휴대폰은 Remote 창에서 로그인한 RUNNERS 계정으로 이어집니다. 로그인할 때 Remote 는 계정의 이메일과
+비밀번호를 RUNNERS 시스템 서버(`server.system.runners.im`)로 보냅니다. 비밀번호는 친 그대로가 아니라 SHA-256 값으로
+보냅니다. 서버가 돌려준 토큰 두 개는 운영체제가 암호화해 Remote 자기 폴더에 두고, 그 밖에 사용자에 관한 것은 두지
+않습니다. 로그인해 있는 동안 Remote 는 서버의 중계(relay)에 연결 하나를 열어 둡니다. 중계는 같은 계정의 어느 컴퓨터 ·
+휴대폰이 켜져 있는지(기기마다 이름과 무작위 기기 번호)를 알려 주고, 두 기기가 서로 연결을 맺는 데 필요한 짧은 메시지를
+전해 줍니다. 화면 · 클릭 · 키는 서버를 거치지 않고 WebRTC 로 두 기기 사이를 암호화(DTLS-SRTP)해 바로 오갑니다. 바로 갈
+길을 찾으려고 기기마다 공개 STUN 서버(`stun.l.google.com`)에 자기 인터넷 주소를 묻고, 그 밖에는 아무것도 보내지
+않습니다.
 
-- 같은 망의 다른 컴퓨터는 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 이 컴퓨터를 보고, **다른 컴퓨터의 클릭 ·
+- 같은 계정의 다른 컴퓨터 · 휴대폰은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 이 컴퓨터를 보고, **다른 컴퓨터의 클릭 ·
   키 입력 허용** 까지 켜져 있을 때만 클릭 · 입력합니다. **지금 끊기** 는 보기를 바로 끕니다.
-- Remote 는 Tailscale 주소에서만 연결을 받으므로 그 망 밖의 컴퓨터는 닿을 수 없고, 같은 망의 컴퓨터에만 답합니다
-  (다른 망에서 공유받은 기기는 거절).
+- Remote 는 중계가 같은 계정이라고 알려 준 기기에만 답하고, 이 컴퓨터의 어떤 포트에서도 연결을 기다리지 않습니다.
+  창의 **로그아웃** 은 중계 연결과 다른 기기와의 연결을 모두 끊습니다.
 - 접속 기록(누가 언제 보거나 클릭 · 입력했는지. 친 글자 내용은 적지 않습니다)은 이 컴퓨터 메모리에만 있고 Remote 를
   끄면 사라집니다.
 - 다른 컴퓨터로 보낸 화면은 어느 쪽 컴퓨터에도 저장하지 않습니다.

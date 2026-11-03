@@ -106,7 +106,7 @@ function attach(ws, email) {
       if (!deviceId || !["host", "viewer"].includes(role)) return send(ws, { type: "error", error: "bad hello" });
       const devices = accounts.get(email) ?? new Map();
       accounts.set(email, devices);
-      devices.get(deviceId)?.socket.close(4000, "replaced");
+      devices.get(deviceId)?.socket.close(4409, "replaced");
       me = { socket: ws, deviceId, name: String(name ?? ""), role, projectName };
       devices.set(deviceId, me);
       send(ws, { type: "peers", peers: others(email, deviceId).map(({ deviceId, name, role }) => ({ deviceId, name, role })) });

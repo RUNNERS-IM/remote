@@ -118,6 +118,13 @@ export function connect(): void {
       });
       return;
     }
+    // Why: 4409 means a newer connection with this same device id took over (the same user data folder running
+    // twice); joining again would push that one off in turn, over and over (runners-app-kit docs/relay.md).
+    if (event.code === 4409) {
+      state = "failed";
+      error = "replaced";
+      return;
+    }
     state = "failed";
     error = error ?? (event.reason || `closed ${event.code}`);
     later();

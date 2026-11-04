@@ -3,7 +3,7 @@
 // the phone apps use through runners-app-kit), and the tokens are kept encrypted by the OS (safeStorage) in the user
 // data folder. Nothing but the email and the two tokens is kept.
 import { app, safeStorage } from "electron";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSettings, writeSettings } from "./settings";
@@ -89,16 +89,17 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   if (res.status === 401 || res.status === 400 || res.status === 404) throw new Error("bad");
   if (res.status === 409) throw new Error("exists");
   if (!res.ok) throw new Error("network");
-  return (await res.json()) as T;
+  const answer = (await res.json()) as unknown;
+  // Why: the system server wraps a success as {code, data}; scripts/relay-dev.mjs answers bare.
+  return (answer && typeof answer === "object" && "code" in answer && "data" in answer ? answer.data : answer) as T;
 }
 
-/** Signs in (or makes the account first). Throws `bad`, `exists` or `network`. The server takes the password as its
- *  SHA-256 in hex, like the phone apps send it. */
+/** Signs in (or makes the account first). Throws `bad`, `exists` or `network`. The password goes as typed over HTTPS,
+ *  as runners-app-kit sends it; the server takes letters and digits, 6 to 20 of them. */
 export async function signIn(mode: "login" | "signup", address: string, password: string): Promise<void> {
-  const hashed = createHash("sha256").update(password).digest("hex");
   const answer = await post<{ tokens: Tokens }>(`/api/mobile/auth/${mode}`, {
     email: address.trim(),
-    password: hashed,
+    password,
     projectName: PROJECT,
   });
   save({ email: address.trim(), tokens: answer.tokens });

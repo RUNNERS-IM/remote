@@ -9,9 +9,32 @@
 //     switches, Disconnect, the connection log and the two general settings (decision 「[REMOTE] 메뉴 막대 패널 정리」
 //     1C: there is no tray panel). While someone is watching, a bar with Disconnect sits on top of the grid.
 // On Windows and Linux it says Remote works on macOS only for now.
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CompositionEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import type { SignMode } from "../electron/preload/api";
-import { ChevronLeft, Eye, Laptop, LogOut, Monitor, MousePointerClick, Power, RefreshCw, type LucideIcon } from "lucide-react";
+import {
+  ChevronLeft,
+  Eye,
+  Laptop,
+  LogOut,
+  Maximize,
+  Minimize,
+  Monitor,
+  MousePointerClick,
+  Power,
+  RefreshCw,
+  Scan,
+  Shrink,
+  type LucideIcon,
+} from "lucide-react";
 import { statusText, t } from "./i18n";
 import { keyInput } from "./keys";
 import * as native from "./native";
@@ -26,6 +49,21 @@ const STATUS_EVERY_MS = 2000;
 /** How often each tile of the grid gets a new picture, and how wide that picture is asked for (twice the tile). */
 const TILE_MS = 2000;
 const TILE_WIDTH = 480;
+
+/** Mouse and keys sent to another computer: moves at most every MOVE_MS, a press within DRAG_PX of the last one and
+ *  DOUBLE_MS after it is a double click, farther than DRAG_PX with the button held is a drag, wheel turns are gathered
+ *  for SCROLL_MS (a line counts LINE_PX), and the copied text is fetched COPY_WAIT_MS after Command-C. */
+const MOVE_MS = 30;
+const DRAG_PX = 4;
+const DOUBLE_MS = 500;
+const SCROLL_MS = 40;
+const LINE_PX = 16;
+const COPY_WAIT_MS = 300;
+const NOTE_MS = 3000;
+/** macOS key codes of V, C and X (keys.ts). */
+const KEY_V = 9;
+const KEY_C = 8;
+const KEY_X = 7;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -235,6 +273,25 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
   );
 }
 
+/** Where a pointer is on the picture, as fractions; null outside it unless `clamp` (a drag may leave the picture). */
+function spotOn(
+  element: HTMLVideoElement | null,
+  clientX: number,
+  clientY: number,
+  clamp: boolean,
+): { x: number; y: number } | null {
+  if (!element?.videoWidth) return null;
+  // Why: the video may sit letterboxed inside its box, so the spot is measured on the picture itself.
+  const box = element.getBoundingClientRect();
+  const scale = Math.min(box.width / element.videoWidth, box.height / element.videoHeight);
+  const width = element.videoWidth * scale;
+  const height = element.videoHeight * scale;
+  const x = (clientX - box.left - (box.width - width) / 2) / width;
+  const y = (clientY - box.top - (box.height - height) / 2) / height;
+  if (clamp) return { x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) };
+  return x < 0 || x > 1 || y < 0 || y > 1 ? null : { x, y };
+}
+
 /** One computer opened from the grid: its displays as tabs, the screen, and sending clicks, keys and text. */
 function Detail(props: { host: string; name: string; online: boolean; visible: boolean; onBack: () => void }) {
   const { host, name, online, visible, onBack } = props;
@@ -248,8 +305,22 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   const [sendClicks, setSendClicks] = useState(false);
   const [clickError, setClickError] = useState<string | null>(null);
   const [text, setText] = useState("");
-  /** A click is on its way; presses meanwhile are dropped so one press never sends two clicks. */
-  const sending = useRef(false);
+  const [note, setNote] = useState<string | null>(null);
+  /** What the input method is putting together (a Korean syllable), shown over the picture until it is sent. */
+  const [composing, setComposing] = useState("");
+  /** The hidden key box has focus, so keys go to that computer. */
+  const [typing, setTyping] = useState(false);
+  const [actual, setActual] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const screenBox = useRef<HTMLDivElement>(null);
+  const keys = useRef<HTMLTextAreaElement>(null);
+  /** Inputs go out in this order; a paste waits here until the copied text has arrived there. */
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  /** The button held down on the picture, and whether it has moved far enough to be a drag. */
+  const pressed = useRef<{ button: "left" | "right"; count: number; clientX: number; clientY: number; dragging: boolean } | null>(null);
+  /** The last press, to tell the second press of a double click. */
+  const lastPress = useRef<{ at: number; clientX: number; clientY: number; button: "left" | "right"; count: number } | null>(null);
+  const lastMove = useRef(0);
 
   const loadDisplays = useCallback(async () => {
     let list: Display[] = [];
@@ -338,42 +409,167 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
 
   useEffect(() => setClickError(null), [sendClicks]);
 
-  const send = (input: Input) => peer.ask(host, "input", { input });
-
-  const sendClick = (event: MouseEvent<HTMLVideoElement>) => {
-    const element = event.currentTarget;
-    if (!sendClicks || chosen === null || sending.current || !element.videoWidth) return;
-    // Why: the video may sit letterboxed inside its box, so the spot is measured on the picture itself.
-    const box = element.getBoundingClientRect();
-    const scale = Math.min(box.width / element.videoWidth, box.height / element.videoHeight);
-    const width = element.videoWidth * scale;
-    const height = element.videoHeight * scale;
-    const x = (event.clientX - box.left - (box.width - width) / 2) / width;
-    const y = (event.clientY - box.top - (box.height - height) / 2) / height;
-    if (x < 0 || x > 1 || y < 0 || y > 1) return;
-    sending.current = true;
-    send({ kind: "click", display: chosen, x, y, button: "left", count: 1 })
-      .then(() => setClickError(null))
-      .catch((error) => setClickError(inputError(error)))
-      .finally(() => {
-        sending.current = false;
+  /** Sends one input, after anything still waiting in `queue` (a paste first puts the copied text there). The reply is
+   *  not waited for, so a drag never lags behind the replies. */
+  const post = useCallback(
+    (input: Input) => {
+      queue.current = queue.current.then(() => {
+        void peer
+          .ask(host, "input", { input })
+          .then(() => setClickError(null))
+          .catch((error) => setClickError(inputError(error)));
       });
+    },
+    [host],
+  );
+
+  // The mouse (decision 「[REMOTE] 개발 - 원격 기능 넓히기」 2A): the button goes down and up there as it does here, so a
+  // click, a double click, a right click and a drag all happen as made. Moves are sent at most every MOVE_MS.
+  const onPointerDown = (event: PointerEvent<HTMLVideoElement>) => {
+    if (!sendClicks || chosen === null || (event.button !== 0 && event.button !== 2)) return;
+    const at = spotOn(video.current, event.clientX, event.clientY, false);
+    if (!at) return;
+    event.preventDefault();
+    keys.current?.focus();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const button = event.button === 2 ? "right" : "left";
+    const last = lastPress.current;
+    const again =
+      last &&
+      last.button === button &&
+      event.timeStamp - last.at < DOUBLE_MS &&
+      Math.hypot(event.clientX - last.clientX, event.clientY - last.clientY) < DRAG_PX;
+    const count = again ? Math.min(last.count + 1, 3) : 1;
+    lastPress.current = { at: event.timeStamp, clientX: event.clientX, clientY: event.clientY, button, count };
+    pressed.current = { button, count, clientX: event.clientX, clientY: event.clientY, dragging: false };
+    post({ kind: "press", display: chosen, ...at, button, down: true, count });
   };
 
-  const sendKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!sendClicks) return;
+  const onPointerMove = (event: PointerEvent<HTMLVideoElement>) => {
+    if (!sendClicks || chosen === null || event.timeStamp - lastMove.current < MOVE_MS) return;
+    const held = pressed.current;
+    if (held) {
+      if (!held.dragging && Math.hypot(event.clientX - held.clientX, event.clientY - held.clientY) < DRAG_PX) return;
+      held.dragging = true;
+      const at = spotOn(video.current, event.clientX, event.clientY, true);
+      if (!at) return;
+      lastMove.current = event.timeStamp;
+      post({ kind: "drag", display: chosen, ...at, button: held.button });
+      return;
+    }
+    const at = spotOn(video.current, event.clientX, event.clientY, false);
+    if (!at) return;
+    lastMove.current = event.timeStamp;
+    post({ kind: "move", display: chosen, ...at });
+  };
+
+  const onPointerUp = (event: PointerEvent<HTMLVideoElement>) => {
+    const held = pressed.current;
+    if (!held || chosen === null) return;
+    pressed.current = null;
+    const at = spotOn(video.current, event.clientX, event.clientY, true);
+    if (at) post({ kind: "press", display: chosen, ...at, button: held.button, down: false, count: held.count });
+  };
+
+  // Scrolling: gathered for SCROLL_MS and sent as one, at the spot. Why a listener of its own: React's wheel listener
+  // cannot stop the box itself from scrolling at original size.
+  useEffect(() => {
+    const element = video.current;
+    if (!element || !sendClicks || chosen === null) return;
+    let dx = 0;
+    let dy = 0;
+    let where: { x: number; y: number } | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onWheel = (event: WheelEvent) => {
+      const at = spotOn(video.current, event.clientX, event.clientY, false);
+      if (!at) return;
+      event.preventDefault();
+      const unit = event.deltaMode === 1 ? LINE_PX : event.deltaMode === 2 ? element.clientHeight : 1;
+      dx += event.deltaX * unit;
+      dy += event.deltaY * unit;
+      where = at;
+      timer ??= setTimeout(() => {
+        timer = null;
+        if (where && (Math.round(dx) || Math.round(dy))) {
+          post({ kind: "scroll", display: chosen, ...where, dx: Math.round(dx), dy: Math.round(dy) });
+        }
+        dx = 0;
+        dy = 0;
+      }, SCROLL_MS);
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      element.removeEventListener("wheel", onWheel);
+      if (timer) clearTimeout(timer);
+    };
+  }, [sendClicks, chosen, post]);
+
+  // While keys go there, this window's own menu shortcuts stand aside, so Command-C, Command-V and the rest reach it.
+  useEffect(() => {
+    native.keysToPeer(sendClicks && typing);
+    return () => native.keysToPeer(false);
+  }, [sendClicks, typing]);
+
+  // Keys (2B): shortcuts and keys like Return go as keys; letters, accents and Korean are left to the hidden box below,
+  // whose input method puts the syllables together here, and each finished piece is sent as text.
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!sendClicks || event.nativeEvent.isComposing || event.keyCode === 229) return;
     const input = keyInput(event.nativeEvent);
-    if (!input) return;
+    if (!input || input.kind !== "key") return;
     event.preventDefault();
-    send(input)
-      .then(() => setClickError(null))
-      .catch((error) => setClickError(inputError(error)));
+    const command = input.modifiers.length === 1 && input.modifiers[0] === "command";
+    // Copy and paste (2C): Command-V first puts the text copied here on that computer; after Command-C or Command-X
+    // the text copied there is brought here.
+    if (command && input.code === KEY_V) {
+      queue.current = queue.current
+        .then(async () => peer.ask(host, "clipboardSet", { text: await native.readClipboard() }))
+        .catch((error) => setClickError(inputError(error)));
+    }
+    post(input);
+    if (command && (input.code === KEY_C || input.code === KEY_X)) {
+      queue.current = queue.current
+        .then(() => wait(COPY_WAIT_MS))
+        .then(() => peer.ask(host, "clipboardGet"))
+        .then((text) => native.writeClipboard(String(text ?? "")))
+        .then(() => setNote(t("peer.copied")))
+        .catch((error) => setClickError(inputError(error)));
+    }
+  };
+
+  const onTyped = (event: FormEvent<HTMLTextAreaElement>) => {
+    const typed = event.nativeEvent as InputEvent;
+    if (typed.isComposing) return;
+    if (sendClicks && typed.inputType === "insertText" && typed.data) post({ kind: "text", text: typed.data });
+    event.currentTarget.value = "";
+  };
+
+  const onComposed = (event: CompositionEvent<HTMLTextAreaElement>) => {
+    setComposing("");
+    if (sendClicks && event.data) post({ kind: "text", text: event.data });
+  };
+
+  useEffect(() => {
+    if (!note) return;
+    const timer = setTimeout(() => setNote(null), NOTE_MS);
+    return () => clearTimeout(timer);
+  }, [note]);
+
+  // Fullscreen and original size (2D). Esc leaves fullscreen and is not sent.
+  useEffect(() => {
+    const changed = () => setFullscreen(document.fullscreenElement !== null);
+    document.addEventListener("fullscreenchange", changed);
+    return () => document.removeEventListener("fullscreenchange", changed);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void screenBox.current?.requestFullscreen().then(() => keys.current?.focus());
   };
 
   const sendText = (event: FormEvent) => {
     event.preventDefault();
     if (!text) return;
-    send({ kind: "text", text })
+    peer
+      .ask(host, "input", { input: { kind: "text", text } satisfies Input })
       .then(() => {
         setText("");
         setClickError(null);
@@ -383,6 +579,7 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
 
   const display = displays.find((d) => d.id === chosen);
   const canClick = info?.control ?? false;
+  const shown = playing && problem === null;
 
   return (
     <main className="viewer-window">
@@ -413,17 +610,37 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
           ))}
         </div>
 
-        <div className="screen-box card" tabIndex={0} onKeyDown={sendKey}>
+        <div ref={screenBox} className={actual ? "screen-box card actual" : "screen-box card"}>
           <video
             ref={video}
             className={sendClicks ? "screen clickable" : "screen"}
-            hidden={!playing || problem !== null}
+            style={actual && display ? { width: display.width } : undefined}
+            hidden={!shown}
             aria-label={display ? displayLabel(display, displays.indexOf(display)) : ""}
             muted
             playsInline
-            onClick={sendClick}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onContextMenu={(event) => event.preventDefault()}
           />
-          {(!playing || problem !== null) && <div className="empty">{problem ?? t("view.loading")}</div>}
+          {!shown && <div className="empty">{problem ?? t("view.loading")}</div>}
+          <textarea
+            ref={keys}
+            className="key-catcher"
+            aria-label={t("clickTest.label")}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            onKeyDown={onKeyDown}
+            onInput={onTyped}
+            onCompositionUpdate={(event) => setComposing(event.data)}
+            onCompositionEnd={onComposed}
+            onFocus={() => setTyping(true)}
+            onBlur={() => setTyping(false)}
+          />
+          {composing && <div className="composing">{composing}</div>}
         </div>
 
         <div className="toolbar">
@@ -442,8 +659,19 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
           </label>
           <div className="meta">
             {clickError && <span className="error">{clickError}</span>}
+            {!clickError && note && <span>{note}</span>}
             {display && <span>{t("display.size", { width: display.width, height: display.height })}</span>}
-            {playing && !problem && <span>{t("view.rate", { fps })}</span>}
+            {shown && <span>{t("view.rate", { fps })}</span>}
+          </div>
+          <div className="view-buttons">
+            <button type="button" className="button" disabled={!shown} onClick={() => setActual(!actual)}>
+              {actual ? <Shrink size={14} strokeWidth={1.5} aria-hidden /> : <Scan size={14} strokeWidth={1.5} aria-hidden />}
+              <span>{actual ? t("view.fitSize") : t("view.actualSize")}</span>
+            </button>
+            <button type="button" className="button" disabled={!shown} onClick={toggleFullscreen}>
+              {fullscreen ? <Minimize size={14} strokeWidth={1.5} aria-hidden /> : <Maximize size={14} strokeWidth={1.5} aria-hidden />}
+              <span>{fullscreen ? t("view.exitFullscreen") : t("view.fullscreen")}</span>
+            </button>
           </div>
         </div>
 

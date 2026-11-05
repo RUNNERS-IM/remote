@@ -178,6 +178,65 @@
   background: var(--screen);
 }
 
+.screen-box {
+  position: relative;
+}
+
+/* Original size (decision 「[REMOTE] 개발 - 원격 기능 넓히기」 2D): one point there is one point here, and the box
+   scrolls; `safe center` keeps the top-left reachable when the picture is larger than the box. */
+.screen-box.actual {
+  overflow: auto;
+  place-items: safe center;
+}
+
+.screen-box.actual .screen {
+  max-width: none;
+  max-height: none;
+}
+
+.screen-box:fullscreen {
+  border: 0;
+  border-radius: 0;
+}
+
+/* Takes the keys while the picture is being used: invisible, at the bottom left so the input method's word list opens
+   there. */
+.key-catcher {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  resize: none;
+  pointer-events: none;
+}
+
+.composing {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.view-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.view-buttons .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .screen {
   display: block;
   max-width: 100%;

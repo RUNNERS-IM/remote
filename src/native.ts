@@ -39,6 +39,9 @@ export const requestPermission = (kind: PermissionKind) => api().requestPermissi
 export const setSendClicks = (on: boolean) => api().setSendClicks(on);
 export const sendInput = (input: Input, pressAt: PressAt | null) => api().sendInput(input, pressAt);
 export const link = () => api().link();
+export const readClipboard = () => api().readClipboard();
+export const writeClipboard = (text: string) => api().writeClipboard(text);
+export const keysToPeer = (on: boolean) => api().keysToPeer(on);
 export const signIn = (mode: "login" | "signup", email: string, password: string) => api().signIn(mode, email, password);
 export const signOut = () => api().signOut();
 export const setAllow = (what: Allow, on: boolean) => api().setAllow(what, on);

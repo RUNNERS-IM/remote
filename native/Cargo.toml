@@ -31,7 +31,7 @@ objc2-core-foundation = { version = "=0.3.2", default-features = false, features
 objc2-core-graphics = { version = "=0.3.2", default-features = false, features = ["std", "CGImage", "CGWindow"] }
 objc2-image-io = { version = "=0.3.2", default-features = false, features = ["std", "CGImageDestination", "objc2-core-graphics"] }
 # Why: CGEvent and CGDisplay with safe wrappers.
-core-graphics = "0.25"
+core-graphics = { version = "0.25", features = ["highsierra"] }
 core-foundation = "0.10"
 
 [build-dependencies]

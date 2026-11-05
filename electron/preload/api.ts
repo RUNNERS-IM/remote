@@ -61,10 +61,15 @@ export type Display = {
   pixelHeight: number;
 };
 
-/** One click or key a viewer sends; `x` and `y` are fractions of the display (0 at the left / top, 1 at the far edge). */
+/** One click or key a viewer sends; `x` and `y` are fractions of the display (0 at the left / top, 1 at the far edge).
+ *  `press` is one half of a click (for dragging), `drag` a move with the button held, `scroll` pixels as the browser
+ *  counts them (positive `dy` shows what is further down). */
 export type Input =
   | { kind: "move"; display: number; x: number; y: number }
   | { kind: "click"; display: number; x: number; y: number; button: "left" | "right"; count: number }
+  | { kind: "press"; display: number; x: number; y: number; button: "left" | "right"; down: boolean; count?: number }
+  | { kind: "drag"; display: number; x: number; y: number; button: "left" | "right" }
+  | { kind: "scroll"; display: number; x: number; y: number; dx: number; dy: number }
   | { kind: "key"; code: number; modifiers: ("shift" | "control" | "option" | "command")[] }
   | { kind: "text"; text: string };
 
@@ -78,7 +83,7 @@ export type LinkState = "signedOut" | "starting" | "running" | "failed";
 
 /** One line of the connection log: who did what to this computer, and when (ms since 1970). `refused` is a request
  *  turned away because seeing or clicking was off. Typed text itself is never written down. */
-export type LogEntry = { at: number; peer: string; what: "view" | "click" | "key" | "text" | "refused" };
+export type LogEntry = { at: number; peer: string; what: "view" | "click" | "key" | "text" | "copy" | "paste" | "refused" };
 
 export type Link = {
   state: LinkState;
@@ -157,6 +162,12 @@ export type RemoteApi = {
   clientReply: (rid: string, ok: boolean, value: unknown) => void;
   /** Called with true when the viewer window is shown and false when it is hidden. */
   onViewerVisible: (listener: (visible: boolean) => void) => () => void;
+  /** This computer's copied text, and putting text there: copy and paste between this computer and the one on screen. */
+  readClipboard: () => Promise<string>;
+  writeClipboard: (text: string) => Promise<void>;
+  /** While keys go to the computer on screen, this window's menu shortcuts (Command-C, Command-V…) are left alone so
+   *  the keys reach the page and go there. */
+  keysToPeer: (on: boolean) => void;
   /** Whether the OS blurs what is behind the window; the page draws a solid background when it does not. */
   translucent: () => Promise<boolean>;
   /** Sets the window's content height so it fits the page. */

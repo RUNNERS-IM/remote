@@ -35,6 +35,9 @@ const api: RemoteApi = {
     ipcRenderer.on("remote:viewerVisible", handler);
     return () => ipcRenderer.removeListener("remote:viewerVisible", handler);
   },
+  readClipboard: () => ipcRenderer.invoke("remote:readClipboard"),
+  writeClipboard: (text) => ipcRenderer.invoke("remote:writeClipboard", text),
+  keysToPeer: (on) => ipcRenderer.send("remote:keysToPeer", on),
   translucent: () => ipcRenderer.invoke("remote:translucent"),
   fitHeight: (height) => ipcRenderer.send("remote:fitHeight", height),
   version: () => ipcRenderer.invoke("remote:version"),

@@ -11,7 +11,7 @@
 //
 // Why seeing and clicking are separate switches: seeing is what a coworker asks for most ("look at this error"), and
 // clicking is a bigger trust step, so it starts off. Disconnect turns seeing off, which also stops clicking.
-import { app, desktopCapturer, ipcMain, nativeImage, type WebContents } from "electron";
+import { app, clipboard, desktopCapturer, ipcMain, nativeImage, type WebContents } from "electron";
 import { randomUUID } from "node:crypto";
 import type { Allow, Computer, Input, Link, LogEntry, PeerInfo } from "../preload/api";
 import * as account from "./account";
@@ -29,6 +29,10 @@ const MAX_WIDTH = 1280;
 /** Debug runs only: REMOTE_FAKE_SCREEN=1 sends a drawn test picture instead of the screen, so two copies on one Mac can
  *  be tried without the Screen Recording permission and without anyone's screen leaving the window. */
 const FAKE_SCREEN = DEV && process.env.REMOTE_FAKE_SCREEN === "1";
+/** Debug runs only: `REMOTE_FAKE_INPUT=1` prints each input from another computer instead of posting it, and keeps
+ *  copied text in memory instead of this computer's clipboard, so two test copies on one Mac never click or paste in it. */
+export const FAKE_INPUT = DEV && process.env.REMOTE_FAKE_INPUT === "1";
+let fakeClipboard = "";
 
 const log: LogEntry[] = [];
 let page: () => WebContents | null = () => null;
@@ -84,6 +88,7 @@ function fakePicture(): Buffer {
 
 function logKind(input: Input): LogEntry["what"] | null {
   if (input.kind === "click") return "click";
+  if (input.kind === "press") return input.down ? "click" : null;
   if (input.kind === "key") return "key";
   if (input.kind === "text") return "text";
   return null;
@@ -134,13 +139,34 @@ async function hostRequest(peerId: string, method: string, params: Record<string
       note(peer.name, "refused");
       throw new Error("control");
     }
-    if (!status.SUPPORTED) throw new Error("unsupported");
-    if (!now.permissions.accessibility) throw new Error("accessibility");
     const input = params.input as Input;
-    native.sendInput(JSON.stringify(input));
+    if (FAKE_INPUT) console.log("input:", JSON.stringify(input));
+    else {
+      if (!status.SUPPORTED) throw new Error("unsupported");
+      if (!now.permissions.accessibility) throw new Error("accessibility");
+      native.sendInput(JSON.stringify(input));
+    }
     const kind = logKind(input);
     if (kind) note(peer.name, kind);
     return "sent";
+  }
+  // Copy and paste with the computer on screen: only while it lets others click and type, like the keys that copy.
+  if (method === "clipboardGet" || method === "clipboardSet") {
+    if (!settings.allowControl) {
+      note(peer.name, "refused");
+      throw new Error("control");
+    }
+    if (method === "clipboardSet") {
+      const text = String(params.text ?? "");
+      if (FAKE_INPUT) {
+        fakeClipboard = text;
+        console.log("clipboard set:", text);
+      } else clipboard.writeText(text);
+      note(peer.name, "paste");
+      return "sent";
+    }
+    note(peer.name, "copy");
+    return FAKE_INPUT ? fakeClipboard || "fake copied text" : clipboard.readText();
   }
   throw new Error(`unknown method ${method}`);
 }

@@ -17,6 +17,8 @@
   }
 }
 
+/* Why the page itself too: without it the page grows with a tall screen picture, pushing Send Clicks out of the window. */
+:root[data-window="viewer"],
 :root[data-window="viewer"] body,
 :root[data-window="viewer"] #root {
   height: 100%;

@@ -5,11 +5,13 @@
 //   node scripts/relay-dev.mjs [port]     (default 8790)
 //   REMOTE_API_URL=http://127.0.0.1:8790 pnpm dev
 //
-// Login takes any email and password: the account is the email, and the access token is "dev.<email>". Tokens never
-// expire, except that REMOTE_DEV_EXPIRE=1 answers every relay connection with 4401 once, to try the refresh path.
+// Login takes any email and any password the real server would take: the account is the email, and the access token
+// is "dev.<email>". Tokens never expire, except that REMOTE_DEV_EXPIRE=1 answers every relay connection with 4401 once, to try the refresh path.
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 
+// The system server's rule (system-server is-password-or-hash.decorator.ts): a letter and a digit, 6 to 20 long.
+const PASSWORD = /^(?=.*[a-zA-Z])(?=.*[0-9])[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};:,.<>?|]{6,20}$/;
 const port = Number(process.argv[2] ?? 8790);
 const PING_MS = 30_000;
 
@@ -45,7 +47,7 @@ const http = createServer(async (req, res) => {
   if (req.method !== "POST") return json(res, 404, { message: "not found" });
   const body = await readJson(req);
   if (path === "/api/mobile/auth/login" || path === "/api/mobile/auth/signup") {
-    if (!/^\S+@\S+$/.test(String(body.email ?? "")) || !/^[0-9a-f]{64}$/.test(String(body.password ?? ""))) {
+    if (!/^\S+@\S+$/.test(String(body.email ?? "")) || !PASSWORD.test(String(body.password ?? ""))) {
       return json(res, 400, { message: "bad request" });
     }
     return json(res, 200, { user: { id: body.email, email: body.email }, tokens: tokensFor(body.email) });

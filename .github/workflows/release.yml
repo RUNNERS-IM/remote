@@ -91,7 +91,7 @@ jobs:
     timeout-minutes: 60
     env:
       VERSION: ${{ needs.version.outputs.version }}
-      # 파일 이름은 앱 버전(2.6.1030+2) 대신 태그 모양(2.6.1030.2)을 쓴다 (electron-builder.config.cjs)
+      # 파일 이름은 태그 모양을 쓴다. 지금은 앱 버전과 태그가 같다(2.6.110502). 예전 판은 앱 2.6.1030+2 · 태그 2.6.1030.2 였다 (electron-builder.config.cjs)
       REMOTE_TAG: ${{ needs.version.outputs.version }}
       CARGO_TARGET_DIR: ${{ github.workspace }}/native/target.noindex
     steps:

@@ -1,31 +1,94 @@
 // The viewer window ("Open Remote"), decision 「[REMOTE] 모든 컴퓨터 한눈에」 1A 2A:
-//   - First, every computer in the same Tailscale network that has Remote open, as a grid. Each tile shows a small
-//     picture of that computer's main display, new every two seconds, or why it cannot be seen.
-//   - Pressing a tile opens that computer: a tab per display, its screen about five times a second, the Send Clicks
-//     switch, and keys and text going there. "All Computers" goes back.
+//   - Signed out, it asks for the RUNNERS account first: computers and phones of the same account see each other.
+//   - Then every computer of the account that has Remote open, as a grid. Each tile shows a small still picture of
+//     that computer's main display, new every two seconds, or why it cannot be seen.
+//   - Pressing a tile opens that computer: a tab per display, its screen as WebRTC video, the Send Clicks switch, and
+//     keys and text going there. "All Computers" goes back.
+// The page also holds the WebRTC connections (./peer), which is why the window is made at launch and only hidden.
 //   - "This Mac" at the bottom of the grid opens this Mac's page: its permissions, the See This and Click and Type
 //     switches, Disconnect, the connection log and the two general settings (decision 「[REMOTE] 메뉴 막대 패널 정리」
 //     1C: there is no tray panel). While someone is watching, a bar with Disconnect sits on top of the grid.
 // On Windows and Linux it says Remote works on macOS only for now.
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { ChevronLeft, Eye, Laptop, Monitor, MousePointerClick, Power, RefreshCw, type LucideIcon } from "lucide-react";
-import { statusText, t } from "./i18n";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CompositionEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  Command,
+  Eye,
+  Laptop,
+  LogOut,
+  Maximize,
+  Minimize,
+  Monitor,
+  MousePointerClick,
+  Pin,
+  PinOff,
+  Power,
+  RefreshCw,
+  Scan,
+  Settings,
+  Shrink,
+  Type,
+  type LucideIcon,
+} from "lucide-react";
+import { AccountButton, SignInSheet, type SignMode } from "./runners-account/runners-account";
+import { locale, statusText, t } from "./i18n";
 import { keyInput } from "./keys";
 import * as native from "./native";
+import * as peer from "./peer";
 import type { Computer, Display, Input, Link, LogEntry, MenuState, PeerInfo, PermissionKind, Status } from "./native";
 import "./App.css";
 import "./runners-window.css";
 import "./Viewer.css";
 
-// Why: about five pictures a second is enough to find and press a dialog button, and keeps the CPU quiet.
-const FRAME_MS = 200;
 const RETRY_MS = 1000;
 const STATUS_EVERY_MS = 2000;
 /** How often each tile of the grid gets a new picture, and how wide that picture is asked for (twice the tile). */
 const TILE_MS = 2000;
 const TILE_WIDTH = 480;
 
+/** Mouse and keys sent to another computer: moves at most every MOVE_MS, a press within DRAG_PX of the last one and
+ *  DOUBLE_MS after it is a double click, farther than DRAG_PX with the button held is a drag, wheel turns are gathered
+ *  for SCROLL_MS (a line counts LINE_PX), and the copied text is fetched COPY_WAIT_MS after Command-C. */
+const MOVE_MS = 30;
+const DRAG_PX = 4;
+const DOUBLE_MS = 500;
+const SCROLL_MS = 40;
+const LINE_PX = 16;
+const COPY_WAIT_MS = 300;
+const NOTE_MS = 3000;
+/** macOS key codes of V, C and X (keys.ts). */
+const KEY_V = 9;
+const KEY_C = 8;
+const KEY_X = 7;
+
+/** The floating bar hides BAR_MS after the pointer leaves it while the mouse goes to that computer, and comes back
+ *  when the pointer is within BAR_ZONE_PX of the top. */
+const BAR_MS = 2500;
+const BAR_ZONE_PX = 56;
+
+/** Shortcuts the floating bar sends that this Mac would take for itself (macOS key codes, keys.ts). */
+const SHORTCUTS: { key: "switchApp" | "spotlight" | "forceQuit" | "lock" | "screenshot"; label: string; code: number; modifiers: ("shift" | "control" | "option" | "command")[] }[] = [
+  { key: "switchApp", label: "⌘⇥", code: 48, modifiers: ["command"] },
+  { key: "spotlight", label: "⌘Space", code: 49, modifiers: ["command"] },
+  { key: "forceQuit", label: "⌥⌘Esc", code: 53, modifiers: ["option", "command"] },
+  { key: "lock", label: "⌃⌘Q", code: 12, modifiers: ["control", "command"] },
+  { key: "screenshot", label: "⌘⇧4", code: 21, modifiers: ["shift", "command"] },
+];
+
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+if (native.page === "viewer") peer.startPeers();
 
 /** Why another computer cannot be seen right now, from what it says about itself, or null when it can. */
 function peerProblem(info: PeerInfo): string | null {
@@ -78,10 +141,22 @@ function usePicture(): [string | null, (bytes: Uint8Array | null) => void] {
 export default function Viewer() {
   const [status, setStatus] = useState<Status | null>(null);
   const [link, setLink] = useState<Link | null>(null);
-  const [visible, setVisible] = useState(true);
+  // Why not just false: the window is made hidden at launch (it holds the connections) and says when it is shown, but
+  // a window opened at once is shown before this page listens, so the page also starts from whether it is seen now.
+  const [visible, setVisible] = useState(() => document.visibilityState === "visible");
   /** The computer opened from the grid, or null for the grid. */
   const [computer, setComputer] = useState<string | null>(null);
   const [thisMac, setThisMac] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const closeSignIn = useCallback(() => setSigningIn(false), []);
+  // The shared sheet reads the failure's short code (bad, exists) from the error's message.
+  const signIn = useCallback(
+    (mode: SignMode, email: string, password: string) =>
+      native.signIn(mode, email, password).then(setLink, (error: unknown) => {
+        throw new Error(native.errorCode(error));
+      }),
+    [],
+  );
 
   // Why: closing the window only hides it, so pictures stop while it is hidden and start again when shown.
   useEffect(() => native.onViewerVisible(setVisible), []);
@@ -100,6 +175,9 @@ export default function Viewer() {
   const supported = status?.supported ?? true;
   const computers = link?.computers ?? [];
   const opened = computers.find((c) => c.host === computer);
+  // Why remember: a computer that goes off leaves the list, and its page should still say its name, not its device id.
+  const names = useRef(new Map<string, string>());
+  for (const c of computers) names.current.set(c.host, c.name);
 
   if (!supported) {
     return (
@@ -122,18 +200,46 @@ export default function Viewer() {
     return (
       <Detail
         host={computer}
-        name={opened?.name ?? computer}
+        name={opened?.name ?? names.current.get(computer) ?? computer}
+        online={opened !== undefined}
         visible={visible}
         onBack={() => setComputer(null)}
       />
     );
   }
 
+  const signedOut = link?.state === "signedOut";
   return (
     <main className="viewer-window">
-      <header>
-        <div className="title">{t("grid.title")}</div>
-        <div className="subtitle">{t("grid.subtitle", { count: computers.length })}</div>
+      <header className="window-head">
+        <div className="window-head-text">
+          <div className="title">{t("grid.title")}</div>
+          <div className="subtitle">
+            {signedOut ? t("grid.subtitleSignedOut") : t("grid.subtitle", { count: computers.length })}
+          </div>
+        </div>
+        {link?.account && (
+          <AccountButton
+            lang={locale}
+            account={link.account}
+            line={
+              <>
+                <span className={`state-dot ${link.state === "running" ? "waiting" : ""}`} aria-hidden />
+                {link.state === "running"
+                  ? t("account.online", { count: link.computers.filter((c) => c.online).length })
+                  : t("link.starting")}
+              </>
+            }
+            items={[
+              {
+                label: t("account.thisMac"),
+                icon: <Settings size={16} strokeWidth={1.5} aria-hidden />,
+                onSelect: () => setThisMac(true),
+              },
+            ]}
+            onSignOut={() => void native.signOut().then(setLink)}
+          />
+        )}
       </header>
       {status && status.viewers.length > 0 && (
         <div className="watching">
@@ -144,7 +250,18 @@ export default function Viewer() {
           </button>
         </div>
       )}
-      <LinkNote link={link} />
+      {signedOut ? (
+        <section className="card signed-out">
+          <Laptop size={28} strokeWidth={1.25} aria-hidden />
+          <div className="switch-label">{t("account.emptyTitle")}</div>
+          <div className="hint">{t("account.intro")}</div>
+          <button type="button" className="rw-button default" onClick={() => setSigningIn(true)}>
+            {t("account.signIn")}
+          </button>
+        </section>
+      ) : (
+        <LinkNote link={link} />
+      )}
       {computers.length > 0 && (
         <section className="grid" aria-label={t("grid.title")}>
           {computers.map((c) => (
@@ -167,6 +284,7 @@ export default function Viewer() {
           <ChevronLeft className="flip" size={14} strokeWidth={1.5} aria-hidden />
         </button>
       )}
+      {signingIn && <SignInSheet lang={locale} signIn={signIn} onClose={closeSignIn} />}
     </main>
   );
 }
@@ -183,7 +301,7 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
     void (async () => {
       while (running) {
         try {
-          const now = await native.peerInfo(computer.host);
+          const now = (await peer.ask(computer.host, "info")) as PeerInfo;
           if (!running) break;
           setInfo(now);
           const why = peerProblem(now);
@@ -192,7 +310,7 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
             setProblem(why ?? t("view.noDisplay"));
             setPicture(null);
           } else {
-            const bytes = await native.peerCapture(computer.host, main.id, TILE_WIDTH);
+            const bytes = await peer.frame(computer.host, main.id, TILE_WIDTH);
             if (!running) break;
             setPicture(bytes);
             setProblem(null);
@@ -222,6 +340,7 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
         )}
       </div>
       <div className="tile-label">
+        <span className={computer.online ? "state-dot waiting" : "state-dot"} aria-hidden />
         <span className="tile-name">{computer.name}</span>
         {monitors > 1 && <span className="tab-badge">{t("grid.monitors", { count: monitors })}</span>}
       </div>
@@ -229,64 +348,132 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
   );
 }
 
+/** Where a pointer is on the picture, as fractions; null outside it unless `clamp` (a drag may leave the picture). */
+function spotOn(
+  element: HTMLVideoElement | null,
+  clientX: number,
+  clientY: number,
+  clamp: boolean,
+): { x: number; y: number } | null {
+  if (!element?.videoWidth) return null;
+  // Why: the video may sit letterboxed inside its box, so the spot is measured on the picture itself.
+  const box = element.getBoundingClientRect();
+  const scale = Math.min(box.width / element.videoWidth, box.height / element.videoHeight);
+  const width = element.videoWidth * scale;
+  const height = element.videoHeight * scale;
+  const x = (clientX - box.left - (box.width - width) / 2) / width;
+  const y = (clientY - box.top - (box.height - height) / 2) / height;
+  if (clamp) return { x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) };
+  return x < 0 || x > 1 || y < 0 || y > 1 ? null : { x, y };
+}
+
 /** One computer opened from the grid: its displays as tabs, the screen, and sending clicks, keys and text. */
-function Detail({ host, name, visible, onBack }: { host: string; name: string; visible: boolean; onBack: () => void }) {
-  const [peer, setPeer] = useState<PeerInfo | null>(null);
+function Detail(props: { host: string; name: string; online: boolean; visible: boolean; onBack: () => void }) {
+  const { host, name, online, visible, onBack } = props;
+  const [info, setInfo] = useState<PeerInfo | null>(null);
   const [displays, setDisplays] = useState<Display[]>([]);
   const [chosen, setChosen] = useState<number | null>(null);
-  const [frame, setFrame] = usePicture();
+  const [playing, setPlaying] = useState(false);
+  const video = useRef<HTMLVideoElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [fps, setFps] = useState(0);
   const [sendClicks, setSendClicks] = useState(false);
   const [clickError, setClickError] = useState<string | null>(null);
   const [text, setText] = useState("");
-  /** A click is on its way; presses meanwhile are dropped so one press never sends two clicks. */
-  const sending = useRef(false);
+  const [note, setNote] = useState<string | null>(null);
+  /** What the input method is putting together (a Korean syllable), shown over the picture until it is sent. */
+  const [composing, setComposing] = useState("");
+  /** The hidden key box has focus, so keys go to that computer. */
+  const [typing, setTyping] = useState(false);
+  const [actual, setActual] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const screenBox = useRef<HTMLDivElement>(null);
+  const keys = useRef<HTMLTextAreaElement>(null);
+  /** Inputs go out in this order; a paste waits here until the copied text has arrived there. */
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  /** The button held down on the picture, and whether it has moved far enough to be a drag. */
+  const pressed = useRef<{ button: "left" | "right"; count: number; clientX: number; clientY: number; dragging: boolean } | null>(null);
+  /** The last press, to tell the second press of a double click. */
+  const lastPress = useRef<{ at: number; clientX: number; clientY: number; button: "left" | "right"; count: number } | null>(null);
+  const lastMove = useRef(0);
+  /** Which menu of the floating bar is open, whether the bar is out, and a new try after a failure. */
+  const [menu, setMenu] = useState<"displays" | "keys" | "text" | null>(null);
+  const [barAwake, setBarAwake] = useState(true);
+  const barTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  /** Pinned, the bar stays out (Windows App users complained of a bar that keeps sliding in and out). */
+  const [pinned, setPinned] = useState(false);
 
   const loadDisplays = useCallback(async () => {
     let list: Display[] = [];
     try {
-      const info = await native.peerInfo(host);
-      setPeer(info);
-      list = info.displays;
-      setProblem(peerProblem(info));
+      const now = (await peer.ask(host, "info")) as PeerInfo;
+      setInfo(now);
+      list = now.displays;
+      setProblem(peerProblem(now));
     } catch (error) {
-      setPeer(null);
+      setInfo(null);
       setProblem(captureError(error));
     }
     setDisplays(list);
     setChosen((current) => (current !== null && list.some((d) => d.id === current) ? current : (list[0]?.id ?? null)));
   }, [host]);
 
+  /** The connection the video came over; a new one (the other side dropped it) means asking for the video again. */
+  const [serial, setSerial] = useState(0);
+
+  // Why ask again every few seconds: the other computer can turn seeing off or go away at any time, and the video by
+  // itself would just stop on its last picture.
   useEffect(() => {
     if (!visible) {
       // Why: the main process turns sending off when the window hides; the switch shows the same.
       setSendClicks(false);
       return;
     }
-    void loadDisplays();
-  }, [visible, loadDisplays]);
+    if (!online) {
+      // Why: the relay already said it left, so nobody waits for a connection that cannot come.
+      setInfo(null);
+      setProblem(t("computer.offline"));
+      return;
+    }
+    const check = () => void loadDisplays().then(() => setSerial(peer.serial(host)));
+    check();
+    const timer = setInterval(check, STATUS_EVERY_MS);
+    return () => clearInterval(timer);
+  }, [visible, online, loadDisplays, host, attempt]);
 
-  const viewable = peer?.viewing ?? false;
+  const viewable = online && (info?.viewing ?? false);
 
-  // The picture loop: one capture at a time, then a short wait, so a slow capture never piles up requests.
+  // The video: asked for once per display; the other computer sends only what changes. Pictures a second are counted
+  // as they are drawn. A failed start is tried again after a moment.
   useEffect(() => {
     if (!visible || chosen === null || !viewable) return;
     let running = true;
+    let counter = 0;
     const times: number[] = [];
-    setFrame(null);
+    setPlaying(false);
+    const count = () => {
+      const element = video.current;
+      if (!running || !element) return;
+      times.push(performance.now());
+      while (times.length > 0 && times[0] < performance.now() - 2000) times.shift();
+      setFps(Math.round(times.length / 2));
+      setPlaying(true);
+      counter = element.requestVideoFrameCallback(count);
+    };
     void (async () => {
       while (running) {
-        const started = performance.now();
         try {
-          const bytes = await native.peerCapture(host, chosen);
+          const stream = await peer.watch(host, chosen);
           if (!running) break;
-          setFrame(bytes);
+          const element = video.current;
+          if (element) {
+            element.srcObject = stream;
+            void element.play().catch(() => undefined);
+            counter = element.requestVideoFrameCallback(count);
+          }
           setProblem(null);
-          times.push(performance.now());
-          while (times.length > 0 && times[0] < performance.now() - 2000) times.shift();
-          setFps(Math.round(times.length / 2));
-          await wait(Math.max(0, FRAME_MS - (performance.now() - started)));
+          break;
         } catch (error) {
           if (!running) break;
           setProblem(captureError(error));
@@ -297,42 +484,174 @@ function Detail({ host, name, visible, onBack }: { host: string; name: string; v
     })();
     return () => {
       running = false;
+      video.current?.cancelVideoFrameCallback(counter);
+      void peer.unwatch(host);
     };
-  }, [visible, chosen, host, viewable, setFrame]);
+  }, [visible, chosen, host, viewable, serial, attempt]);
 
   useEffect(() => setClickError(null), [sendClicks]);
 
-  const send = (input: Input) => native.peerInput(host, input);
-
-  const sendClick = (event: MouseEvent<HTMLImageElement>) => {
-    if (!sendClicks || chosen === null || sending.current) return;
-    // Why: the picture is drawn at exactly its own box, so the spot inside the box is the spot on the display.
-    const box = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - box.left) / box.width;
-    const y = (event.clientY - box.top) / box.height;
-    sending.current = true;
-    send({ kind: "click", display: chosen, x, y, button: "left", count: 1 })
-      .then(() => setClickError(null))
-      .catch((error) => setClickError(inputError(error)))
-      .finally(() => {
-        sending.current = false;
+  /** Sends one input, after anything still waiting in `queue` (a paste first puts the copied text there). The reply is
+   *  not waited for, so a drag never lags behind the replies. */
+  const post = useCallback(
+    (input: Input) => {
+      queue.current = queue.current.then(() => {
+        void peer
+          .ask(host, "input", { input })
+          .then(() => setClickError(null))
+          .catch((error) => setClickError(inputError(error)));
       });
+    },
+    [host],
+  );
+
+  // The mouse (decision 「[REMOTE] 개발 - 원격 기능 넓히기」 2A): the button goes down and up there as it does here, so a
+  // click, a double click, a right click and a drag all happen as made. Moves are sent at most every MOVE_MS.
+  const onPointerDown = (event: PointerEvent<HTMLVideoElement>) => {
+    if (!sendClicks || chosen === null || (event.button !== 0 && event.button !== 2)) return;
+    const at = spotOn(video.current, event.clientX, event.clientY, false);
+    if (!at) return;
+    event.preventDefault();
+    keys.current?.focus();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const button = event.button === 2 ? "right" : "left";
+    const last = lastPress.current;
+    const again =
+      last &&
+      last.button === button &&
+      event.timeStamp - last.at < DOUBLE_MS &&
+      Math.hypot(event.clientX - last.clientX, event.clientY - last.clientY) < DRAG_PX;
+    const count = again ? Math.min(last.count + 1, 3) : 1;
+    lastPress.current = { at: event.timeStamp, clientX: event.clientX, clientY: event.clientY, button, count };
+    pressed.current = { button, count, clientX: event.clientX, clientY: event.clientY, dragging: false };
+    post({ kind: "press", display: chosen, ...at, button, down: true, count });
   };
 
-  const sendKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!sendClicks) return;
+  const onPointerMove = (event: PointerEvent<HTMLVideoElement>) => {
+    if (!sendClicks || chosen === null || event.timeStamp - lastMove.current < MOVE_MS) return;
+    const held = pressed.current;
+    if (held) {
+      if (!held.dragging && Math.hypot(event.clientX - held.clientX, event.clientY - held.clientY) < DRAG_PX) return;
+      held.dragging = true;
+      const at = spotOn(video.current, event.clientX, event.clientY, true);
+      if (!at) return;
+      lastMove.current = event.timeStamp;
+      post({ kind: "drag", display: chosen, ...at, button: held.button });
+      return;
+    }
+    const at = spotOn(video.current, event.clientX, event.clientY, false);
+    if (!at) return;
+    lastMove.current = event.timeStamp;
+    post({ kind: "move", display: chosen, ...at });
+  };
+
+  const onPointerUp = (event: PointerEvent<HTMLVideoElement>) => {
+    const held = pressed.current;
+    if (!held || chosen === null) return;
+    pressed.current = null;
+    const at = spotOn(video.current, event.clientX, event.clientY, true);
+    if (at) post({ kind: "press", display: chosen, ...at, button: held.button, down: false, count: held.count });
+  };
+
+  // Scrolling: gathered for SCROLL_MS and sent as one, at the spot. Why a listener of its own: React's wheel listener
+  // cannot stop the box itself from scrolling at original size.
+  useEffect(() => {
+    const element = video.current;
+    if (!element || !sendClicks || chosen === null) return;
+    let dx = 0;
+    let dy = 0;
+    let where: { x: number; y: number } | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onWheel = (event: WheelEvent) => {
+      const at = spotOn(video.current, event.clientX, event.clientY, false);
+      if (!at) return;
+      event.preventDefault();
+      const unit = event.deltaMode === 1 ? LINE_PX : event.deltaMode === 2 ? element.clientHeight : 1;
+      dx += event.deltaX * unit;
+      dy += event.deltaY * unit;
+      where = at;
+      timer ??= setTimeout(() => {
+        timer = null;
+        if (where && (Math.round(dx) || Math.round(dy))) {
+          post({ kind: "scroll", display: chosen, ...where, dx: Math.round(dx), dy: Math.round(dy) });
+        }
+        dx = 0;
+        dy = 0;
+      }, SCROLL_MS);
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      element.removeEventListener("wheel", onWheel);
+      if (timer) clearTimeout(timer);
+    };
+  }, [sendClicks, chosen, post]);
+
+  // While keys go there, this window's own menu shortcuts stand aside, so Command-C, Command-V and the rest reach it.
+  useEffect(() => {
+    native.keysToPeer(sendClicks && typing);
+    return () => native.keysToPeer(false);
+  }, [sendClicks, typing]);
+
+  // Keys (2B): shortcuts and keys like Return go as keys; letters, accents and Korean are left to the hidden box below,
+  // whose input method puts the syllables together here, and each finished piece is sent as text.
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!sendClicks || event.nativeEvent.isComposing || event.keyCode === 229) return;
     const input = keyInput(event.nativeEvent);
-    if (!input) return;
+    if (!input || input.kind !== "key") return;
     event.preventDefault();
-    send(input)
-      .then(() => setClickError(null))
-      .catch((error) => setClickError(inputError(error)));
+    const command = input.modifiers.length === 1 && input.modifiers[0] === "command";
+    // Copy and paste (2C): Command-V first puts the text copied here on that computer; after Command-C or Command-X
+    // the text copied there is brought here.
+    if (command && input.code === KEY_V) {
+      queue.current = queue.current
+        .then(async () => peer.ask(host, "clipboardSet", { text: await native.readClipboard() }))
+        .catch((error) => setClickError(inputError(error)));
+    }
+    post(input);
+    if (command && (input.code === KEY_C || input.code === KEY_X)) {
+      queue.current = queue.current
+        .then(() => wait(COPY_WAIT_MS))
+        .then(() => peer.ask(host, "clipboardGet"))
+        .then((text) => native.writeClipboard(String(text ?? "")))
+        .then(() => setNote(t("peer.copied")))
+        .catch((error) => setClickError(inputError(error)));
+    }
+  };
+
+  const onTyped = (event: FormEvent<HTMLTextAreaElement>) => {
+    const typed = event.nativeEvent as InputEvent;
+    if (typed.isComposing) return;
+    if (sendClicks && typed.inputType === "insertText" && typed.data) post({ kind: "text", text: typed.data });
+    event.currentTarget.value = "";
+  };
+
+  const onComposed = (event: CompositionEvent<HTMLTextAreaElement>) => {
+    setComposing("");
+    if (sendClicks && event.data) post({ kind: "text", text: event.data });
+  };
+
+  useEffect(() => {
+    if (!note) return;
+    const timer = setTimeout(() => setNote(null), NOTE_MS);
+    return () => clearTimeout(timer);
+  }, [note]);
+
+  // Fullscreen and original size (2D). Esc leaves fullscreen and is not sent.
+  useEffect(() => {
+    const changed = () => setFullscreen(document.fullscreenElement !== null);
+    document.addEventListener("fullscreenchange", changed);
+    return () => document.removeEventListener("fullscreenchange", changed);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void screenBox.current?.requestFullscreen().then(() => keys.current?.focus());
   };
 
   const sendText = (event: FormEvent) => {
     event.preventDefault();
     if (!text) return;
-    send({ kind: "text", text })
+    peer
+      .ask(host, "input", { input: { kind: "text", text } satisfies Input })
       .then(() => {
         setText("");
         setClickError(null);
@@ -341,105 +660,260 @@ function Detail({ host, name, visible, onBack }: { host: string; name: string; v
   };
 
   const display = displays.find((d) => d.id === chosen);
-  const canClick = peer?.control ?? false;
+  const canClick = info?.control ?? false;
+  const shown = playing && problem === null;
+
+  const sendShortcut = (code: number, modifiers: ("shift" | "control" | "option" | "command")[]) => {
+    setMenu(null);
+    post({ kind: "key", code, modifiers });
+    keys.current?.focus();
+  };
+
+  // The floating bar (like Chrome Remote Desktop and Zoom): always there until the mouse goes to that computer, then it
+  // slides up after BAR_MS and comes back when the pointer nears the top edge.
+  const wake = useCallback(() => {
+    setBarAwake(true);
+    if (barTimer.current) clearTimeout(barTimer.current);
+    barTimer.current = setTimeout(() => setBarAwake(false), BAR_MS);
+  }, []);
+  useEffect(() => () => {
+    if (barTimer.current) clearTimeout(barTimer.current);
+  }, []);
+  const barHidden = sendClicks && shown && !barAwake && !pinned && menu === null;
 
   return (
-    <main className="viewer-window">
-      <header>
-        <button type="button" className="button back" onClick={onBack}>
-          <ChevronLeft size={14} strokeWidth={1.5} aria-hidden />
-          <span>{t("grid.back")}</span>
-        </button>
-        <div className="title">{name}</div>
-        <div className="subtitle">{t("window.subtitlePeer")}</div>
-      </header>
+    <main className="viewer-window session">
+      <div
+        ref={screenBox}
+        className={actual ? "screen-box actual" : "screen-box"}
+        onPointerMove={(event) => {
+          const top = event.currentTarget.getBoundingClientRect().top;
+          if (event.clientY - top < BAR_ZONE_PX) wake();
+        }}
+      >
+        <video
+          ref={video}
+          className={sendClicks ? "screen clickable" : "screen"}
+          style={actual && display ? { width: display.width } : undefined}
+          hidden={!shown}
+          aria-label={display ? displayLabel(display, displays.indexOf(display)) : ""}
+          muted
+          playsInline
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onContextMenu={(event) => event.preventDefault()}
+        />
+        {!shown && (
+          <div className="session-state">
+            {problem === null ? (
+              <>
+                <span className="spinner" aria-hidden />
+                <div className="session-state-title">{t("session.connecting", { name })}</div>
+              </>
+            ) : (
+              <>
+                <div className="session-state-title">{t("session.cannotSee", { name })}</div>
+                <div className="hint">{problem}</div>
+                <div className="session-state-buttons">
+                  <button type="button" className="rw-button" onClick={onBack}>
+                    {t("grid.back")}
+                  </button>
+                  <button type="button" className="rw-button default" onClick={() => setAttempt((n) => n + 1)}>
+                    {t("session.retry")}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <textarea
+          ref={keys}
+          className="key-catcher"
+          aria-label={t("clickTest.label")}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onKeyDown={onKeyDown}
+          onInput={onTyped}
+          onCompositionUpdate={(event) => setComposing(event.data)}
+          onCompositionEnd={onComposed}
+          onFocus={() => setTyping(true)}
+          onBlur={() => setTyping(false)}
+        />
+        {composing && <div className="composing">{composing}</div>}
 
-      <section className="viewer-section">
-        <h2 className="section-head">{t("display.title")}</h2>
-        <div className="tabs" role="tablist" aria-label={t("display.title")}>
-          {displays.map((d, index) => (
+        <div className={barHidden ? "float-bar hidden" : "float-bar"} onPointerEnter={wake} onPointerMove={wake}>
+          <button type="button" className="bar-button" title={t("grid.back")} aria-label={t("grid.back")} onClick={onBack}>
+            <ChevronLeft size={16} strokeWidth={1.5} aria-hidden />
+          </button>
+          <span className="bar-name">
+            <span className={shown ? "state-dot waiting" : "state-dot"} aria-hidden />
+            {name}
+          </span>
+          <span className="bar-sep" />
+          <div className="bar-menu-box">
             <button
-              key={d.id}
-              role="tab"
-              aria-selected={d.id === chosen}
-              className={d.id === chosen ? "tab chosen" : "tab"}
-              onClick={() => setChosen(d.id)}
+              type="button"
+              className="bar-button wide"
+              disabled={displays.length === 0}
+              aria-haspopup="menu"
+              onClick={() => setMenu(menu === "displays" ? null : "displays")}
             >
-              <Monitor size={14} strokeWidth={1.5} />
-              <span>{displayLabel(d, index)}</span>
-              {d.main && <span className="tab-badge">{t("display.main")}</span>}
+              <Monitor size={16} strokeWidth={1.5} aria-hidden />
+              <span>{display ? displayLabel(display, displays.indexOf(display)) : t("display.title")}</span>
+              <ChevronDown size={12} strokeWidth={1.5} aria-hidden />
             </button>
-          ))}
-        </div>
-
-        <div className="screen-box card" tabIndex={0} onKeyDown={sendKey}>
-          {frame && !problem ? (
-            <img
-              className={sendClicks ? "screen clickable" : "screen"}
-              src={frame}
-              alt={display ? displayLabel(display, displays.indexOf(display)) : ""}
-              draggable={false}
-              onClick={sendClick}
-            />
-          ) : (
-            <div className="empty">{problem ?? t("view.loading")}</div>
-          )}
-        </div>
-
-        <div className="toolbar">
-          <label className={canClick ? "switch" : "switch disabled"}>
+            {menu === "displays" && (
+              <div className="bar-menu" role="menu">
+                {displays.map((d, index) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={d.id === chosen}
+                    className="bar-menu-item"
+                    onClick={() => {
+                      setChosen(d.id);
+                      setMenu(null);
+                    }}
+                  >
+                    <Check size={14} strokeWidth={2} className={d.id === chosen ? "" : "invisible"} aria-hidden />
+                    <span>{displayLabel(d, index)}</span>
+                    <span className="hint">
+                      {d.main ? `${t("display.main")} · ` : ""}
+                      {t("display.size", { width: d.width, height: d.height })}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <span className="bar-sep" />
+          <label className={canClick ? "switch bar-switch" : "switch bar-switch disabled"} title={canClick ? t("peer.typeNote") : t("peer.noControl")}>
+            <MousePointerClick size={16} strokeWidth={1.5} aria-hidden />
+            <span>{t("session.control")}</span>
             <input
               type="checkbox"
               checked={sendClicks}
               disabled={!canClick}
-              onChange={(event) => setSendClicks(event.target.checked)}
+              onChange={(event) => {
+                setSendClicks(event.target.checked);
+                if (event.target.checked) keys.current?.focus();
+              }}
             />
             <span className="knob" aria-hidden />
-            <span className="switch-text">
-              <span className="switch-label">{t("clickTest.label")}</span>
-              <span className="hint">{canClick ? t("peer.typeNote") : t("peer.noControl")}</span>
-            </span>
           </label>
-          <div className="meta">
-            {clickError && <span className="error">{clickError}</span>}
-            {display && <span>{t("display.size", { width: display.width, height: display.height })}</span>}
-            {frame && !problem && <span>{t("view.rate", { fps })}</span>}
+          <div className="bar-menu-box">
+            <button
+              type="button"
+              className="bar-button"
+              disabled={!sendClicks}
+              title={t("session.keys")}
+              aria-label={t("session.keys")}
+              aria-haspopup="menu"
+              onClick={() => setMenu(menu === "keys" ? null : "keys")}
+            >
+              <Command size={16} strokeWidth={1.5} aria-hidden />
+            </button>
+            {menu === "keys" && (
+              <div className="bar-menu" role="menu">
+                {SHORTCUTS.map((s) => (
+                  <button key={s.key} type="button" role="menuitem" className="bar-menu-item" onClick={() => sendShortcut(s.code, s.modifiers)}>
+                    <span className="invisible" />
+                    <span>{t(`session.key.${s.key}`)}</span>
+                    <span className="hint keycap">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          <div className="bar-menu-box">
+            <button
+              type="button"
+              className="bar-button"
+              disabled={!sendClicks}
+              title={t("session.typeText")}
+              aria-label={t("session.typeText")}
+              onClick={() => setMenu(menu === "text" ? null : "text")}
+            >
+              <Type size={16} strokeWidth={1.5} aria-hidden />
+            </button>
+            {menu === "text" && (
+              <form className="bar-menu text-menu" onSubmit={sendText}>
+                <div className="hint">{t("session.typeTextNote")}</div>
+                <div className="type-row">
+                  <input
+                    className="type-box"
+                    autoFocus
+                    value={text}
+                    placeholder={t("peer.textPlaceholder")}
+                    onChange={(event) => setText(event.target.value)}
+                  />
+                  <button className="rw-button default" type="submit" disabled={!text}>
+                    {t("peer.textSend")}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+          <span className="bar-sep" />
+          <button
+            type="button"
+            className="bar-button"
+            disabled={!shown}
+            title={actual ? t("view.fitSize") : t("view.actualSize")}
+            aria-label={actual ? t("view.fitSize") : t("view.actualSize")}
+            onClick={() => setActual(!actual)}
+          >
+            {actual ? <Shrink size={16} strokeWidth={1.5} aria-hidden /> : <Scan size={16} strokeWidth={1.5} aria-hidden />}
+          </button>
+          <button
+            type="button"
+            className="bar-button"
+            disabled={!shown}
+            title={fullscreen ? t("view.exitFullscreen") : t("view.fullscreen")}
+            aria-label={fullscreen ? t("view.exitFullscreen") : t("view.fullscreen")}
+            onClick={toggleFullscreen}
+          >
+            {fullscreen ? <Minimize size={16} strokeWidth={1.5} aria-hidden /> : <Maximize size={16} strokeWidth={1.5} aria-hidden />}
+          </button>
+          <button
+            type="button"
+            className={pinned ? "bar-button on" : "bar-button"}
+            title={t(pinned ? "session.unpin" : "session.pin")}
+            aria-label={t(pinned ? "session.unpin" : "session.pin")}
+            aria-pressed={pinned}
+            onClick={() => setPinned(!pinned)}
+          >
+            {pinned ? <PinOff size={16} strokeWidth={1.5} aria-hidden /> : <Pin size={16} strokeWidth={1.5} aria-hidden />}
+          </button>
+          <span className="bar-sep" />
+          <button type="button" className="bar-button end" onClick={onBack}>
+            <span>{t("session.end")}</span>
+          </button>
         </div>
 
-        {sendClicks && (
-          <form className="type-row" onSubmit={sendText}>
-            <input
-              className="type-box"
-              value={text}
-              placeholder={t("peer.textPlaceholder")}
-              onChange={(event) => setText(event.target.value)}
-            />
-            <button className="button" type="submit" disabled={!text}>
-              {t("peer.textSend")}
-            </button>
-          </form>
+        {(clickError || note || shown) && (
+          <div className={clickError ? "session-note error" : "session-note"}>
+            {clickError ?? note ?? (
+              <>
+                {display && t("display.size", { width: display.width, height: display.height })} · {t("view.rate", { fps })}
+              </>
+            )}
+          </div>
         )}
-      </section>
+      </div>
     </main>
   );
 }
 
 /** One line under the title saying how the connection is doing, or why no other computer is listed. */
 function LinkNote({ link }: { link: Link | null }) {
-  if (!link) return null;
-  if (link.state === "noTailscale") return <div className="hint link-note">{t("link.noTailscale")}</div>;
+  if (!link || link.state === "signedOut") return null;
   if (link.state === "starting") return <div className="hint link-note">{t("link.starting")}</div>;
   if (link.state === "failed") return <div className="hint link-note error">{t("link.failed", { error: link.error ?? "" })}</div>;
-  if (link.state === "needsLogin")
-    return (
-      <div className="hint link-note">
-        {t("link.needsLogin")}{" "}
-        <button className="button" onClick={() => void native.openLinkLogin()}>
-          {t("link.approve")}
-        </button>
-      </div>
-    );
   if (link.computers.length === 0) return <div className="hint link-note">{t("link.empty")}</div>;
   return null;
 }
@@ -521,6 +995,19 @@ function ThisMac(props: { status: Status; link: Link; onChange: (link: Link) => 
           {!status.permissions.screenRecording && <div className="hint">{t("permission.restartNote")}</div>}
         </div>
       </section>
+
+      {link.account && (
+        <section>
+          <h2 className="section-head">{t("account.title")}</h2>
+          <div className="card account-row">
+            <span>{t("account.signedInAs", { email: link.account })}</span>
+            <button className="button" onClick={() => void native.signOut().then(props.onChange)}>
+              <LogOut size={14} strokeWidth={1.5} aria-hidden />
+              <span>{t("account.signOut")}</span>
+            </button>
+          </div>
+        </section>
+      )}
 
       <section>
         <h2 className="section-head">{t("thisMac.sharing")}</h2>

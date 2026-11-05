@@ -1,8 +1,9 @@
 // Remote's main process: a menu bar app whose picture shows whether this computer can be seen (off / waiting / being
 // viewed), with a short native menu on right click, and the Remote window (opened by a click on the picture) that shows
 // every office computer, one computer's screens with clicks and typing, and this Mac's settings.
-import { app, BrowserWindow, ipcMain, nativeTheme, shell, systemPreferences, type Tray } from "electron";
+import { app, BrowserWindow, clipboard, ipcMain, nativeTheme, shell, systemPreferences, type Tray } from "electron";
 import { writeFileSync } from "node:fs";
+import { uptime } from "node:os";
 import type { Allow, Input, PermissionKind, PressAt } from "../preload/api";
 import { startClaude } from "./claude";
 import * as input from "./input";
@@ -15,7 +16,7 @@ import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
 import { createTray, showState } from "./tray";
 import { checkNow, displayVersion, startUpdates } from "./updates";
-import { allowClose, answerUpdate, askUpdate, showAbout, showViewer, TRANSLUCENT, updateOffer } from "./windows";
+import { allowClose, answerUpdate, askUpdate, prepareViewer, showAbout, showViewer, TRANSLUCENT, updateOffer, viewerContents } from "./windows";
 
 const ISSUES_URL = "https://github.com/RUNNERS-IM/remote/issues";
 const STATUS_EVERY_MS = 2000;
@@ -30,16 +31,28 @@ const DEV = !app.isPackaged;
 let tray: Tray | null = null;
 /** Opens the Remote window. While it is open Remote also shows in the Dock, so it can be found like any app's window;
  *  closed, Remote is back to the menu bar only (2026-11-02: menu bar, plus the Dock while the window is open). */
+function viewerHidden(): void {
+  // Why: a hidden window must never keep clicking, so the switch turns off with it.
+  input.setSendClicks(false);
+  app.dock?.hide();
+}
+
 function openViewer(): void {
   if (process.platform === "darwin") {
     void app.dock?.show();
     app.focus({ steal: true });
   }
-  showViewer(() => {
-    // Why: a hidden window must never keep clicking, so the switch turns off with it.
-    input.setSendClicks(false);
-    app.dock?.hide();
-  });
+  showViewer(viewerHidden);
+}
+
+/** Started by the computer at login rather than by a person (decision 「[REMOTE] 개발 - 원격 기능 넓히기」 1B): then the
+ *  window stays closed and only the menu bar picture shows. Windows and Linux start it with `--hidden` (login.ts). */
+function startedAtLogin(): boolean {
+  if (process.argv.includes(login.HIDDEN_ARG)) return true;
+  if (process.platform !== "darwin") return false;
+  // Why the uptime too: an app registered as a login item through macOS 13's own list may not be told it was started
+  // at login, and nobody opens Remote by hand in the first two minutes after the Mac starts.
+  return app.getLoginItemSettings().wasOpenedAtLogin || uptime() < 120;
 }
 
 function menuState(): MenuState {
@@ -134,6 +147,12 @@ function registerIpc(): void {
   });
   ipcMain.handle("remote:setSendClicks", (_event, on: boolean) => input.setSendClicks(Boolean(on)));
   ipcMain.handle("remote:sendInput", (_event, what: Input, pressAt: PressAt | null) => input.send(what, pressAt));
+  ipcMain.handle("remote:readClipboard", () => (link.FAKE_INPUT ? "fake local text" : clipboard.readText()));
+  ipcMain.handle("remote:writeClipboard", (_event, text: unknown) => {
+    if (link.FAKE_INPUT) console.log("local clipboard:", String(text));
+    else clipboard.writeText(String(text));
+  });
+  ipcMain.on("remote:keysToPeer", (event, on: unknown) => event.sender.setIgnoreMenuShortcuts(Boolean(on)));
   ipcMain.handle("remote:translucent", () => TRANSLUCENT);
   ipcMain.handle("remote:version", () => displayVersion());
   ipcMain.handle("remote:accentColor", () => accentColor());
@@ -154,7 +173,10 @@ function registerIpc(): void {
   });
   ipcMain.on("remote:closeWindow", (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle("remote:link", () => link.current());
-  ipcMain.handle("remote:openLinkLogin", () => link.openLogin());
+  ipcMain.handle("remote:signIn", (_event, mode: unknown, email: unknown, password: unknown) =>
+    link.signIn(mode === "signup" ? "signup" : "login", String(email), String(password)),
+  );
+  ipcMain.handle("remote:signOut", () => link.signOut());
   ipcMain.handle("remote:setAllow", (_event, what: Allow, on: boolean) => {
     if (what === "allowViewing" || what === "allowControl") link.setAllow(what, Boolean(on));
     return link.current();
@@ -163,11 +185,6 @@ function registerIpc(): void {
     link.disconnect();
     return link.current();
   });
-  ipcMain.handle("remote:peerInfo", (_event, host: string) => link.peerInfo(String(host)));
-  ipcMain.handle("remote:peerCapture", (_event, host: string, display: number, width?: number) =>
-    link.peerCapture(String(host), Number(display), width === undefined ? undefined : Number(width)),
-  );
-  ipcMain.handle("remote:peerInput", (_event, host: string, what: Input) => link.peerInput(String(host), what));
   ipcMain.handle("remote:updateOffer", () => updateOffer());
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
@@ -233,10 +250,12 @@ function start(): void {
     refreshLinuxMenu();
   });
   statusLoop();
-  void link.startConnection();
+  link.startConnection(viewerContents);
+  prepareViewer(viewerHidden);
   startClaude();
   startUpdates();
   if (DEV) debugHooks();
+  else if (!startedAtLogin()) openViewer();
 }
 
 // Why: a second copy would add a second tray icon; opening it again opens the viewer of the running one instead.
@@ -244,6 +263,11 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", () => openViewer());
+  // Why: opening Remote again from Finder or Spotlight while it runs comes here on macOS; it shows the window. The first
+  // seconds of a login start are skipped in case macOS reports that start here too.
+  app.on("activate", () => {
+    if (process.uptime() > 5 || !startedAtLogin()) openViewer();
+  });
   app.on("before-quit", allowClose);
   // Why: closing a window must not quit a tray app.
   app.on("window-all-closed", () => undefined);

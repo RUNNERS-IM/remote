@@ -8,12 +8,15 @@
   --off: #8e8e93;
   --bad: #ff3b30;
   --screen: #000000;
+  /* Menus over the screen: an opaque box, so the picture under it does not show through. */
+  --menu-bg: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-window="viewer"] {
     --ok: #30d158;
     --bad: #ff453a;
+    --menu-bg: #2c2c2e;
   }
 }
 
@@ -178,10 +181,73 @@
   background: var(--screen);
 }
 
+.screen-box {
+  position: relative;
+}
+
+/* Original size (decision 「[REMOTE] 개발 - 원격 기능 넓히기」 2D): one point there is one point here, and the box
+   scrolls; `safe center` keeps the top-left reachable when the picture is larger than the box. */
+.screen-box.actual {
+  overflow: auto;
+  place-items: safe center;
+}
+
+.screen-box.actual .screen {
+  max-width: none;
+  max-height: none;
+}
+
+.screen-box:fullscreen {
+  border: 0;
+  border-radius: 0;
+}
+
+/* Takes the keys while the picture is being used: invisible, at the bottom left so the input method's word list opens
+   there. */
+.key-catcher {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  resize: none;
+  pointer-events: none;
+}
+
+.composing {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.view-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.view-buttons .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .screen {
   display: block;
   max-width: 100%;
   max-height: 100%;
+}
+
+.screen[hidden] {
+  display: none;
 }
 
 .screen.clickable {
@@ -493,4 +559,329 @@
 
 .watching > span:nth-child(2) {
   flex: 1;
+}
+
+/* The RUNNERS account form, shown in place of the grid while signed out. */
+.sign-in {
+  margin-top: var(--rw-section-gap);
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sign-in .type-box {
+  flex: none;
+  padding: 6px 8px;
+}
+
+.sign-in-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.link-button {
+  font: inherit;
+  font-size: 11px;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-row .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Window head (decision 「[REMOTE] 개발 - 화면 다듬기」): the title on the left, the RUNNERS account at the top right,
+   as in Zoom and in all four RUNNERS apps. */
+.window-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.window-head-text {
+  min-width: 0;
+}
+
+.bar-menu {
+  position: absolute;
+  z-index: 20;
+  min-width: 240px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 0.5px solid var(--line);
+  background: var(--menu-bg);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+}
+
+.bar-menu-item {
+  font: inherit;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bar-menu-item:hover {
+  background: var(--rw-accent, var(--accent));
+  color: #ffffff;
+}
+
+.bar-menu-item:hover .hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Signed out: the grid's place says what signing in gives, with the same Sign In button as the top right. */
+.signed-out {
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 36px 24px;
+  color: var(--sub);
+}
+
+.signed-out .switch-label {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.signed-out .rw-button {
+  margin-top: 6px;
+  min-width: 120px;
+}
+
+/* A computer opened from the grid (decision 「[REMOTE] 개발 - 화면 다듬기」): its screen fills the window, and the
+   controls float over it at the top centre, as in Chrome Remote Desktop, Windows App and TeamViewer. */
+.viewer-window.session {
+  padding: 0;
+  gap: 0;
+  background: var(--screen);
+}
+
+.session .screen-box {
+  border-radius: 0;
+  border: 0;
+}
+
+.session-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  padding: 24px;
+  text-align: center;
+  color: #f5f5f7;
+}
+
+.session-state .hint {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.session-state-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.session-state-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.session-state .rw-button:not(.default) {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f5f5f7;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #ffffff;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.float-bar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 10;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: calc(100% - 24px);
+  padding: 4px 6px;
+  border-radius: 12px;
+  background: rgba(36, 36, 38, 0.86);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  color: #f5f5f7;
+  white-space: nowrap;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.float-bar.hidden {
+  transform: translate(-50%, calc(-100% - 12px));
+  opacity: 0;
+}
+
+.bar-button {
+  font: inherit;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  min-width: 30px;
+  justify-content: center;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bar-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.bar-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bar-button.on {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.bar-button.wide span {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-button.end {
+  margin-left: 4px;
+  padding: 0 12px;
+  background: #ff453a;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.bar-button.end:hover {
+  background: #ff5b52 !important;
+}
+
+.bar-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 4px;
+  font-weight: 600;
+}
+
+.bar-sep {
+  width: 0.5px;
+  height: 18px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.bar-switch {
+  gap: 6px;
+  padding: 0 8px;
+  height: 30px;
+}
+
+.bar-switch .knob {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.bar-menu-box {
+  position: relative;
+}
+
+.bar-menu {
+  top: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.bar-menu-item .hint {
+  margin-left: auto;
+  padding-left: 16px;
+}
+
+.keycap {
+  font-variant-numeric: tabular-nums;
+}
+
+.invisible {
+  visibility: hidden;
+  width: 14px;
+}
+
+.text-menu {
+  width: 320px;
+  padding: 10px;
+  gap: 8px;
+  white-space: normal;
+}
+
+.session-note {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.session-note.error {
+  background: rgba(255, 69, 58, 0.9);
+  color: #ffffff;
+  white-space: normal;
+  max-width: 80%;
 }

@@ -14,14 +14,17 @@ const CODES: Record<string, number> = {
   Backslash: 42, Comma: 43, Slash: 44, KeyN: 45, KeyM: 46, Period: 47, Tab: 48, Space: 49, Backquote: 50,
   Backspace: 51, Escape: 53, F5: 96, F6: 97, F7: 98, F3: 99, F8: 100, F9: 101, F11: 103, F10: 109, F12: 111,
   Home: 115, PageUp: 116, Delete: 117, F4: 118, End: 119, F2: 120, PageDown: 121, F1: 122, ArrowLeft: 123,
-  ArrowRight: 124, ArrowDown: 125, ArrowUp: 126, NumpadEnter: 76,
+  ArrowRight: 124, ArrowDown: 125, ArrowUp: 126, NumpadEnter: 76, IntlBackslash: 10, F13: 105, F14: 107, F15: 113,
+  F16: 106, F17: 64, F18: 79, F19: 80, F20: 90, NumpadDecimal: 65, NumpadMultiply: 67, NumpadAdd: 69,
+  NumLock: 71, NumpadDivide: 75, NumpadSubtract: 78, NumpadEqual: 81, Numpad0: 82, Numpad1: 83, Numpad2: 84,
+  Numpad3: 85, Numpad4: 86, Numpad5: 87, Numpad6: 88, Numpad7: 89, Numpad8: 91, Numpad9: 92,
 };
 
 /** Keys that are never text, even without a modifier. */
 const ALWAYS_KEY = new Set([
   "Enter", "NumpadEnter", "Tab", "Backspace", "Escape", "Delete", "Home", "End", "PageUp", "PageDown",
   "ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10",
-  "F11", "F12",
+  "F11", "F12", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20", "NumLock",
 ]);
 
 type Modifier = "shift" | "control" | "option" | "command";

@@ -12,7 +12,8 @@ export type MenuCommand =
   | "help"
   | "quit";
 
-/** `linked` is false until this computer is in the Tailscale network; the two Allow lines show only after that. */
+/** `linked` is false until this computer is on the relay (signed in and connected); the two Allow lines show only after
+ *  that. */
 export type MenuState = {
   openAtLogin: boolean;
   autoUpdate: boolean;
@@ -60,29 +61,35 @@ export type Display = {
   pixelHeight: number;
 };
 
-/** One click or key a viewer sends; `x` and `y` are fractions of the display (0 at the left / top, 1 at the far edge). */
+/** One click or key a viewer sends; `x` and `y` are fractions of the display (0 at the left / top, 1 at the far edge).
+ *  `press` is one half of a click (for dragging), `drag` a move with the button held, `scroll` pixels as the browser
+ *  counts them (positive `dy` shows what is further down). */
 export type Input =
   | { kind: "move"; display: number; x: number; y: number }
   | { kind: "click"; display: number; x: number; y: number; button: "left" | "right"; count: number }
+  | { kind: "press"; display: number; x: number; y: number; button: "left" | "right"; down: boolean; count?: number }
+  | { kind: "drag"; display: number; x: number; y: number; button: "left" | "right" }
+  | { kind: "scroll"; display: number; x: number; y: number; dx: number; dy: number }
   | { kind: "key"; code: number; modifiers: ("shift" | "control" | "option" | "command")[] }
   | { kind: "text"; text: string };
 
-/** One computer in the Tailscale network that runs Remote. `host` is its network name, used to reach it. */
+/** One computer of the same RUNNERS account that has Remote open. `host` is its device id on the relay, used to reach
+ *  it. */
 export type Computer = { name: string; host: string; online: boolean; os: string };
 
-/** The connection: Tailscale is not installed, starting, waiting for this computer to log in to Tailscale, running,
- *  or failed (the reason is in `error`). */
-export type LinkState = "noTailscale" | "starting" | "needsLogin" | "running" | "failed";
+/** The connection: not signed in to a RUNNERS account, starting, running, or failed (the reason is in `error`; it
+ *  tries again by itself). */
+export type LinkState = "signedOut" | "starting" | "running" | "failed";
 
 /** One line of the connection log: who did what to this computer, and when (ms since 1970). `refused` is a request
  *  turned away because seeing or clicking was off. Typed text itself is never written down. */
-export type LogEntry = { at: number; peer: string; what: "view" | "click" | "key" | "text" | "refused" };
+export type LogEntry = { at: number; peer: string; what: "view" | "click" | "key" | "text" | "copy" | "paste" | "refused" };
 
 export type Link = {
   state: LinkState;
   error: string | null;
-  /** This computer's name in the network. */
-  self: string | null;
+  /** The signed-in account's email, or null. */
+  account: string | null;
   computers: Computer[];
   allowViewing: boolean;
   allowControl: boolean;
@@ -109,6 +116,15 @@ export type PressAt = { x: number; y: number };
 /** What happened to a sent input: sent, or ignored because it was Remote's own click landing on the picture again. */
 export type SendResult = "sent" | "echo";
 
+/** A WebRTC signal from another device, passed on by the relay. */
+export type Signal = { from: string; sdp?: unknown; candidate?: unknown };
+
+/** Claude asking another computer something through the page's connection to it (link.ts askPage). */
+export type ClientRequest = { rid: string; device: string; method: string; params: Record<string, unknown> };
+
+/** Signing in or making the account first. */
+export type SignMode = "login" | "signup";
+
 export type RemoteApi = {
   status: () => Promise<Status>;
   displays: () => Promise<Display[]>;
@@ -122,21 +138,36 @@ export type RemoteApi = {
   sendInput: (input: Input, pressAt: PressAt | null) => Promise<SendResult>;
   /** The connection and the computers in the network. */
   link: () => Promise<Link>;
-  /** Opens Tailscale's login page for this computer (only while the state is needsLogin). */
-  openLinkLogin: () => Promise<void>;
+  /** Signs in to the RUNNERS account. Rejects with `bad`, `exists` or `network`. */
+  signIn: (mode: SignMode, email: string, password: string) => Promise<Link>;
+  signOut: () => Promise<Link>;
   /** Turns letting others see or click in this computer on or off. */
   setAllow: (what: Allow, on: boolean) => Promise<Link>;
   /** Stops everyone looking now and turns seeing off until it is turned on again. */
   disconnect: () => Promise<Link>;
-  /** Another computer's name and displays. Rejects with `unreachable`, `off`, or a message. */
-  peerInfo: (host: string) => Promise<PeerInfo>;
-  /** One JPEG picture of another computer's display; `width` asks for a narrower one (the grid of all computers).
-   *  Rejects with `off`, `permission`, `display` or a message. */
-  peerCapture: (host: string, display: number, width?: number) => Promise<Uint8Array>;
-  /** One click or key into another computer. Rejects with `off`, `control`, `accessibility` or a message. */
-  peerInput: (host: string, input: Input) => Promise<void>;
+  /** This computer's id on the relay. */
+  deviceId: () => Promise<string>;
+  /** Passes a WebRTC signal to another device of the account. */
+  sendSignal: (to: string, payload: { sdp?: unknown; candidate?: unknown }) => void;
+  onSignal: (listener: (signal: Signal) => void) => () => void;
+  /** A device went offline; its connections can be closed. */
+  onPeerLeft: (listener: (deviceId: string) => void) => () => void;
+  /** Another device's question to this computer; the main process decides with the switches and permissions. */
+  hostRequest: (peer: string, method: string, params: Record<string, unknown>) => Promise<unknown>;
+  /** Seeing was turned off: end every connection other devices have to this computer. */
+  onDropHosted: (listener: () => void) => () => void;
+  /** Signed out: end every connection. */
+  onDropAll: (listener: () => void) => () => void;
+  onClientRequest: (listener: (request: ClientRequest) => void) => () => void;
+  clientReply: (rid: string, ok: boolean, value: unknown) => void;
   /** Called with true when the viewer window is shown and false when it is hidden. */
   onViewerVisible: (listener: (visible: boolean) => void) => () => void;
+  /** This computer's copied text, and putting text there: copy and paste between this computer and the one on screen. */
+  readClipboard: () => Promise<string>;
+  writeClipboard: (text: string) => Promise<void>;
+  /** While keys go to the computer on screen, this window's menu shortcuts (Command-C, Command-V…) are left alone so
+   *  the keys reach the page and go there. */
+  keysToPeer: (on: boolean) => void;
   /** Whether the OS blurs what is behind the window; the page draws a solid background when it does not. */
   translucent: () => Promise<boolean>;
   /** Sets the window's content height so it fits the page. */

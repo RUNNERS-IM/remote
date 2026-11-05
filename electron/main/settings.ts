@@ -8,12 +8,14 @@ export type Settings = {
   autoUpdate: boolean;
   /** The day (`2026-10-30`) "Later" was chosen in the update dialog, so the daily check does not ask again that day. */
   updateLaterOn: string | null;
-  /** Other computers in the network may see this one. "Disconnect" turns it off. */
+  /** Other computers and phones of the same account may see this one. "Disconnect" turns it off. */
   allowViewing: boolean;
   /** Other computers may also click and type here. Off by default: seeing is asked for far more often than doing. */
   allowControl: boolean;
   /** Apps (bundle ids) Claude may click in without a person approving each time (decision 5B). */
   claudeApps: string[];
+  /** This computer's id on the relay, made at first start (account.ts). */
+  deviceId: string | null;
 };
 
 const DEFAULTS: Settings = {
@@ -22,6 +24,7 @@ const DEFAULTS: Settings = {
   allowViewing: true,
   allowControl: false,
   claudeApps: [],
+  deviceId: null,
 };
 
 function file(): string {

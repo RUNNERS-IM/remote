@@ -9,6 +9,8 @@ import { join } from "node:path";
 
 /** Marks that the one-time default was applied, so a later launch never turns it back on. */
 const DEFAULT_APPLIED = "open-at-login-default";
+/** Added to the login start on Windows and Linux, so Remote knows not to open its window (index.ts). */
+export const HIDDEN_ARG = "--hidden";
 const LINUX_AUTOSTART = join(homedir(), ".config", "autostart", "remote.desktop");
 
 export function isOn(): boolean {
@@ -27,11 +29,11 @@ export function setOn(on: boolean): void {
     mkdirSync(join(homedir(), ".config", "autostart"), { recursive: true });
     writeFileSync(
       LINUX_AUTOSTART,
-      `[Desktop Entry]\nType=Application\nName=Remote\nExec="${exec}"\nX-GNOME-Autostart-enabled=true\n`,
+      `[Desktop Entry]\nType=Application\nName=Remote\nExec="${exec}" ${HIDDEN_ARG}\nX-GNOME-Autostart-enabled=true\n`,
     );
     return;
   }
-  app.setLoginItemSettings({ openAtLogin: on });
+  app.setLoginItemSettings({ openAtLogin: on, args: [HIDDEN_ARG] });
 }
 
 /** The menu line: flips the setting and returns what it is now. */

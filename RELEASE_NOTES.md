@@ -1,7 +1,13 @@
 ## 한국어
 
-- 다른 컴퓨터를 크게 볼 때, 화면 그림이 창보다 길면 아래 「클릭 보내기」 스위치가 창 밖으로 밀려 보이지 않던 문제를 고쳤습니다. 이제 창 크기와 상관없이 스위치가 늘 창 안에 보여, 켜고 클릭 · 키 입력을 보낼 수 있습니다.
+- 컴퓨터끼리는 같은 RUNNERS 계정으로 로그인하면 이어집니다. Tailscale 은 더 이상 쓰지 않습니다.
+- Remote 창에서 이메일과 비밀번호로 로그인하거나 계정을 만들고, 「이 맥」에서 로그아웃할 수 있습니다.
+- 다른 컴퓨터의 화면은 영상으로 바로 오가며 초당 15장까지 나옵니다. 화면은 서버를 거치지 않습니다.
+- 보던 컴퓨터가 꺼지면 「꺼져 있음」을 보여 주고, 다시 켜지면 화면이 이어집니다.
 
 ## English
 
-- When you see another computer large and its screen picture is taller than the window, the Send Clicks switch was pushed out of the window and could not be turned on. It now always stays inside the window, so you can turn it on and send clicks and keys.
+- Computers connect when they are signed in to the same RUNNERS account. Tailscale is no longer used.
+- Sign in or make an account with an email and password in the Remote window, and sign out under This Mac.
+- Other computers' screens come as video directly between the two computers, up to 15 pictures a second. Screens do not pass through the server.
+- When the computer you are watching goes off, the window says so, and the screen comes back when it is on again.

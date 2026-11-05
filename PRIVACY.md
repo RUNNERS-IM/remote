@@ -1,20 +1,20 @@
 # Remote Privacy Policy
 
-Last updated: November 1, 2026
+Last updated: November 5, 2026
 
 Remote is an app made by Runners Co., Ltd for seeing and clicking the screens of other computers. This policy covers every version of Remote.
 
 ## What Remote collects
 
-Nothing. Remote has no account, no ads and no analytics, and it does not send anything about you or your computer to Runners or anyone else, except what the office connection below needs to work.
+Only the RUNNERS account you sign in with, as described under Office connection below. Remote has no ads and no analytics, and it does not send anything else about you or your computer to Runners or anyone else.
 
 ## What Remote reads on your computer
 
-When the Remote window is open, Remote takes pictures of the display you choose, about five a second, to show them in that window. The pictures stay in memory only: they are not saved to disk and not sent anywhere, and Remote stops taking them when the window closes.
+Remote takes pictures of this computer's screen only when something asks for them: another computer or phone of the same account, while **Let Other Computers See This** is on, or Claude through Remote's MCP server (see Claude below). This happens whether or not the Remote window is open. Pictures for another device go straight to that device, as a video of up to 15 frames a second or as single pictures, and stop when it disconnects, when that switch is turned off, or when you choose **Disconnect Now**. The pictures are kept in memory only and are not saved to disk.
 
 Remote also reads the list of displays and whether it has the Screen Recording and Accessibility permissions.
 
-When you turn on **Send Clicks** in the window, a click on the picture is sent to the same spot on your own screen. Remote does nothing else with your mouse or keyboard.
+When you are looking at another computer in the Remote window and turn on **Send Clicks**, your clicks, scrolls and keys on its picture are sent to that computer, not to this one. Remote clicks and types on this computer only when another device of the same account sends input while **Let Other Computers Click and Type** is on, or when Claude does so with the approval described in the README. It does nothing else with your mouse or keyboard.
 
 ## Network
 
@@ -59,21 +59,21 @@ Questions: open an issue at https://github.com/RUNNERS-IM/remote/issues.
 
 # Remote 개인정보 처리방침
 
-최종 수정: 2026년 11월 1일
+최종 수정: 2026년 11월 5일
 
 Remote 는 Runners Co., Ltd 가 만드는, 다른 컴퓨터 화면을 보고 누르는 앱입니다. 이 방침은 모든 Remote 에 적용됩니다.
 
 ## 모으는 정보
 
-없습니다. Remote 에는 계정, 광고, 사용 통계 수집이 없고, 사용자나 컴퓨터에 관한 어떤 정보도 Runners 나 다른 곳으로 보내지 않습니다. 아래 사무실 연결이 동작하는 데 필요한 것만 예외입니다.
+아래 사무실 연결에 적은, 로그인한 RUNNERS 계정 정보뿐입니다. Remote 에는 광고와 사용 통계 수집이 없고, 그 밖에 사용자나 컴퓨터에 관한 정보를 Runners 나 다른 곳으로 보내지 않습니다.
 
 ## 컴퓨터 안에서 읽는 정보
 
-Remote 창이 열려 있으면, 고른 모니터의 화면을 초당 5장쯤 찍어 그 창에 보여 줍니다. 찍은 화면은 메모리에만 있고 디스크에 저장하거나 어디로 보내지 않으며, 창을 닫으면 찍기를 멈춥니다.
+Remote 는 요청이 올 때만 이 컴퓨터 화면을 찍습니다. 요청하는 쪽은 둘입니다. **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때 같은 계정의 다른 컴퓨터 · 휴대폰, 그리고 Remote 의 MCP 서버로 붙은 Claude(아래 Claude 참고)입니다. Remote 창이 닫혀 있어도 찍습니다. 다른 기기에 보내는 화면은 그 기기로 바로 가며(초당 최대 15장의 영상, 또는 한 장씩), 상대가 연결을 끊거나 그 스위치를 끄거나 **지금 끊기** 를 고르면 멈춥니다. 찍은 화면은 메모리에만 있고 디스크에 저장하지 않습니다.
 
 모니터 목록과, 화면 기록 · 손쉬운 사용 권한이 켜졌는지도 읽습니다.
 
-창에서 **클릭 보내기** 를 켜면, 화면 그림을 누른 자리를 이 컴퓨터 화면의 같은 자리에 클릭합니다. 그 밖에는 마우스나 키보드에 아무것도 하지 않습니다.
+Remote 창에서 다른 컴퓨터 화면을 보며 **클릭 보내기** 를 켜면, 그 화면 그림 위의 클릭 · 스크롤 · 키 입력이 이 컴퓨터가 아니라 그 컴퓨터로 갑니다. Remote 가 이 컴퓨터에 클릭 · 입력하는 것은 **다른 컴퓨터의 클릭 · 키 입력 허용** 이 켜져 있을 때 같은 계정의 다른 기기가 보낸 입력과, README 에 적은 승인을 거친 Claude 의 입력뿐입니다. 그 밖에는 마우스나 키보드에 아무것도 하지 않습니다.
 
 ## 인터넷 연결
 

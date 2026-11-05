@@ -19,9 +19,11 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from "react";
-import type { SignMode } from "../electron/preload/api";
 import {
+  Check,
+  ChevronDown,
   ChevronLeft,
+  Command,
   Eye,
   Laptop,
   LogOut,
@@ -29,13 +31,18 @@ import {
   Minimize,
   Monitor,
   MousePointerClick,
+  Pin,
+  PinOff,
   Power,
   RefreshCw,
   Scan,
+  Settings,
   Shrink,
+  Type,
   type LucideIcon,
 } from "lucide-react";
-import { statusText, t } from "./i18n";
+import { AccountButton, SignInSheet, type SignMode } from "./runners-account/runners-account";
+import { locale, statusText, t } from "./i18n";
 import { keyInput } from "./keys";
 import * as native from "./native";
 import * as peer from "./peer";
@@ -64,6 +71,20 @@ const NOTE_MS = 3000;
 const KEY_V = 9;
 const KEY_C = 8;
 const KEY_X = 7;
+
+/** The floating bar hides BAR_MS after the pointer leaves it while the mouse goes to that computer, and comes back
+ *  when the pointer is within BAR_ZONE_PX of the top. */
+const BAR_MS = 2500;
+const BAR_ZONE_PX = 56;
+
+/** Shortcuts the floating bar sends that this Mac would take for itself (macOS key codes, keys.ts). */
+const SHORTCUTS: { key: "switchApp" | "spotlight" | "forceQuit" | "lock" | "screenshot"; label: string; code: number; modifiers: ("shift" | "control" | "option" | "command")[] }[] = [
+  { key: "switchApp", label: "⌘⇥", code: 48, modifiers: ["command"] },
+  { key: "spotlight", label: "⌘Space", code: 49, modifiers: ["command"] },
+  { key: "forceQuit", label: "⌥⌘Esc", code: 53, modifiers: ["option", "command"] },
+  { key: "lock", label: "⌃⌘Q", code: 12, modifiers: ["control", "command"] },
+  { key: "screenshot", label: "⌘⇧4", code: 21, modifiers: ["shift", "command"] },
+];
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -120,11 +141,22 @@ function usePicture(): [string | null, (bytes: Uint8Array | null) => void] {
 export default function Viewer() {
   const [status, setStatus] = useState<Status | null>(null);
   const [link, setLink] = useState<Link | null>(null);
-  // Why false: the window is made hidden at launch (it holds the connections) and says when it is first shown.
-  const [visible, setVisible] = useState(false);
+  // Why not just false: the window is made hidden at launch (it holds the connections) and says when it is shown, but
+  // a window opened at once is shown before this page listens, so the page also starts from whether it is seen now.
+  const [visible, setVisible] = useState(() => document.visibilityState === "visible");
   /** The computer opened from the grid, or null for the grid. */
   const [computer, setComputer] = useState<string | null>(null);
   const [thisMac, setThisMac] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const closeSignIn = useCallback(() => setSigningIn(false), []);
+  // The shared sheet reads the failure's short code (bad, exists) from the error's message.
+  const signIn = useCallback(
+    (mode: SignMode, email: string, password: string) =>
+      native.signIn(mode, email, password).then(setLink, (error: unknown) => {
+        throw new Error(native.errorCode(error));
+      }),
+    [],
+  );
 
   // Why: closing the window only hides it, so pictures stop while it is hidden and start again when shown.
   useEffect(() => native.onViewerVisible(setVisible), []);
@@ -143,6 +175,9 @@ export default function Viewer() {
   const supported = status?.supported ?? true;
   const computers = link?.computers ?? [];
   const opened = computers.find((c) => c.host === computer);
+  // Why remember: a computer that goes off leaves the list, and its page should still say its name, not its device id.
+  const names = useRef(new Map<string, string>());
+  for (const c of computers) names.current.set(c.host, c.name);
 
   if (!supported) {
     return (
@@ -165,7 +200,7 @@ export default function Viewer() {
     return (
       <Detail
         host={computer}
-        name={opened?.name ?? computer}
+        name={opened?.name ?? names.current.get(computer) ?? computer}
         online={opened !== undefined}
         visible={visible}
         onBack={() => setComputer(null)}
@@ -173,11 +208,38 @@ export default function Viewer() {
     );
   }
 
+  const signedOut = link?.state === "signedOut";
   return (
     <main className="viewer-window">
-      <header>
-        <div className="title">{t("grid.title")}</div>
-        <div className="subtitle">{t("grid.subtitle", { count: computers.length })}</div>
+      <header className="window-head">
+        <div className="window-head-text">
+          <div className="title">{t("grid.title")}</div>
+          <div className="subtitle">
+            {signedOut ? t("grid.subtitleSignedOut") : t("grid.subtitle", { count: computers.length })}
+          </div>
+        </div>
+        {link?.account && (
+          <AccountButton
+            lang={locale}
+            account={link.account}
+            line={
+              <>
+                <span className={`state-dot ${link.state === "running" ? "waiting" : ""}`} aria-hidden />
+                {link.state === "running"
+                  ? t("account.online", { count: link.computers.filter((c) => c.online).length })
+                  : t("link.starting")}
+              </>
+            }
+            items={[
+              {
+                label: t("account.thisMac"),
+                icon: <Settings size={16} strokeWidth={1.5} aria-hidden />,
+                onSelect: () => setThisMac(true),
+              },
+            ]}
+            onSignOut={() => void native.signOut().then(setLink)}
+          />
+        )}
       </header>
       {status && status.viewers.length > 0 && (
         <div className="watching">
@@ -188,7 +250,18 @@ export default function Viewer() {
           </button>
         </div>
       )}
-      <LinkNote link={link} onChange={setLink} />
+      {signedOut ? (
+        <section className="card signed-out">
+          <Laptop size={28} strokeWidth={1.25} aria-hidden />
+          <div className="switch-label">{t("account.emptyTitle")}</div>
+          <div className="hint">{t("account.intro")}</div>
+          <button type="button" className="rw-button default" onClick={() => setSigningIn(true)}>
+            {t("account.signIn")}
+          </button>
+        </section>
+      ) : (
+        <LinkNote link={link} />
+      )}
       {computers.length > 0 && (
         <section className="grid" aria-label={t("grid.title")}>
           {computers.map((c) => (
@@ -211,6 +284,7 @@ export default function Viewer() {
           <ChevronLeft className="flip" size={14} strokeWidth={1.5} aria-hidden />
         </button>
       )}
+      {signingIn && <SignInSheet lang={locale} signIn={signIn} onClose={closeSignIn} />}
     </main>
   );
 }
@@ -266,6 +340,7 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
         )}
       </div>
       <div className="tile-label">
+        <span className={computer.online ? "state-dot waiting" : "state-dot"} aria-hidden />
         <span className="tile-name">{computer.name}</span>
         {monitors > 1 && <span className="tab-badge">{t("grid.monitors", { count: monitors })}</span>}
       </div>
@@ -321,6 +396,13 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   /** The last press, to tell the second press of a double click. */
   const lastPress = useRef<{ at: number; clientX: number; clientY: number; button: "left" | "right"; count: number } | null>(null);
   const lastMove = useRef(0);
+  /** Which menu of the floating bar is open, whether the bar is out, and a new try after a failure. */
+  const [menu, setMenu] = useState<"displays" | "keys" | "text" | null>(null);
+  const [barAwake, setBarAwake] = useState(true);
+  const barTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  /** Pinned, the bar stays out (Windows App users complained of a bar that keeps sliding in and out). */
+  const [pinned, setPinned] = useState(false);
 
   const loadDisplays = useCallback(async () => {
     let list: Display[] = [];
@@ -358,7 +440,7 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
     check();
     const timer = setInterval(check, STATUS_EVERY_MS);
     return () => clearInterval(timer);
-  }, [visible, online, loadDisplays, host]);
+  }, [visible, online, loadDisplays, host, attempt]);
 
   const viewable = online && (info?.viewing ?? false);
 
@@ -405,7 +487,7 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
       video.current?.cancelVideoFrameCallback(counter);
       void peer.unwatch(host);
     };
-  }, [visible, chosen, host, viewable, serial]);
+  }, [visible, chosen, host, viewable, serial, attempt]);
 
   useEffect(() => setClickError(null), [sendClicks]);
 
@@ -581,185 +663,259 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   const canClick = info?.control ?? false;
   const shown = playing && problem === null;
 
+  const sendShortcut = (code: number, modifiers: ("shift" | "control" | "option" | "command")[]) => {
+    setMenu(null);
+    post({ kind: "key", code, modifiers });
+    keys.current?.focus();
+  };
+
+  // The floating bar (like Chrome Remote Desktop and Zoom): always there until the mouse goes to that computer, then it
+  // slides up after BAR_MS and comes back when the pointer nears the top edge.
+  const wake = useCallback(() => {
+    setBarAwake(true);
+    if (barTimer.current) clearTimeout(barTimer.current);
+    barTimer.current = setTimeout(() => setBarAwake(false), BAR_MS);
+  }, []);
+  useEffect(() => () => {
+    if (barTimer.current) clearTimeout(barTimer.current);
+  }, []);
+  const barHidden = sendClicks && shown && !barAwake && !pinned && menu === null;
+
   return (
-    <main className="viewer-window">
-      <header>
-        <button type="button" className="button back" onClick={onBack}>
-          <ChevronLeft size={14} strokeWidth={1.5} aria-hidden />
-          <span>{t("grid.back")}</span>
-        </button>
-        <div className="title">{name}</div>
-        <div className="subtitle">{t("window.subtitlePeer")}</div>
-      </header>
+    <main className="viewer-window session">
+      <div
+        ref={screenBox}
+        className={actual ? "screen-box actual" : "screen-box"}
+        onPointerMove={(event) => {
+          const top = event.currentTarget.getBoundingClientRect().top;
+          if (event.clientY - top < BAR_ZONE_PX) wake();
+        }}
+      >
+        <video
+          ref={video}
+          className={sendClicks ? "screen clickable" : "screen"}
+          style={actual && display ? { width: display.width } : undefined}
+          hidden={!shown}
+          aria-label={display ? displayLabel(display, displays.indexOf(display)) : ""}
+          muted
+          playsInline
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onContextMenu={(event) => event.preventDefault()}
+        />
+        {!shown && (
+          <div className="session-state">
+            {problem === null ? (
+              <>
+                <span className="spinner" aria-hidden />
+                <div className="session-state-title">{t("session.connecting", { name })}</div>
+              </>
+            ) : (
+              <>
+                <div className="session-state-title">{t("session.cannotSee", { name })}</div>
+                <div className="hint">{problem}</div>
+                <div className="session-state-buttons">
+                  <button type="button" className="rw-button" onClick={onBack}>
+                    {t("grid.back")}
+                  </button>
+                  <button type="button" className="rw-button default" onClick={() => setAttempt((n) => n + 1)}>
+                    {t("session.retry")}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <textarea
+          ref={keys}
+          className="key-catcher"
+          aria-label={t("clickTest.label")}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onKeyDown={onKeyDown}
+          onInput={onTyped}
+          onCompositionUpdate={(event) => setComposing(event.data)}
+          onCompositionEnd={onComposed}
+          onFocus={() => setTyping(true)}
+          onBlur={() => setTyping(false)}
+        />
+        {composing && <div className="composing">{composing}</div>}
 
-      <section className="viewer-section">
-        <h2 className="section-head">{t("display.title")}</h2>
-        <div className="tabs" role="tablist" aria-label={t("display.title")}>
-          {displays.map((d, index) => (
+        <div className={barHidden ? "float-bar hidden" : "float-bar"} onPointerEnter={wake} onPointerMove={wake}>
+          <button type="button" className="bar-button" title={t("grid.back")} aria-label={t("grid.back")} onClick={onBack}>
+            <ChevronLeft size={16} strokeWidth={1.5} aria-hidden />
+          </button>
+          <span className="bar-name">
+            <span className={shown ? "state-dot waiting" : "state-dot"} aria-hidden />
+            {name}
+          </span>
+          <span className="bar-sep" />
+          <div className="bar-menu-box">
             <button
-              key={d.id}
-              role="tab"
-              aria-selected={d.id === chosen}
-              className={d.id === chosen ? "tab chosen" : "tab"}
-              onClick={() => setChosen(d.id)}
+              type="button"
+              className="bar-button wide"
+              disabled={displays.length === 0}
+              aria-haspopup="menu"
+              onClick={() => setMenu(menu === "displays" ? null : "displays")}
             >
-              <Monitor size={14} strokeWidth={1.5} />
-              <span>{displayLabel(d, index)}</span>
-              {d.main && <span className="tab-badge">{t("display.main")}</span>}
+              <Monitor size={16} strokeWidth={1.5} aria-hidden />
+              <span>{display ? displayLabel(display, displays.indexOf(display)) : t("display.title")}</span>
+              <ChevronDown size={12} strokeWidth={1.5} aria-hidden />
             </button>
-          ))}
-        </div>
-
-        <div ref={screenBox} className={actual ? "screen-box card actual" : "screen-box card"}>
-          <video
-            ref={video}
-            className={sendClicks ? "screen clickable" : "screen"}
-            style={actual && display ? { width: display.width } : undefined}
-            hidden={!shown}
-            aria-label={display ? displayLabel(display, displays.indexOf(display)) : ""}
-            muted
-            playsInline
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onContextMenu={(event) => event.preventDefault()}
-          />
-          {!shown && <div className="empty">{problem ?? t("view.loading")}</div>}
-          <textarea
-            ref={keys}
-            className="key-catcher"
-            aria-label={t("clickTest.label")}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            onKeyDown={onKeyDown}
-            onInput={onTyped}
-            onCompositionUpdate={(event) => setComposing(event.data)}
-            onCompositionEnd={onComposed}
-            onFocus={() => setTyping(true)}
-            onBlur={() => setTyping(false)}
-          />
-          {composing && <div className="composing">{composing}</div>}
-        </div>
-
-        <div className="toolbar">
-          <label className={canClick ? "switch" : "switch disabled"}>
+            {menu === "displays" && (
+              <div className="bar-menu" role="menu">
+                {displays.map((d, index) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={d.id === chosen}
+                    className="bar-menu-item"
+                    onClick={() => {
+                      setChosen(d.id);
+                      setMenu(null);
+                    }}
+                  >
+                    <Check size={14} strokeWidth={2} className={d.id === chosen ? "" : "invisible"} aria-hidden />
+                    <span>{displayLabel(d, index)}</span>
+                    <span className="hint">
+                      {d.main ? `${t("display.main")} · ` : ""}
+                      {t("display.size", { width: d.width, height: d.height })}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <span className="bar-sep" />
+          <label className={canClick ? "switch bar-switch" : "switch bar-switch disabled"} title={canClick ? t("peer.typeNote") : t("peer.noControl")}>
+            <MousePointerClick size={16} strokeWidth={1.5} aria-hidden />
+            <span>{t("session.control")}</span>
             <input
               type="checkbox"
               checked={sendClicks}
               disabled={!canClick}
-              onChange={(event) => setSendClicks(event.target.checked)}
+              onChange={(event) => {
+                setSendClicks(event.target.checked);
+                if (event.target.checked) keys.current?.focus();
+              }}
             />
             <span className="knob" aria-hidden />
-            <span className="switch-text">
-              <span className="switch-label">{t("clickTest.label")}</span>
-              <span className="hint">{canClick ? t("peer.typeNote") : t("peer.noControl")}</span>
-            </span>
           </label>
-          <div className="meta">
-            {clickError && <span className="error">{clickError}</span>}
-            {!clickError && note && <span>{note}</span>}
-            {display && <span>{t("display.size", { width: display.width, height: display.height })}</span>}
-            {shown && <span>{t("view.rate", { fps })}</span>}
-          </div>
-          <div className="view-buttons">
-            <button type="button" className="button" disabled={!shown} onClick={() => setActual(!actual)}>
-              {actual ? <Shrink size={14} strokeWidth={1.5} aria-hidden /> : <Scan size={14} strokeWidth={1.5} aria-hidden />}
-              <span>{actual ? t("view.fitSize") : t("view.actualSize")}</span>
+          <div className="bar-menu-box">
+            <button
+              type="button"
+              className="bar-button"
+              disabled={!sendClicks}
+              title={t("session.keys")}
+              aria-label={t("session.keys")}
+              aria-haspopup="menu"
+              onClick={() => setMenu(menu === "keys" ? null : "keys")}
+            >
+              <Command size={16} strokeWidth={1.5} aria-hidden />
             </button>
-            <button type="button" className="button" disabled={!shown} onClick={toggleFullscreen}>
-              {fullscreen ? <Minimize size={14} strokeWidth={1.5} aria-hidden /> : <Maximize size={14} strokeWidth={1.5} aria-hidden />}
-              <span>{fullscreen ? t("view.exitFullscreen") : t("view.fullscreen")}</span>
-            </button>
+            {menu === "keys" && (
+              <div className="bar-menu" role="menu">
+                {SHORTCUTS.map((s) => (
+                  <button key={s.key} type="button" role="menuitem" className="bar-menu-item" onClick={() => sendShortcut(s.code, s.modifiers)}>
+                    <span className="invisible" />
+                    <span>{t(`session.key.${s.key}`)}</span>
+                    <span className="hint keycap">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          <div className="bar-menu-box">
+            <button
+              type="button"
+              className="bar-button"
+              disabled={!sendClicks}
+              title={t("session.typeText")}
+              aria-label={t("session.typeText")}
+              onClick={() => setMenu(menu === "text" ? null : "text")}
+            >
+              <Type size={16} strokeWidth={1.5} aria-hidden />
+            </button>
+            {menu === "text" && (
+              <form className="bar-menu text-menu" onSubmit={sendText}>
+                <div className="hint">{t("session.typeTextNote")}</div>
+                <div className="type-row">
+                  <input
+                    className="type-box"
+                    autoFocus
+                    value={text}
+                    placeholder={t("peer.textPlaceholder")}
+                    onChange={(event) => setText(event.target.value)}
+                  />
+                  <button className="rw-button default" type="submit" disabled={!text}>
+                    {t("peer.textSend")}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+          <span className="bar-sep" />
+          <button
+            type="button"
+            className="bar-button"
+            disabled={!shown}
+            title={actual ? t("view.fitSize") : t("view.actualSize")}
+            aria-label={actual ? t("view.fitSize") : t("view.actualSize")}
+            onClick={() => setActual(!actual)}
+          >
+            {actual ? <Shrink size={16} strokeWidth={1.5} aria-hidden /> : <Scan size={16} strokeWidth={1.5} aria-hidden />}
+          </button>
+          <button
+            type="button"
+            className="bar-button"
+            disabled={!shown}
+            title={fullscreen ? t("view.exitFullscreen") : t("view.fullscreen")}
+            aria-label={fullscreen ? t("view.exitFullscreen") : t("view.fullscreen")}
+            onClick={toggleFullscreen}
+          >
+            {fullscreen ? <Minimize size={16} strokeWidth={1.5} aria-hidden /> : <Maximize size={16} strokeWidth={1.5} aria-hidden />}
+          </button>
+          <button
+            type="button"
+            className={pinned ? "bar-button on" : "bar-button"}
+            title={t(pinned ? "session.unpin" : "session.pin")}
+            aria-label={t(pinned ? "session.unpin" : "session.pin")}
+            aria-pressed={pinned}
+            onClick={() => setPinned(!pinned)}
+          >
+            {pinned ? <PinOff size={16} strokeWidth={1.5} aria-hidden /> : <Pin size={16} strokeWidth={1.5} aria-hidden />}
+          </button>
+          <span className="bar-sep" />
+          <button type="button" className="bar-button end" onClick={onBack}>
+            <span>{t("session.end")}</span>
+          </button>
         </div>
 
-        {sendClicks && (
-          <form className="type-row" onSubmit={sendText}>
-            <input
-              className="type-box"
-              value={text}
-              placeholder={t("peer.textPlaceholder")}
-              onChange={(event) => setText(event.target.value)}
-            />
-            <button className="button" type="submit" disabled={!text}>
-              {t("peer.textSend")}
-            </button>
-          </form>
+        {(clickError || note || shown) && (
+          <div className={clickError ? "session-note error" : "session-note"}>
+            {clickError ?? note ?? (
+              <>
+                {display && t("display.size", { width: display.width, height: display.height })} · {t("view.rate", { fps })}
+              </>
+            )}
+          </div>
         )}
-      </section>
+      </div>
     </main>
   );
 }
 
 /** One line under the title saying how the connection is doing, or why no other computer is listed. */
-function LinkNote({ link, onChange }: { link: Link | null; onChange: (link: Link) => void }) {
-  if (!link) return null;
-  if (link.state === "signedOut") return <SignIn onChange={onChange} />;
+function LinkNote({ link }: { link: Link | null }) {
+  if (!link || link.state === "signedOut") return null;
   if (link.state === "starting") return <div className="hint link-note">{t("link.starting")}</div>;
   if (link.state === "failed") return <div className="hint link-note error">{t("link.failed", { error: link.error ?? "" })}</div>;
   if (link.computers.length === 0) return <div className="hint link-note">{t("link.empty")}</div>;
   return null;
-}
-
-/** The RUNNERS account form: email and password, signing in or making the account. */
-function SignIn({ onChange }: { onChange: (link: Link) => void }) {
-  const [mode, setMode] = useState<SignMode>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (!email || !password || busy) return;
-    setBusy(true);
-    setProblem(null);
-    native
-      .signIn(mode, email, password)
-      .then((link) => {
-        setPassword("");
-        onChange(link);
-      })
-      .catch((error) => {
-        const code = native.errorCode(error);
-        setProblem(t(code === "bad" || code === "exists" ? `account.${code}` : "account.network"));
-      })
-      .finally(() => setBusy(false));
-  };
-
-  return (
-    <form className="card sign-in" onSubmit={submit}>
-      <div className="switch-label">{t("account.title")}</div>
-      <div className="hint">{t("account.intro")}</div>
-      <input
-        className="type-box"
-        type="email"
-        autoComplete="email"
-        placeholder={t("account.email")}
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-      />
-      <input
-        className="type-box"
-        type="password"
-        autoComplete={mode === "login" ? "current-password" : "new-password"}
-        placeholder={t("account.password")}
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-      />
-      {problem && <div className="hint error">{problem}</div>}
-      <div className="sign-in-row">
-        <button className="button" type="submit" disabled={!email || !password || busy}>
-          {t(mode === "login" ? "account.signIn" : "account.signUp")}
-        </button>
-        <button className="link-button" type="button" onClick={() => setMode(mode === "login" ? "signup" : "login")}>
-          {t(mode === "login" ? "account.toSignUp" : "account.toSignIn")}
-        </button>
-      </div>
-    </form>
-  );
 }
 
 /** One on/off line: what it is for (a Lucide icon and a name) on the left, the shared toggle on the right

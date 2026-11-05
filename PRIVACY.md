@@ -29,8 +29,8 @@ Automatically** stops the daily check. Choosing **Check for Updates…** does th
 ### Office connection
 
 Computers and phones connect through the RUNNERS account you sign in with in the Remote window. Remote sends the
-account's email and password to the RUNNERS system server (`server.system.runners.im`) to sign in; the password is sent
-as its SHA-256, never as typed. The server returns two tokens, which Remote keeps encrypted by the operating system in
+account's email and password to the RUNNERS system server (`server.system.runners.im`) to sign in; the password goes
+only over the encrypted connection (HTTPS), and the server keeps it only as a bcrypt hash. The server returns two tokens, which Remote keeps encrypted by the operating system in
 its own folder, and nothing else about you is kept. While signed in, Remote keeps one connection open to the server's
 relay, which tells it which computers and phones of the same account are online (each one's name and a random device
 id) and passes the short messages that set up a connection between two of them. Screens, clicks and keys do not pass
@@ -87,8 +87,8 @@ Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연
 ### 사무실 연결
 
 컴퓨터와 휴대폰은 Remote 창에서 로그인한 RUNNERS 계정으로 이어집니다. 로그인할 때 Remote 는 계정의 이메일과
-비밀번호를 RUNNERS 시스템 서버(`server.system.runners.im`)로 보냅니다. 비밀번호는 친 그대로가 아니라 SHA-256 값으로
-보냅니다. 서버가 돌려준 토큰 두 개는 운영체제가 암호화해 Remote 자기 폴더에 두고, 그 밖에 사용자에 관한 것은 두지
+비밀번호를 RUNNERS 시스템 서버(`server.system.runners.im`)로 보냅니다. 비밀번호는 암호화된 연결(HTTPS)로만 보내고,
+서버는 bcrypt 로 바꾼 값만 저장합니다. 서버가 돌려준 토큰 두 개는 운영체제가 암호화해 Remote 자기 폴더에 두고, 그 밖에 사용자에 관한 것은 두지
 않습니다. 로그인해 있는 동안 Remote 는 서버의 중계(relay)에 연결 하나를 열어 둡니다. 중계는 같은 계정의 어느 컴퓨터 ·
 휴대폰이 켜져 있는지(기기마다 이름과 무작위 기기 번호)를 알려 주고, 두 기기가 서로 연결을 맺는 데 필요한 짧은 메시지를
 전해 줍니다. 화면 · 클릭 · 키는 서버를 거치지 않고 WebRTC 로 두 기기 사이를 암호화(DTLS-SRTP)해 바로 오갑니다. 바로 갈

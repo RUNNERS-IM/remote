@@ -8,6 +8,8 @@ export type Settings = {
   autoUpdate: boolean;
   /** The day (`2026-10-30`) "Later" was chosen in the update dialog, so the daily check does not ask again that day. */
   updateLaterOn: string | null;
+  /** When a check last reached GitHub (milliseconds since 1970), so a wake from sleep checks only when one is due. */
+  updateCheckedAt?: number;
   /** Other computers and phones of the same account may see this one. "Disconnect" turns it off. */
   allowViewing: boolean;
   /** Other computers may also click and type here. Off by default: seeing is asked for far more often than doing. */

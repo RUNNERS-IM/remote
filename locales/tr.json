@@ -43,6 +43,8 @@
   "computer.offline": "Çevrim dışı",
   "link.starting": "Bağlanıyor…",
   "link.failed": "Bağlanılamadı: {{error}}",
+  "link.elsewhere": "Başka bir bağlantı bu cihazın yerini aldığı için Remote bağlanmayı durdurdu. Remote'u yeniden açın veya tekrar oturum açın.",
+  "link.unreachable": "Sunucuya ulaşılamıyor. Yeniden deneniyor…",
   "account.title": "RUNNERS Hesabı",
   "account.intro": "Aynı RUNNERS hesabıyla oturum açmış bilgisayarlar ve telefonlar birbirini görür ve tıklayabilir.",
   "account.email": "E-posta",

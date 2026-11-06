@@ -43,6 +43,8 @@
   "computer.offline": "Hors ligne",
   "link.starting": "Connexion…",
   "link.failed": "Connexion impossible : {{error}}",
+  "link.elsewhere": "Une autre connexion a pris la place de cet appareil : Remote a cessé de se connecter. Rouvrez Remote ou reconnectez-vous.",
+  "link.unreachable": "Serveur injoignable. Nouvelle tentative…",
   "account.title": "Compte RUNNERS",
   "account.intro": "Les ordinateurs et téléphones connectés au même compte RUNNERS se voient et cliquent les uns chez les autres.",
   "account.email": "E-mail",

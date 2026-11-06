@@ -43,6 +43,8 @@
   "computer.offline": "Ngoại tuyến",
   "link.starting": "Đang kết nối…",
   "link.failed": "Không kết nối được: {{error}}",
+  "link.elsewhere": "Một kết nối khác đã thế chỗ thiết bị này nên Remote đã ngừng kết nối. Hãy mở lại Remote hoặc đăng nhập lại.",
+  "link.unreachable": "Không thể kết nối tới máy chủ. Đang thử lại…",
   "account.title": "Tài khoản RUNNERS",
   "account.intro": "Máy tính và điện thoại đăng nhập cùng một tài khoản RUNNERS có thể xem và nhấp vào màn hình của nhau.",
   "account.email": "Email",

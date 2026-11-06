@@ -43,6 +43,8 @@
   "computer.offline": "Offline",
   "link.starting": "Łączenie…",
   "link.failed": "Nie udało się połączyć: {{error}}",
+  "link.elsewhere": "Inne połączenie zajęło miejsce tego urządzenia, więc Remote przestał się łączyć. Otwórz Remote ponownie lub zaloguj się jeszcze raz.",
+  "link.unreachable": "Brak połączenia z serwerem. Ponawianie…",
   "account.title": "Konto RUNNERS",
   "account.intro": "Komputery i telefony zalogowane na to samo konto RUNNERS widzą się nawzajem i mogą klikać.",
   "account.email": "E-mail",

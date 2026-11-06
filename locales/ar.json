@@ -43,6 +43,8 @@
   "computer.offline": "غير متصل",
   "link.starting": "جارٍ الاتصال…",
   "link.failed": "تعذّر الاتصال: {{error}}",
+  "link.elsewhere": "اتصال آخر حلّ محل هذا الجهاز، فتوقف Remote عن الاتصال. أعد فتح Remote أو سجّل الدخول مجددًا.",
+  "link.unreachable": "تعذّر الوصول إلى الخادم. جارٍ إعادة المحاولة…",
   "account.title": "حساب RUNNERS",
   "account.intro": "أجهزة الكمبيوتر والهواتف المسجّلة في حساب RUNNERS نفسه ترى شاشات بعضها وتنقر عليها.",
   "account.email": "البريد الإلكتروني",

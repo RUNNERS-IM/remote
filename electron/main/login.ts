@@ -15,7 +15,9 @@ const LINUX_AUTOSTART = join(homedir(), ".config", "autostart", "remote.desktop"
 
 export function isOn(): boolean {
   if (process.platform === "linux") return existsSync(LINUX_AUTOSTART);
-  return app.getLoginItemSettings().openAtLogin;
+  // Why the args: Windows only counts the Run key entry as this login item when the arguments match what setOn wrote;
+  // without them the menu always reads off there. macOS ignores them.
+  return app.getLoginItemSettings({ args: [HIDDEN_ARG] }).openAtLogin;
 }
 
 export function setOn(on: boolean): void {

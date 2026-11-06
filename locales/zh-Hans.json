@@ -43,6 +43,8 @@
   "computer.offline": "离线",
   "link.starting": "正在连接…",
   "link.failed": "无法连接：{{error}}",
+  "link.elsewhere": "另一个连接占用了此设备的位置，Remote 已停止连接。请重新打开 Remote 或重新登录。",
+  "link.unreachable": "无法连接服务器。正在重试…",
   "account.title": "RUNNERS 账户",
   "account.intro": "登录同一 RUNNERS 账户的电脑和手机可以互相查看并点击屏幕。",
   "account.email": "电子邮件",

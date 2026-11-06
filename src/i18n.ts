@@ -26,9 +26,9 @@ const table: Table = tables[locale];
 document.documentElement.lang = locale;
 document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
 
-/** Looks up `key` and fills `{{name}}` slots; a missing key shows the key itself so it is easy to spot. */
+/** Looks up `key` and fills `{{name}}` slots; a key this language lacks reads in English, never as the bare key. */
 export function t(key: Key, args: Record<string, string | number> = {}): string {
-  let text = table[key] ?? key;
+  let text = table[key] ?? tables.en?.[key] ?? key;
   for (const [name, value] of Object.entries(args)) {
     text = text.replaceAll(`{{${name}}}`, String(value));
   }

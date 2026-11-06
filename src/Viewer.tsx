@@ -913,6 +913,8 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
 function LinkNote({ link }: { link: Link | null }) {
   if (!link || link.state === "signedOut") return null;
   if (link.state === "starting") return <div className="hint link-note">{t("link.starting")}</div>;
+  if (link.state === "failed" && link.error === "elsewhere") return <div className="hint link-note error">{t("link.elsewhere")}</div>;
+  if (link.state === "failed" && link.error === "unreachable") return <div className="hint link-note error">{t("link.unreachable")}</div>;
   if (link.state === "failed") return <div className="hint link-note error">{t("link.failed", { error: link.error ?? "" })}</div>;
   if (link.computers.length === 0) return <div className="hint link-note">{t("link.empty")}</div>;
   return null;

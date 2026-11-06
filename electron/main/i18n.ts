@@ -30,11 +30,11 @@ export function currentLocale(): string {
   return code;
 }
 
-/** Looks up `key` and fills `{{name}}` slots; a missing key shows the key itself so it is easy to spot. */
+/** Looks up `key` and fills `{{name}}` slots; a key this language lacks reads in English, never as the bare key. */
 export function t(key: string, args: Record<string, string | number> = {}): string {
   // Why: the system language list is only known once the app is ready, so the table is picked on first use.
   table ??= tables[currentLocale()] ?? tables.en;
-  let text = table[key] ?? key;
+  let text = table[key] ?? tables.en?.[key] ?? key;
   for (const [name, value] of Object.entries(args)) {
     text = text.replaceAll(`{{${name}}}`, String(value));
   }

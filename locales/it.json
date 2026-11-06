@@ -43,6 +43,8 @@
   "computer.offline": "Offline",
   "link.starting": "Connessione…",
   "link.failed": "Connessione non riuscita: {{error}}",
+  "link.elsewhere": "Un'altra connessione ha preso il posto di questo dispositivo, quindi Remote ha smesso di connettersi. Riapri Remote o accedi di nuovo.",
+  "link.unreachable": "Server non raggiungibile. Nuovo tentativo…",
   "account.title": "Account RUNNERS",
   "account.intro": "Computer e telefoni collegati allo stesso account RUNNERS si vedono e fanno clic a vicenda.",
   "account.email": "Email",

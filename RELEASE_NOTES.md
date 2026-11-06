@@ -1,13 +1,13 @@
 ## 한국어
 
-- 컴퓨터끼리는 같은 RUNNERS 계정으로 로그인하면 이어집니다. Tailscale 은 더 이상 쓰지 않습니다.
-- Remote 창에서 이메일과 비밀번호로 로그인하거나 계정을 만들고, 「이 맥」에서 로그아웃할 수 있습니다.
-- 다른 컴퓨터의 화면은 영상으로 바로 오가며 초당 15장까지 나옵니다. 화면은 서버를 거치지 않습니다.
-- 보던 컴퓨터가 꺼지면 「꺼져 있음」을 보여 주고, 다시 켜지면 화면이 이어집니다.
+- 인터넷이 잠깐 끊겨도 로그아웃되지 않습니다. 연결이 돌아오면 저절로 다시 이어집니다.
+- 한 시간마다 연결이 끊기던 문제를 고쳤습니다. 보던 화면이 끊기지 않습니다.
+- 맥에서 업데이트를 설치한 뒤 새 판으로 다시 켜지지 않을 수 있던 문제를 고쳤습니다.
+- 컴퓨터가 잠자기에서 깨어나면 밀린 업데이트 확인을 합니다.
 
 ## English
 
-- Computers connect when they are signed in to the same RUNNERS account. Tailscale is no longer used.
-- Sign in or make an account with an email and password in the Remote window, and sign out under This Mac.
-- Other computers' screens come as video directly between the two computers, up to 15 pictures a second. Screens do not pass through the server.
-- When the computer you are watching goes off, the window says so, and the screen comes back when it is on again.
+- A short internet outage no longer signs you out. Remote reconnects by itself when the connection is back.
+- Fixed the connection dropping every hour, so the screen you are watching stays on.
+- Fixed a case where a Mac might not restart into the new version after installing an update.
+- Remote checks for updates it missed when the computer wakes from sleep.

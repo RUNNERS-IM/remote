@@ -19,6 +19,19 @@ export const RELAY_URL = `${API_URL.replace(/^http/, "ws")}/api/relay`;
 type Tokens = { accessToken: string; refreshToken: string };
 type Saved = { email: string; tokens: Tokens };
 
+/** Why: the same outcomes as runners-app-kit refreshSession(). Only "rejected" ends the sign-in; "network" means the
+ *  server could not be reached or was briefly unwell, so the tokens stay and the caller tries again later. */
+export type RefreshResult = { ok: true } | { ok: false; reason: "rejected" | "network" | "signedOut" };
+
+/** A failed call: `message` is the code the sign-in sheet reads, `status` the server's answer (none when unreached). */
+class ApiError extends Error {
+  status: number | null;
+  constructor(message: string, status: number | null) {
+    super(message);
+    this.status = status;
+  }
+}
+
 let saved: Saved | null | undefined;
 
 function file(): string {
@@ -27,12 +40,15 @@ function file(): string {
 
 // Why plain text in debug runs: the dev copy of Electron has no stable signature, so the keychain could stop it with a
 // prompt nobody is there to answer. Debug runs only hold test tokens from scripts/relay-dev.mjs.
+// Why the availability check: encrypting throws where the OS has no key store (a Linux without one), and that would
+// show up as "could not reach the server" after a correct password. The same fallback as Monitor; the file stays
+// readable by this user only (mode 0600).
 function seal(text: string): Buffer {
-  return DEV ? Buffer.from(text) : safeStorage.encryptString(text);
+  return !DEV && safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(text) : Buffer.from(text);
 }
 
 function unseal(data: Buffer): string {
-  return DEV ? data.toString("utf8") : safeStorage.decryptString(data);
+  return !DEV && safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(data) : data.toString("utf8");
 }
 
 function load(): Saved | null {
@@ -84,11 +100,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
-    throw new Error("network");
+    throw new ApiError("network", null);
   }
-  if (res.status === 401 || res.status === 400 || res.status === 404) throw new Error("bad");
-  if (res.status === 409) throw new Error("exists");
-  if (!res.ok) throw new Error("network");
+  if (res.status === 401 || res.status === 400 || res.status === 404) throw new ApiError("bad", res.status);
+  if (res.status === 409) throw new ApiError("exists", res.status);
+  if (!res.ok) throw new ApiError("network", res.status);
   const answer = (await res.json()) as unknown;
   // Why: the system server wraps a success as {code, data}; scripts/relay-dev.mjs answers bare.
   return (answer && typeof answer === "object" && "code" in answer && "data" in answer ? answer.data : answer) as T;
@@ -105,17 +121,39 @@ export async function signIn(mode: "login" | "signup", address: string, password
   save({ email: address.trim(), tokens: answer.tokens });
 }
 
-/** New tokens after the relay said the old one expired. False when the account has to sign in again. */
-export async function refresh(): Promise<boolean> {
-  const now = load();
-  if (!now) return false;
+let refreshing: Promise<RefreshResult> | null = null;
+
+/** New tokens, before the old one runs out or after the relay said it did. Only the server refusing the refresh token
+ *  (401) ends the sign-in, as in runners-app-kit docs/relay.md; a 400 or 404 is not a verdict on the account. */
+export function refresh(): Promise<RefreshResult> {
+  refreshing ??= (async (): Promise<RefreshResult> => {
+    const now = load();
+    if (!now) return { ok: false, reason: "signedOut" };
+    try {
+      const tokens = await post<Tokens>("/api/mobile/auth/refresh", { refreshToken: now.tokens.refreshToken });
+      save({ ...now, tokens });
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        save(null);
+        return { ok: false, reason: "rejected" };
+      }
+      return { ok: false, reason: "network" };
+    }
+  })().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
+/** When the access token runs out, in milliseconds since 1970, or null when it cannot be read. */
+export function accessTokenExpiry(): number | null {
+  const token = accessToken();
   try {
-    const tokens = await post<Tokens>("/api/mobile/auth/refresh", { refreshToken: now.tokens.refreshToken });
-    save({ ...now, tokens });
-    return true;
-  } catch (e) {
-    if (e instanceof Error && e.message === "bad") save(null);
-    return false;
+    const exp = JSON.parse(Buffer.from(token!.split(".")[1], "base64url").toString("utf8")).exp;
+    return typeof exp === "number" ? exp * 1000 : null;
+  } catch {
+    return null;
   }
 }
 

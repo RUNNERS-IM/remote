@@ -43,6 +43,8 @@
   "computer.offline": "オフライン",
   "link.starting": "接続しています…",
   "link.failed": "接続できませんでした: {{error}}",
+  "link.elsewhere": "別の接続がこのデバイスの場所を引き継いだため、Remote は接続を停止しました。Remote を開き直すか、もう一度ログインしてください。",
+  "link.unreachable": "サーバーに接続できません。再試行しています…",
   "account.title": "RUNNERS アカウント",
   "account.intro": "同じ RUNNERS アカウントでログインしたコンピュータとスマートフォンは、互いの画面を見てクリックできます。",
   "account.email": "メールアドレス",

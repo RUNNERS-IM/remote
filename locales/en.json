@@ -43,6 +43,8 @@
   "computer.offline": "Offline",
   "link.starting": "Connecting…",
   "link.failed": "Could not connect: {{error}}",
+  "link.elsewhere": "Another connection took this device's place, so Remote stopped connecting. Reopen Remote or sign in again.",
+  "link.unreachable": "Can't reach the server. Trying again…",
   "account.title": "RUNNERS Account",
   "account.intro": "Computers and phones signed in to the same RUNNERS account can see and click each other.",
   "account.email": "Email",

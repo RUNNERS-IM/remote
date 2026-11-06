@@ -79,7 +79,8 @@ jobs:
       matrix:
         include:
           - os: macos
-            runner: macos-26
+            # GitHub 호스팅 macos-26 은 2026-10-31 새벽 Split 출시 때 대기열에서 16분 만에 두 번 취소돼서 자리가 많은 macos-15 를 쓴다.
+            runner: macos-15
             builder: --mac
           - os: windows
             runner: windows-latest
@@ -178,9 +179,16 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ matrix.os }}" = macos ]; then export APPLE_API_KEY="$APPLE_API_KEY_PATH"; fi
-          pnpm exec electron-builder --config electron-builder.config.cjs ${{ matrix.builder }} --publish never
+          # Why: stapling inside electron-builder fails now and then when Apple's ticket server drops the
+          # connection (NSURLErrorDomain -1005, stapler error 68); a second try a little later goes through.
+          for TRY in 1 2 3; do
+            pnpm exec electron-builder --config electron-builder.config.cjs ${{ matrix.builder }} --publish never && break
+            [ "$TRY" = 3 ] && exit 1
+            echo "::warning::electron-builder failed (try $TRY), trying again in 30 seconds"
+            sleep 30
+          done
 
-      # 앱은 electron-builder 가 공증했지만 DMG 자체도 공증 · 스테이플해야 오프라인에서도 경고 없이 열린다
+      # 앱은 electron-builder 가 공증했지만 DMG 자체도 서명 · 공증 · 스테이플해야 오프라인에서도 경고 없이 열린다
       - name: Notarize the DMGs
         if: matrix.os == 'macos'
         env:
@@ -189,8 +197,16 @@ jobs:
         run: |
           set -euo pipefail
           for DMG in dist.noindex/*.dmg; do
+            # electron-builder signs the app inside but not the DMG; Gatekeeper wants the DMG signed too.
+            codesign --sign "Runners Co., Ltd (RGWVXJ8URP)" --timestamp "$DMG"
             xcrun notarytool submit "$DMG" --key "$APPLE_API_KEY_PATH" --key-id "$ASC_API_KEY_ID" --issuer "$ASC_API_ISSUER_ID" --wait
-            xcrun stapler staple "$DMG"
+            for TRY in 1 2 3; do
+              xcrun stapler staple "$DMG" && break
+              [ "$TRY" = 3 ] && exit 1
+              echo "::warning::stapler failed (try $TRY), trying again in 30 seconds"
+              sleep 30
+            done
+            spctl -a -t open --context context:primary-signature -v "$DMG"
           done
 
       - name: Collect the files
@@ -203,6 +219,15 @@ jobs:
             case "$(basename "$f")" in builder-debug.yml|builder-effective-config.yaml) continue ;; esac
             cp "$f" "$OUT/"
           done
+          # 홈페이지의 받기 단추는 releases/latest/download/<이름> 으로 바로 받는다. 그래서 버전 없는 이름으로도
+          # 한 벌 올린다. 자동 업데이트(latest*.yml)와 Homebrew 는 버전 붙은 파일을 쓴다.
+          case "${{ matrix.os }}" in
+            macos) cp "dist.noindex/Remote-$VERSION-mac-arm64.dmg" "$OUT/remote-macos-arm64.dmg"
+                   cp "dist.noindex/Remote-$VERSION-mac-x64.dmg" "$OUT/remote-macos-x64.dmg" ;;
+            windows) cp "dist.noindex/remote-$VERSION-windows-x64-setup.exe" "$OUT/remote-windows-x64-setup.exe" ;;
+            linux) cp "dist.noindex/remote-$VERSION-linux-x86_64.AppImage" "$OUT/remote-linux-x86_64.AppImage"
+                   cp "dist.noindex/remote-$VERSION-linux-amd64.deb" "$OUT/remote-linux-amd64.deb" ;;
+          esac
           ls -la $OUT
 
       - uses: actions/upload-artifact@v4

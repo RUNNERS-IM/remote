@@ -43,6 +43,8 @@
   "computer.offline": "Offline",
   "link.starting": "Verbinden…",
   "link.failed": "Kan geen verbinding maken: {{error}}",
+  "link.elsewhere": "Een andere verbinding heeft de plaats van dit apparaat overgenomen, dus Remote maakt geen verbinding meer. Open Remote opnieuw of log opnieuw in.",
+  "link.unreachable": "Server niet bereikbaar. Opnieuw proberen…",
   "account.title": "RUNNERS-account",
   "account.intro": "Computers en telefoons die met hetzelfde RUNNERS-account zijn aangemeld, zien en klikken bij elkaar.",
   "account.email": "E-mail",

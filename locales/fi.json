@@ -43,6 +43,8 @@
   "computer.offline": "Offline",
   "link.starting": "Yhdistetään…",
   "link.failed": "Yhteys epäonnistui: {{error}}",
+  "link.elsewhere": "Toinen yhteys otti tämän laitteen paikan, joten Remote lopetti yhdistämisen. Avaa Remote uudelleen tai kirjaudu uudelleen.",
+  "link.unreachable": "Palvelimeen ei saada yhteyttä. Yritetään uudelleen…",
   "account.title": "RUNNERS-tili",
   "account.intro": "Samalle RUNNERS-tilille kirjautuneet tietokoneet ja puhelimet näkevät ja napsauttavat toisiaan.",
   "account.email": "Sähköposti",

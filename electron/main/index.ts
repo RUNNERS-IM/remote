@@ -27,6 +27,9 @@ const SETTINGS_PAGE: Record<PermissionKind, string> = {
 };
 /** Debug runs only: everything below that reads REMOTE_* is ignored in a packaged app. */
 const DEV = !app.isPackaged;
+// Why: a debug run keeps its own data folder, so it runs next to the installed Remote (which holds the single-instance
+// lock on the shared folder) and never signs it in or out.
+if (DEV) app.setPath("userData", `${app.getPath("userData")}-dev`);
 
 let tray: Tray | null = null;
 /** Opens the Remote window. While it is open Remote also shows in the Dock, so it can be found like any app's window;

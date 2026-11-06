@@ -43,6 +43,8 @@
   "computer.offline": "Offline",
   "link.starting": "Menghubungkan…",
   "link.failed": "Tidak dapat terhubung: {{error}}",
+  "link.elsewhere": "Koneksi lain mengambil tempat perangkat ini, jadi Remote berhenti menyambung. Buka lagi Remote atau masuk kembali.",
+  "link.unreachable": "Tidak dapat menjangkau server. Mencoba lagi…",
   "account.title": "Akun RUNNERS",
   "account.intro": "Komputer dan ponsel yang masuk ke akun RUNNERS yang sama dapat saling melihat dan mengeklik.",
   "account.email": "Email",

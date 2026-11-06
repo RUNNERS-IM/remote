@@ -43,6 +43,8 @@
   "computer.offline": "Offline",
   "link.starting": "Verbinde…",
   "link.failed": "Verbindung fehlgeschlagen: {{error}}",
+  "link.elsewhere": "Eine andere Verbindung hat den Platz dieses Geräts übernommen, daher verbindet Remote nicht mehr. Öffne Remote neu oder melde dich erneut an.",
+  "link.unreachable": "Server nicht erreichbar. Neuer Versuch läuft…",
   "account.title": "RUNNERS-Konto",
   "account.intro": "Computer und Telefone, die mit demselben RUNNERS-Konto angemeldet sind, sehen und klicken einander.",
   "account.email": "E-Mail",

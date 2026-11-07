@@ -102,19 +102,51 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   } catch {
     throw new ApiError("network", null);
   }
-  if (res.status === 401 || res.status === 400 || res.status === 404) throw new ApiError("bad", res.status);
-  if (res.status === 409) throw new ApiError("exists", res.status);
-  if (!res.ok) throw new ApiError("network", res.status);
-  const answer = (await res.json()) as unknown;
+  if (!res.ok) {
+    // Why: the codes the shared sign-in sheet reads (runners-account.tsx SignInProblem), as runners-app-kit
+    // desktop/main/account.ts makes them. A 401 that says "User not found" is an email with no app password yet.
+    const said = await res.text().catch(() => "");
+    const code =
+      res.status === 404 || (res.status === 401 && said.includes("User not found"))
+        ? "none"
+        : ({ 400: "format", 401: "bad", 409: "exists", 422: "code", 429: "many" } as Record<number, string>)[res.status];
+    throw new ApiError(code ?? "network", res.status);
+  }
+  // Why: sending a code answers 204 with no body.
+  const text = await res.text();
+  const answer = (text ? JSON.parse(text) : null) as unknown;
   // Why: the system server wraps a success as {code, data}; scripts/relay-dev.mjs answers bare.
   return (answer && typeof answer === "object" && "code" in answer && "data" in answer ? answer.data : answer) as T;
 }
 
-/** Signs in (or makes the account first). Throws `bad`, `exists` or `network`. The password goes as typed over HTTPS,
- *  as runners-app-kit sends it; the server takes letters and digits, 6 to 20 of them. */
-export async function signIn(mode: "login" | "signup", address: string, password: string): Promise<void> {
+/** Signs in (or makes the account with the code mailed to the address). Throws `bad`, `none`, `format`, `exists`,
+ *  `code`, `many` or `network`. The password goes as typed over HTTPS, as runners-app-kit sends it; the server takes
+ *  letters and digits, 6 to 20 of them. */
+export async function signIn(mode: "login" | "signup", address: string, password: string, code?: string): Promise<void> {
   const answer = await post<{ tokens: Tokens }>(`/api/mobile/auth/${mode}`, {
     email: address.trim(),
+    password,
+    projectName: PROJECT,
+    ...(code ? { code } : {}),
+  });
+  save({ email: address.trim(), tokens: answer.tokens });
+}
+
+/** Mails a six-digit code: `signup` to make the account (`exists` when there is one), `reset` for a new password
+ *  (`none` when there is no account). */
+export async function sendCode(purpose: "signup" | "reset", address: string, locale: string): Promise<void> {
+  await post(purpose === "signup" ? "/api/mobile/auth/email-code" : "/api/mobile/auth/password-reset", {
+    email: address.trim(),
+    projectName: PROJECT,
+    locale,
+  });
+}
+
+/** Sets a new password with the mailed code and signs in with it. The four apps share the password. */
+export async function resetPassword(address: string, code: string, password: string): Promise<void> {
+  const answer = await post<{ tokens: Tokens }>("/api/mobile/auth/password-reset/confirm", {
+    email: address.trim(),
+    code,
     password,
     projectName: PROJECT,
   });

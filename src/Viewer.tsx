@@ -41,7 +41,7 @@ import {
   Type,
   type LucideIcon,
 } from "lucide-react";
-import { AccountButton, SignInSheet, type SignMode } from "./runners-account/runners-account";
+import { AccountButton, SignInSheet, type CodePurpose, type SignMode } from "./runners-account/runners-account";
 import { locale, statusText, t } from "./i18n";
 import { keyInput } from "./keys";
 import * as native from "./native";
@@ -98,6 +98,11 @@ function peerProblem(info: PeerInfo): string | null {
   return t("peer.off");
 }
 
+/** Gives the sign-in sheet the bare code (`bad`, `none`, …) without the IPC words around it. */
+function rethrowCode(error: unknown): never {
+  throw new Error(native.errorCode(error));
+}
+
 /** Turns the short error codes from another computer into a sentence. */
 function captureError(error: unknown): string {
   const code = native.errorCode(error);
@@ -151,10 +156,17 @@ export default function Viewer() {
   const closeSignIn = useCallback(() => setSigningIn(false), []);
   // The shared sheet reads the failure's short code (bad, exists) from the error's message.
   const signIn = useCallback(
-    (mode: SignMode, email: string, password: string) =>
-      native.signIn(mode, email, password).then(setLink, (error: unknown) => {
-        throw new Error(native.errorCode(error));
-      }),
+    (mode: SignMode, email: string, password: string, code?: string) =>
+      native.signIn(mode, email, password, code).then(setLink, rethrowCode),
+    [],
+  );
+  const sendCode = useCallback(
+    (purpose: CodePurpose, email: string) => native.sendCode(purpose, email).catch(rethrowCode),
+    [],
+  );
+  const resetPassword = useCallback(
+    (email: string, code: string, password: string) =>
+      native.resetPassword(email, code, password).then(setLink, rethrowCode),
     [],
   );
 
@@ -284,7 +296,15 @@ export default function Viewer() {
           <ChevronLeft className="flip" size={14} strokeWidth={1.5} aria-hidden />
         </button>
       )}
-      {signingIn && <SignInSheet lang={locale} signIn={signIn} onClose={closeSignIn} />}
+      {signingIn && (
+        <SignInSheet
+          lang={locale}
+          signIn={signIn}
+          sendCode={sendCode}
+          resetPassword={resetPassword}
+          onClose={closeSignIn}
+        />
+      )}
     </main>
   );
 }

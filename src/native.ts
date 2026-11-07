@@ -42,7 +42,11 @@ export const link = () => api().link();
 export const readClipboard = () => api().readClipboard();
 export const writeClipboard = (text: string) => api().writeClipboard(text);
 export const keysToPeer = (on: boolean) => api().keysToPeer(on);
-export const signIn = (mode: "login" | "signup", email: string, password: string) => api().signIn(mode, email, password);
+export const signIn = (mode: "login" | "signup", email: string, password: string, code?: string) =>
+  api().signIn(mode, email, password, code);
+export const sendCode = (purpose: "signup" | "reset", email: string) => api().sendCode(purpose, email);
+export const resetPassword = (email: string, code: string, password: string) =>
+  api().resetPassword(email, code, password);
 export const signOut = () => api().signOut();
 export const setAllow = (what: Allow, on: boolean) => api().setAllow(what, on);
 export const disconnect = () => api().disconnect();

@@ -138,8 +138,13 @@ export type RemoteApi = {
   sendInput: (input: Input, pressAt: PressAt | null) => Promise<SendResult>;
   /** The connection and the computers in the network. */
   link: () => Promise<Link>;
-  /** Signs in to the RUNNERS account. Rejects with `bad`, `exists` or `network`. */
-  signIn: (mode: SignMode, email: string, password: string) => Promise<Link>;
+  /** Signs in to the RUNNERS account; making it takes the code mailed by `sendCode`. Rejects with `bad`, `none`,
+   *  `format`, `exists`, `code`, `many` or `network`. */
+  signIn: (mode: SignMode, email: string, password: string, code?: string) => Promise<Link>;
+  /** Mails a six-digit code for making the account (`signup`) or choosing a new password (`reset`). */
+  sendCode: (purpose: "signup" | "reset", email: string) => Promise<void>;
+  /** Sets a new password with the mailed code and signs in. */
+  resetPassword: (email: string, code: string, password: string) => Promise<Link>;
   signOut: () => Promise<Link>;
   /** Turns letting others see or click in this computer on or off. */
   setAllow: (what: Allow, on: boolean) => Promise<Link>;

@@ -1,13 +1,13 @@
 ## 한국어
 
-- 인터넷이 잠깐 끊겨도 로그아웃되지 않습니다. 연결이 돌아오면 저절로 다시 이어집니다.
-- 한 시간마다 연결이 끊기던 문제를 고쳤습니다. 보던 화면이 끊기지 않습니다.
-- 맥에서 업데이트를 설치한 뒤 새 판으로 다시 켜지지 않을 수 있던 문제를 고쳤습니다.
-- 컴퓨터가 잠자기에서 깨어나면 밀린 업데이트 확인을 합니다.
+- 로그인이 안 될 때 까닭을 나눠 알려 줍니다: 비밀번호가 틀렸는지, 그 이메일로 만든 계정이 없는지, 비밀번호 모양이 맞지 않는지.
+- 계정이 없는 이메일이면 그 자리에서 「이 이메일로 계정 만들기」를 누를 수 있습니다.
+- 계정을 만들 때 메일로 받은 6자리 숫자로 이메일을 확인합니다.
+- 「비밀번호를 잊으셨나요?」에서 메일로 받은 숫자와 새 비밀번호를 넣으면 바로 로그인됩니다. 새 비밀번호는 Remote · Monitor · Prompt · Split 에 모두 적용됩니다.
 
 ## English
 
-- A short internet outage no longer signs you out. Remote reconnects by itself when the connection is back.
-- Fixed the connection dropping every hour, so the screen you are watching stays on.
-- Fixed a case where a Mac might not restart into the new version after installing an update.
-- Remote checks for updates it missed when the computer wakes from sleep.
+- When you cannot log in, Remote now tells you why: a wrong password, no account with that email, or a password of the wrong shape.
+- If no account has that email, you can create one with it right there.
+- Creating an account checks your email with a 6-digit code sent to it.
+- "Forgot your password?" lets you enter the emailed code and a new password and logs you in. The new password works in Remote, Monitor, Prompt and Split.

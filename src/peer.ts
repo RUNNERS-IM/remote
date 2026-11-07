@@ -2,10 +2,12 @@
 // page, which Remote makes at launch and only hides, so this computer can be seen while the window is closed.
 //
 // One connection per pair of devices and direction:
-//   - As the viewer, this page offers a connection to a computer: a data channel "remote" for questions, and one video
-//     line the computer fills once asked to `watch` a display.
+//   - As the viewer, this page offers a connection to a computer: a data channel "remote" for questions, and
+//     VIDEO_LINES video lines. The computer fills the first once asked to `watch` one display, or one line per display
+//     once asked to `watchAll` (every monitor side by side, 2026-11-07 decision 1C). A computer before that answers
+//     `watchAll` with an unknown method, and the viewer then shows one display at a time.
 //   - As the host, it answers other devices' offers. Their questions go to the main process (hostRequest), which
-//     checks the See This and Click and Type switches and the permissions.
+//     checks the See This switch and the permissions.
 // Both directions can be up between the same two computers, so every ICE candidate says which side it is for
 // (`for: "host"` goes to the connection this device answered, `"viewer"` to the one it offered). The phone app
 // (remote-app) speaks the same.
@@ -24,6 +26,10 @@ const PART_CHARS = 60_000;
 /** While video goes out, how often the main process hears that the viewer is still watching (status and log). */
 const VIEWING_EVERY_MS = 500;
 const VIDEO_MAX_FPS = 15;
+/** Video lines a viewer offers; a computer with more displays shows the first ones side by side. */
+const VIDEO_LINES = 4;
+/** Side by side every picture is small, so each display is captured narrower to keep the line light. */
+const ALL_MAX_WIDTH = 1600;
 
 type Sdp = { type: RTCSdpType; sdp: string };
 type Candidate = RTCIceCandidateInit & { for?: "host" | "viewer" };
@@ -108,17 +114,20 @@ class Outgoing {
   readonly serial = ++made;
   readonly pc = new RTCPeerConnection({ iceServers: ICE });
   readonly ice = new Ice(this.pc);
-  readonly stream = new MediaStream();
+  /** One stream per video line, in the order of the lines; `watch` fills the first. */
+  readonly streams = Array.from({ length: VIDEO_LINES }, () => new MediaStream());
   private channel: RTCDataChannel;
   private nextId = 1;
   private waiting = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
   readonly opened: Promise<void>;
 
   constructor(readonly device: string) {
-    this.pc.addTransceiver("video", { direction: "recvonly" });
+    for (let line = 0; line < VIDEO_LINES; line++) this.pc.addTransceiver("video", { direction: "recvonly" });
     this.pc.ontrack = (event) => {
-      for (const track of this.stream.getTracks()) this.stream.removeTrack(track);
-      this.stream.addTrack(event.track);
+      const stream = this.streams[this.pc.getTransceivers().indexOf(event.transceiver)];
+      if (!stream) return;
+      for (const track of stream.getTracks()) stream.removeTrack(track);
+      stream.addTrack(event.track);
     };
     this.channel = this.pc.createDataChannel(CHANNEL, { ordered: true });
     this.channel.onmessage = reader((message) => this.answer(message));
@@ -224,7 +233,16 @@ export async function frame(device: string, display: number, width?: number): Pr
 export async function watch(device: string, display: number): Promise<MediaStream> {
   const link = connection(device);
   await link.ask("watch", { display });
-  return link.stream;
+  return link.streams[0];
+}
+
+/** Starts the video of several displays at once, one stream each in the same order. Rejects when the computer's Remote
+ *  is older than side by side viewing ("unknown method watchAll"). */
+export async function watchAll(device: string, displays: number[]): Promise<MediaStream[]> {
+  const link = connection(device);
+  const shown = displays.slice(0, VIDEO_LINES);
+  await link.ask("watchAll", { displays: shown });
+  return link.streams.slice(0, shown.length);
 }
 
 export async function unwatch(device: string): Promise<void> {
@@ -237,7 +255,7 @@ export async function unwatch(device: string): Promise<void> {
 class Incoming {
   readonly pc = new RTCPeerConnection({ iceServers: ICE });
   readonly ice = new Ice(this.pc);
-  private video: MediaStreamTrack | null = null;
+  private videos: MediaStreamTrack[] = [];
   private ticking: number | null = null;
 
   constructor(readonly device: string) {
@@ -268,7 +286,8 @@ class Incoming {
     if (message.id === undefined || !message.method) return;
     try {
       let result: unknown;
-      if (message.method === "watch") result = await this.watch(Number(message.params?.display));
+      if (message.method === "watch") result = await this.watch([Number(message.params?.display)]);
+      else if (message.method === "watchAll") result = await this.watch((message.params?.displays as unknown[]).map(Number), ALL_MAX_WIDTH);
       else if (message.method === "unwatch") result = this.stopVideo();
       else {
         result = await api().hostRequest(this.device, message.method, message.params ?? {});
@@ -281,20 +300,37 @@ class Incoming {
     }
   }
 
-  private async watch(display: number): Promise<string> {
-    const answer = (await api().hostRequest(this.device, "watch", { display })) as { sourceId?: string; fake?: boolean };
-    const track = answer.fake ? fakeTrack() : await screenTrack(String(answer.sourceId));
+  /** Video lines in the order the viewer offered them; an older viewer or the phone offers one. */
+  private senders(): RTCRtpSender[] {
+    return this.pc.getTransceivers().filter((t) => t.receiver.track.kind === "video").map((t) => t.sender);
+  }
+
+  /** Sends each display on its own line, the first on the first line. */
+  private async watch(displays: number[], maxWidth?: number): Promise<string> {
+    const senders = this.senders();
+    if (senders.length === 0) throw new Error("no video line");
+    const tracks: MediaStreamTrack[] = [];
+    try {
+      for (const display of displays.slice(0, senders.length)) {
+        const answer = (await api().hostRequest(this.device, "watch", { display })) as { sourceId?: string; fake?: boolean };
+        tracks.push(answer.fake ? fakeTrack(display) : await screenTrack(String(answer.sourceId), maxWidth));
+      }
+    } catch (error) {
+      for (const track of tracks) track.stop();
+      throw error;
+    }
     this.stopVideo();
-    this.video = track;
-    const sender = this.pc.getTransceivers().find((t) => t.receiver.track.kind === "video")?.sender;
-    if (!sender) throw new Error("no video line");
-    // Why: a screen is mostly text, so sharp edges matter more than smooth motion; when the line is slow, fewer
-    // pictures a second are sent rather than blurrier ones.
-    track.contentHint = "detail";
-    await sender.replaceTrack(track);
-    const parameters = sender.getParameters();
-    parameters.degradationPreference = "maintain-resolution";
-    await sender.setParameters(parameters).catch(() => undefined);
+    this.videos = tracks;
+    for (const [line, track] of tracks.entries()) {
+      const sender = senders[line];
+      // Why: a screen is mostly text, so sharp edges matter more than smooth motion; when the line is slow, fewer
+      // pictures a second are sent rather than blurrier ones.
+      track.contentHint = "detail";
+      await sender.replaceTrack(track);
+      const parameters = sender.getParameters();
+      parameters.degradationPreference = "maintain-resolution";
+      await sender.setParameters(parameters).catch(() => undefined);
+    }
     this.ticking = window.setInterval(() => {
       void api()
         .hostRequest(this.device, "viewing", {})
@@ -307,10 +343,9 @@ class Incoming {
   stopVideo(): string {
     if (this.ticking !== null) window.clearInterval(this.ticking);
     this.ticking = null;
-    this.video?.stop();
-    this.video = null;
-    const sender = this.pc.getTransceivers().find((t) => t.receiver.track.kind === "video")?.sender;
-    void sender?.replaceTrack(null).catch(() => undefined);
+    for (const track of this.videos) track.stop();
+    this.videos = [];
+    for (const sender of this.senders()) void sender.replaceTrack(null).catch(() => undefined);
     return "stopped";
   }
 
@@ -327,18 +362,24 @@ class Incoming {
 const incoming = new Map<string, Incoming>();
 
 /** The screen as a video track, through Chromium's own capture (the same Screen Recording permission). */
-async function screenTrack(sourceId: string): Promise<MediaStreamTrack> {
+async function screenTrack(sourceId: string, maxWidth?: number): Promise<MediaStreamTrack> {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
     video: {
-      mandatory: { chromeMediaSource: "desktop", chromeMediaSourceId: sourceId, maxFrameRate: VIDEO_MAX_FPS },
+      mandatory: {
+        chromeMediaSource: "desktop",
+        chromeMediaSourceId: sourceId,
+        maxFrameRate: VIDEO_MAX_FPS,
+        ...(maxWidth ? { maxWidth } : {}),
+      },
     } as unknown as MediaTrackConstraints,
   });
   return stream.getVideoTracks()[0];
 }
 
-/** Debug runs with REMOTE_FAKE_SCREEN=1: a drawn picture with a moving bar and the time, instead of the screen. */
-function fakeTrack(): MediaStreamTrack {
+/** Debug runs with REMOTE_FAKE_SCREEN=1: a drawn picture with a moving bar, the display and the time, instead of the
+ *  screen. */
+function fakeTrack(display: number): MediaStreamTrack {
   const canvas = document.createElement("canvas");
   canvas.width = 1280;
   canvas.height = 800;
@@ -352,7 +393,7 @@ function fakeTrack(): MediaStreamTrack {
     draw.fillRect(((now / 4) % (canvas.width + 200)) - 200, 360, 200, 80);
     draw.fillStyle = "#ffffff";
     draw.font = "64px -apple-system, sans-serif";
-    draw.fillText(`Remote test ${new Date(now).toLocaleTimeString()}`, 80, 160);
+    draw.fillText(`Remote test ${display} · ${new Date(now).toLocaleTimeString()}`, 80, 160);
   };
   paint();
   const timer = window.setInterval(paint, 1000 / VIDEO_MAX_FPS);

@@ -254,8 +254,18 @@ export function disconnect(): void {
   setAllow("allowViewing", false);
 }
 
-export async function signIn(mode: "login" | "signup", email: string, password: string): Promise<Link> {
-  await account.signIn(mode, email, password);
+export async function signIn(mode: "login" | "signup", email: string, password: string, code?: string): Promise<Link> {
+  await account.signIn(mode, email, password, code);
+  relay.connect();
+  return current();
+}
+
+export function sendCode(purpose: "signup" | "reset", email: string, locale: string): Promise<void> {
+  return account.sendCode(purpose, email, locale);
+}
+
+export async function resetPassword(email: string, code: string, password: string): Promise<Link> {
+  await account.resetPassword(email, code, password);
   relay.connect();
   return current();
 }

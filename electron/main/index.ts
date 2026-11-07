@@ -176,8 +176,19 @@ function registerIpc(): void {
   });
   ipcMain.on("remote:closeWindow", (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle("remote:link", () => link.current());
-  ipcMain.handle("remote:signIn", (_event, mode: unknown, email: unknown, password: unknown) =>
-    link.signIn(mode === "signup" ? "signup" : "login", String(email), String(password)),
+  ipcMain.handle("remote:signIn", (_event, mode: unknown, email: unknown, password: unknown, code: unknown) =>
+    link.signIn(
+      mode === "signup" ? "signup" : "login",
+      String(email),
+      String(password),
+      typeof code === "string" ? code : undefined,
+    ),
+  );
+  ipcMain.handle("remote:sendCode", (_event, purpose: unknown, email: unknown) =>
+    link.sendCode(purpose === "reset" ? "reset" : "signup", String(email), app.getLocale()),
+  );
+  ipcMain.handle("remote:resetPassword", (_event, email: unknown, code: unknown, password: unknown) =>
+    link.resetPassword(String(email), String(code), String(password)),
   );
   ipcMain.handle("remote:signOut", () => link.signOut());
   ipcMain.handle("remote:setAllow", (_event, what: Allow, on: boolean) => {

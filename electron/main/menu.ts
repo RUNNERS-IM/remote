@@ -54,7 +54,6 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
     ...(state.linked
       ? [
           check("allowViewing", "menu.allowViewing", state.allowViewing),
-          check("allowControl", "menu.allowControl", state.allowControl),
           separator(),
         ]
       : []),

@@ -3,7 +3,6 @@
 export type MenuCommand =
   | "open"
   | "allowViewing"
-  | "allowControl"
   | "disconnect"
   | "login"
   | "autoUpdate"
@@ -19,7 +18,6 @@ export type MenuState = {
   autoUpdate: boolean;
   linked: boolean;
   allowViewing: boolean;
-  allowControl: boolean;
 };
 
 /** The update window's content: new version as people see it, the "What's new" lines (null hides the box) and the
@@ -92,13 +90,12 @@ export type Link = {
   account: string | null;
   computers: Computer[];
   allowViewing: boolean;
-  allowControl: boolean;
   /** Newest first. */
   log: LogEntry[];
 };
 
-/** The two switches other computers depend on. */
-export type Allow = "allowViewing" | "allowControl";
+/** The switch other computers depend on. */
+export type Allow = "allowViewing";
 
 /** What another computer tells a viewer before it is looked at. `viewing` / `control` say whether it lets others see
  *  it and click in it right now; `reason` is set when it cannot be seen at all (same codes as OffReason). */

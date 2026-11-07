@@ -30,7 +30,6 @@ import {
   Maximize,
   Minimize,
   Monitor,
-  MousePointerClick,
   Pin,
   PinOff,
   Power,
@@ -396,8 +395,8 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   const [playing, setPlaying] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [fps, setFps] = useState(0);
-  const [sendClicks, setSendClicks] = useState(false);
+  /** Clicks and keys always go there once that computer lets them (it has macOS Accessibility on); there is no switch. */
+  const sendClicks = info?.control ?? false;
   const [clickError, setClickError] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [note, setNote] = useState<string | null>(null);
@@ -445,11 +444,7 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   // Why ask again every few seconds: the other computer can turn seeing off or go away at any time, and the video by
   // itself would just stop on its last picture.
   useEffect(() => {
-    if (!visible) {
-      // Why: the main process turns sending off when the window hides; the switch shows the same.
-      setSendClicks(false);
-      return;
-    }
+    if (!visible) return;
     if (!online) {
       // Why: the relay already said it left, so nobody waits for a connection that cannot come.
       setInfo(null);
@@ -464,22 +459,15 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
 
   const viewable = online && (info?.viewing ?? false);
 
-  // The video: asked for once per display; the other computer sends only what changes. Pictures a second are counted
-  // as they are drawn. A failed start is tried again after a moment.
+  // The video: asked for once per display; the other computer sends only what changes. The first picture drawn shows
+  // it. A failed start is tried again after a moment.
   useEffect(() => {
     if (!visible || chosen === null || !viewable) return;
     let running = true;
     let counter = 0;
-    const times: number[] = [];
     setPlaying(false);
-    const count = () => {
-      const element = video.current;
-      if (!running || !element) return;
-      times.push(performance.now());
-      while (times.length > 0 && times[0] < performance.now() - 2000) times.shift();
-      setFps(Math.round(times.length / 2));
-      setPlaying(true);
-      counter = element.requestVideoFrameCallback(count);
+    const drawn = () => {
+      if (running) setPlaying(true);
     };
     void (async () => {
       while (running) {
@@ -490,14 +478,13 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
           if (element) {
             element.srcObject = stream;
             void element.play().catch(() => undefined);
-            counter = element.requestVideoFrameCallback(count);
+            counter = element.requestVideoFrameCallback(drawn);
           }
           setProblem(null);
           break;
         } catch (error) {
           if (!running) break;
           setProblem(captureError(error));
-          setFps(0);
           await wait(RETRY_MS);
         }
       }
@@ -680,7 +667,6 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   };
 
   const display = displays.find((d) => d.id === chosen);
-  const canClick = info?.control ?? false;
   const shown = playing && problem === null;
 
   const sendShortcut = (code: number, modifiers: ("shift" | "control" | "option" | "command")[]) => {
@@ -811,20 +797,6 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
             )}
           </div>
           <span className="bar-sep" />
-          <label className={canClick ? "switch bar-switch" : "switch bar-switch disabled"} title={canClick ? t("peer.typeNote") : t("peer.noControl")}>
-            <MousePointerClick size={16} strokeWidth={1.5} aria-hidden />
-            <span>{t("session.control")}</span>
-            <input
-              type="checkbox"
-              checked={sendClicks}
-              disabled={!canClick}
-              onChange={(event) => {
-                setSendClicks(event.target.checked);
-                if (event.target.checked) keys.current?.focus();
-              }}
-            />
-            <span className="knob" aria-hidden />
-          </label>
           <div className="bar-menu-box">
             <button
               type="button"
@@ -915,14 +887,8 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
           </button>
         </div>
 
-        {(clickError || note || shown) && (
-          <div className={clickError ? "session-note error" : "session-note"}>
-            {clickError ?? note ?? (
-              <>
-                {display && t("display.size", { width: display.width, height: display.height })} · {t("view.rate", { fps })}
-              </>
-            )}
-          </div>
+        {(clickError || note || (shown && !sendClicks)) && (
+          <div className={clickError ? "session-note error" : "session-note"}>{clickError ?? note ?? t("peer.noControl")}</div>
         )}
       </div>
     </main>
@@ -992,7 +958,7 @@ function ThisMac(props: { status: Status; link: Link; onChange: (link: Link) => 
     void native.menuState().then(setMenu);
   }, []);
   const toggle = (name: "login" | "autoUpdate") => void native.command(name).then(setMenu);
-  const allow = (what: "allowViewing" | "allowControl", on: boolean) => void native.setAllow(what, on).then(props.onChange);
+  const allow = (what: "allowViewing", on: boolean) => void native.setAllow(what, on).then(props.onChange);
 
   return (
     <main className="viewer-window scroll">
@@ -1035,13 +1001,6 @@ function ThisMac(props: { status: Status; link: Link; onChange: (link: Link) => 
         <h2 className="section-head">{t("thisMac.sharing")}</h2>
         <div className="card">
           <ToggleRow icon={Eye} label={t("menu.allowViewing")} on={link.allowViewing} onChange={(on) => allow("allowViewing", on)} />
-          <ToggleRow
-            icon={MousePointerClick}
-            label={t("menu.allowControl")}
-            on={link.allowControl}
-            disabled={!link.allowViewing}
-            onChange={(on) => allow("allowControl", on)}
-          />
           {status.viewers.length > 0 && (
             <div className="hint">{t("status.viewers", { names: status.viewers.join(", ") })}</div>
           )}

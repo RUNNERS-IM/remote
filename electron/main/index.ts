@@ -65,7 +65,6 @@ function menuState(): MenuState {
     autoUpdate: settings.autoUpdate,
     linked: link.hasServer(),
     allowViewing: settings.allowViewing,
-    allowControl: settings.allowControl,
   };
 }
 
@@ -76,9 +75,6 @@ function run(command: Command): void {
       break;
     case "allowViewing":
       link.setAllow("allowViewing", !readSettings().allowViewing);
-      break;
-    case "allowControl":
-      link.setAllow("allowControl", !readSettings().allowControl);
       break;
     case "disconnect":
       link.disconnect();
@@ -192,7 +188,7 @@ function registerIpc(): void {
   );
   ipcMain.handle("remote:signOut", () => link.signOut());
   ipcMain.handle("remote:setAllow", (_event, what: Allow, on: boolean) => {
-    if (what === "allowViewing" || what === "allowControl") link.setAllow(what, Boolean(on));
+    if (what === "allowViewing") link.setAllow(what, Boolean(on));
     return link.current();
   });
   ipcMain.handle("remote:disconnect", () => {

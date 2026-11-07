@@ -2,7 +2,7 @@
   "name": "remote",
   "productName": "Remote",
   "private": true,
-  "version": "2.6.110703",
+  "version": "2.6.110704",
   "description": "See and click the screens of other computers, one monitor at a time",
   "author": "RUNNERS",
   "homepage": "https://github.com/RUNNERS-IM/remote",

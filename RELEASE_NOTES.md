@@ -1,13 +1,9 @@
 ## 한국어
 
-- 로그인이 안 될 때 까닭을 나눠 알려 줍니다: 비밀번호가 틀렸는지, 그 이메일로 만든 계정이 없는지, 비밀번호 모양이 맞지 않는지.
-- 계정이 없는 이메일이면 그 자리에서 「이 이메일로 계정 만들기」를 누를 수 있습니다.
-- 계정을 만들 때 메일로 받은 6자리 숫자로 이메일을 확인합니다.
-- 「비밀번호를 잊으셨나요?」에서 메일로 받은 숫자와 새 비밀번호를 넣으면 바로 로그인됩니다. 새 비밀번호는 Remote · Monitor · Prompt · Split 에 모두 적용됩니다.
+- 마우스 · 키보드 스위치를 뺐습니다. 화면을 보여 주는 컴퓨터는 클릭과 키 입력도 늘 받고, 보는 쪽은 켜지 않아도 바로 누르고 칠 수 있습니다. 그 맥에 손쉬운 사용 권한은 여전히 필요합니다.
+- 화면 아래의 크기 · 초당 장수 줄을 없앴습니다.
 
 ## English
 
-- When you cannot log in, Remote now tells you why: a wrong password, no account with that email, or a password of the wrong shape.
-- If no account has that email, you can create one with it right there.
-- Creating an account checks your email with a 6-digit code sent to it.
-- "Forgot your password?" lets you enter the emailed code and a new password and logs you in. The new password works in Remote, Monitor, Prompt and Split.
+- The mouse and keyboard switch is gone. A computer that shares its screen now always takes clicks and typing, and you can click and type right away without turning anything on. That Mac still needs the Accessibility permission.
+- The size and frames-per-second line under the screen is gone.

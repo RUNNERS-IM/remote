@@ -29,6 +29,16 @@ const MAX_WIDTH = 1280;
 /** Debug runs only: REMOTE_FAKE_SCREEN=1 sends a drawn test picture instead of the screen, so two copies on one Mac can
  *  be tried without the Screen Recording permission and without anyone's screen leaving the window. */
 const FAKE_SCREEN = DEV && process.env.REMOTE_FAKE_SCREEN === "1";
+/** With REMOTE_FAKE_SCREEN, REMOTE_FAKE_DISPLAYS=3 says this computer has that many displays, to try side by side
+ *  viewing on a Mac with one. */
+const FAKE_DISPLAYS = FAKE_SCREEN ? Math.min(4, Number(process.env.REMOTE_FAKE_DISPLAYS) || 0) : 0;
+
+function fakeDisplays(): unknown[] {
+  return Array.from({ length: FAKE_DISPLAYS }, (_, i) => {
+    const [width, height] = i === 1 ? [1496, 967] : [2560, 1440];
+    return { id: i + 1, name: `Test ${i + 1}`, main: i === 0, x: i * 2560, y: 0, width, height, pixelWidth: width * 2, pixelHeight: height * 2 };
+  });
+}
 /** Debug runs only: `REMOTE_FAKE_INPUT=1` prints each input from another computer instead of posting it, and keeps
  *  copied text in memory instead of this computer's clipboard, so two test copies on one Mac never click or paste in it. */
 export const FAKE_INPUT = DEV && process.env.REMOTE_FAKE_INPUT === "1";
@@ -51,7 +61,7 @@ function info(): PeerInfo {
   return {
     computer: now.computer,
     // Why: with seeing off, even the monitor names stay private.
-    displays: shown ? JSON.parse(native.displays()) : [],
+    displays: !shown ? [] : FAKE_DISPLAYS ? fakeDisplays() : JSON.parse(native.displays()),
     viewing: settings.allowViewing && (now.reason === null || FAKE_SCREEN),
     control: settings.allowViewing && now.permissions.accessibility,
     reason: FAKE_SCREEN ? null : now.reason,

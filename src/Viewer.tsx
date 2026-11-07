@@ -2,8 +2,9 @@
 //   - Signed out, it asks for the RUNNERS account first: computers and phones of the same account see each other.
 //   - Then every computer of the account that has Remote open, as a grid. Each tile shows a small still picture of
 //     that computer's main display, new every two seconds, or why it cannot be seen.
-//   - Pressing a tile opens that computer: a tab per display, its screen as WebRTC video, the Send Clicks switch, and
-//     keys and text going there. "All Computers" goes back.
+//   - Pressing a tile opens that computer: its screen as WebRTC video, clicks, keys and text going there. Arrows at the
+//     sides step through its displays, and "All Displays" in the display menu shows every one side by side, a name
+//     under each opening that one (decision 「[REMOTE] 개발 - 여러 화면 보기」 1C 2A). "All Computers" goes back.
 // The page also holds the WebRTC connections (./peer), which is why the window is made at launch and only hidden.
 //   - "This Mac" at the bottom of the grid opens this Mac's page: its permissions, the See This and Click and Type
 //     switches, Disconnect, the connection log and the two general settings (decision 「[REMOTE] 메뉴 막대 패널 정리」
@@ -23,6 +24,7 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Command,
   Download,
   Eye,
@@ -392,6 +394,9 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   const [info, setInfo] = useState<PeerInfo | null>(null);
   const [displays, setDisplays] = useState<Display[]>([]);
   const [chosen, setChosen] = useState<number | null>(null);
+  /** Every display side by side instead of the chosen one, each its own video. */
+  const [all, setAll] = useState(false);
+  const [allStreams, setAllStreams] = useState<MediaStream[]>([]);
   const [playing, setPlaying] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -461,8 +466,43 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
 
   // The video: asked for once per display; the other computer sends only what changes. The first picture drawn shows
   // it. A failed start is tried again after a moment.
+  // Side by side, every display comes on its own video line; a computer whose Remote is older answers with an unknown
+  // method, and the viewer goes back to one display with a note saying why.
+  const displayIds = displays.map((d) => d.id).join(",");
   useEffect(() => {
-    if (!visible || chosen === null || !viewable) return;
+    if (!visible || !all || !viewable || displayIds === "") return;
+    let running = true;
+    setPlaying(false);
+    void (async () => {
+      while (running) {
+        try {
+          const streams = await peer.watchAll(host, displayIds.split(",").map(Number));
+          if (!running) break;
+          setAllStreams(streams);
+          setPlaying(true);
+          setProblem(null);
+          break;
+        } catch (error) {
+          if (!running) break;
+          if (error instanceof Error && error.message.startsWith("unknown method")) {
+            setAll(false);
+            setNote(t("display.allOld"));
+            break;
+          }
+          setProblem(captureError(error));
+          await wait(RETRY_MS);
+        }
+      }
+    })();
+    return () => {
+      running = false;
+      setAllStreams([]);
+      void peer.unwatch(host);
+    };
+  }, [visible, all, host, viewable, displayIds, serial, attempt]);
+
+  useEffect(() => {
+    if (!visible || chosen === null || !viewable || all) return;
     let running = true;
     let counter = 0;
     setPlaying(false);
@@ -494,7 +534,7 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
       video.current?.cancelVideoFrameCallback(counter);
       void peer.unwatch(host);
     };
-  }, [visible, chosen, host, viewable, serial, attempt]);
+  }, [visible, chosen, host, viewable, all, serial, attempt]);
 
   useEffect(() => setClickError(null), [sendClicks]);
 
@@ -667,7 +707,14 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   };
 
   const display = displays.find((d) => d.id === chosen);
+  const at = displays.findIndex((d) => d.id === chosen);
+  const previous = displays.length > 1 ? displays[(at - 1 + displays.length) % displays.length] : null;
+  const next = displays.length > 1 ? displays[(at + 1) % displays.length] : null;
   const shown = playing && problem === null;
+  const showOne = (id: number) => {
+    setAll(false);
+    setChosen(id);
+  };
 
   const sendShortcut = (code: number, modifiers: ("shift" | "control" | "option" | "command")[]) => {
     setMenu(null);
@@ -701,7 +748,7 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
           ref={video}
           className={sendClicks ? "screen clickable" : "screen"}
           style={actual && display ? { width: display.width } : undefined}
-          hidden={!shown}
+          hidden={!shown || all}
           aria-label={display ? displayLabel(display, displays.indexOf(display)) : ""}
           muted
           playsInline
@@ -711,6 +758,34 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
           onPointerCancel={onPointerUp}
           onContextMenu={(event) => event.preventDefault()}
         />
+        {all && shown && <AllScreens displays={displays} streams={allStreams} onPick={showOne} />}
+        {!all && shown && previous && next && (
+          <>
+            <button
+              type="button"
+              className="edge-arrow left"
+              title={displayLabel(previous, displays.indexOf(previous))}
+              aria-label={displayLabel(previous, displays.indexOf(previous))}
+              onClick={() => setChosen(previous.id)}
+            >
+              <ChevronLeft size={22} strokeWidth={1.5} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className="edge-arrow right"
+              title={displayLabel(next, displays.indexOf(next))}
+              aria-label={displayLabel(next, displays.indexOf(next))}
+              onClick={() => setChosen(next.id)}
+            >
+              <ChevronRight size={22} strokeWidth={1.5} aria-hidden />
+            </button>
+            <div className="edge-dots" aria-hidden>
+              {displays.map((d) => (
+                <span key={d.id} className={d.id === chosen ? "on" : ""} />
+              ))}
+            </div>
+          </>
+        )}
         {!shown && (
           <div className="session-state">
             {problem === null ? (
@@ -768,24 +843,50 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
               onClick={() => setMenu(menu === "displays" ? null : "displays")}
             >
               <Monitor size={16} strokeWidth={1.5} aria-hidden />
-              <span>{display ? displayLabel(display, displays.indexOf(display)) : t("display.title")}</span>
+              <span>
+                {all
+                  ? t("display.allTitle", { n: displays.length })
+                  : display
+                    ? displayLabel(display, displays.indexOf(display))
+                    : t("display.title")}
+              </span>
               <ChevronDown size={12} strokeWidth={1.5} aria-hidden />
             </button>
             {menu === "displays" && (
               <div className="bar-menu" role="menu">
+                {displays.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={all}
+                      className="bar-menu-item"
+                      onClick={() => {
+                        setActual(false);
+                        setAll(true);
+                        setMenu(null);
+                      }}
+                    >
+                      <Check size={14} strokeWidth={2} className={all ? "" : "invisible"} aria-hidden />
+                      <span>{t("display.all")}</span>
+                      <span className="hint">{t("display.allHint", { n: displays.length })}</span>
+                    </button>
+                    <div className="bar-menu-sep" />
+                  </>
+                )}
                 {displays.map((d, index) => (
                   <button
                     key={d.id}
                     type="button"
                     role="menuitemradio"
-                    aria-checked={d.id === chosen}
+                    aria-checked={!all && d.id === chosen}
                     className="bar-menu-item"
                     onClick={() => {
-                      setChosen(d.id);
+                      showOne(d.id);
                       setMenu(null);
                     }}
                   >
-                    <Check size={14} strokeWidth={2} className={d.id === chosen ? "" : "invisible"} aria-hidden />
+                    <Check size={14} strokeWidth={2} className={!all && d.id === chosen ? "" : "invisible"} aria-hidden />
                     <span>{displayLabel(d, index)}</span>
                     <span className="hint">
                       {d.main ? `${t("display.main")} · ` : ""}
@@ -892,6 +993,34 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
         )}
       </div>
     </main>
+  );
+}
+
+/** Every display of that computer side by side at its own shape, each its own video; the name under one opens it alone
+ *  (decision 2A: pressing a small picture does not click there). Displays beyond the video lines are left out. */
+function AllScreens(props: { displays: Display[]; streams: MediaStream[]; onPick: (id: number) => void }) {
+  return (
+    <div className="all-screens">
+      {props.displays.slice(0, props.streams.length).map((d, index) => (
+        <figure key={d.id} className="all-screen" style={{ flex: d.width / d.height }}>
+          <video
+            className="screen"
+            muted
+            playsInline
+            autoPlay
+            ref={(element) => {
+              if (element && element.srcObject !== props.streams[index]) element.srcObject = props.streams[index];
+            }}
+            onClick={() => props.onPick(d.id)}
+          />
+          <figcaption>
+            <button type="button" className="all-name" onClick={() => props.onPick(d.id)}>
+              {displayLabel(d, index)}
+            </button>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
   );
 }
 

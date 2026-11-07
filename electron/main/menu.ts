@@ -1,5 +1,5 @@
 // The right-click tray menu, with the same groups as the left-click panel and as Monitor's: the status line,
-// Disconnect while someone is looking, Open Remote, the two Allow switches once connected, the two settings,
+// Disconnect while someone is looking, Open Remote, the Allow switch once connected, the two settings,
 // About / Check for Updates… / Help & Feedback, Quit.
 // Icons are the Lucide PNGs from scripts/menu-icons.sh (resources/menu/).
 import { app, Menu, MenuItem, nativeImage, nativeTheme } from "electron";
@@ -41,10 +41,10 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
       registerAccelerator: false,
       click: () => run(id),
     });
-  // Why: on/off lines use the native check mark with no icon (decision 「[PROGRAM] 켬 끔 토글」 2A), like other Mac
-  // apps' menus; a check mark and an icon cannot share the slot.
-  const check = (id: Command, key: string, on: boolean) =>
-    new MenuItem({ id, label: t(key), type: "checkbox", checked: on, click: () => run(id) });
+  // Why: on/off lines keep the native check mark (decision 「[PROGRAM] 켬 끔 토글」 2A) and an icon like every other line;
+  // macOS draws the check in its own column to the left of the icon, so all labels line up.
+  const check = (id: Command, key: string, iconName: string, on: boolean) =>
+    new MenuItem({ id, label: t(key), icon: icon(iconName), type: "checkbox", checked: on, click: () => run(id) });
   const separator = () => new MenuItem({ type: "separator" });
   return Menu.buildFromTemplate([
     { label: statusLine(status), icon: icon(DOT[status.state]), enabled: false },
@@ -53,12 +53,12 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
     separator(),
     ...(state.linked
       ? [
-          check("allowViewing", "menu.allowViewing", state.allowViewing),
+          check("allowViewing", "menu.allowViewing", "eye", state.allowViewing),
           separator(),
         ]
       : []),
-    check("login", "menu.openAtLogin", state.openAtLogin),
-    check("autoUpdate", "menu.autoUpdate", state.autoUpdate),
+    check("login", "menu.openAtLogin", "power", state.openAtLogin),
+    check("autoUpdate", "menu.autoUpdate", "download", state.autoUpdate),
     separator(),
     line("about", "menu.about", "info"),
     line("updates", "menu.checkUpdates", "refresh-cw"),

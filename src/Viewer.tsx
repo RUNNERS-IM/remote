@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronLeft,
   Command,
+  Download,
   Eye,
   Laptop,
   LogOut,
@@ -33,7 +34,6 @@ import {
   Pin,
   PinOff,
   Power,
-  RefreshCw,
   Scan,
   Settings,
   Shrink,
@@ -1032,7 +1032,7 @@ function ThisMac(props: { status: Status; link: Link; onChange: (link: Link) => 
         <h2 className="section-head">{t("thisMac.general")}</h2>
         <div className="card">
           <ToggleRow icon={Power} label={t("menu.openAtLogin")} on={menu?.openAtLogin ?? false} onChange={() => toggle("login")} />
-          <ToggleRow icon={RefreshCw} label={t("menu.autoUpdate")} on={menu?.autoUpdate ?? false} onChange={() => toggle("autoUpdate")} />
+          <ToggleRow icon={Download} label={t("menu.autoUpdate")} on={menu?.autoUpdate ?? false} onChange={() => toggle("autoUpdate")} />
         </div>
       </section>
     </main>

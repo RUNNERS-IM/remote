@@ -53,7 +53,7 @@ function info(): PeerInfo {
     // Why: with seeing off, even the monitor names stay private.
     displays: shown ? JSON.parse(native.displays()) : [],
     viewing: settings.allowViewing && (now.reason === null || FAKE_SCREEN),
-    control: settings.allowViewing && settings.allowControl && now.permissions.accessibility,
+    control: settings.allowViewing && now.permissions.accessibility,
     reason: FAKE_SCREEN ? null : now.reason,
   };
 }
@@ -135,7 +135,7 @@ async function hostRequest(peerId: string, method: string, params: Record<string
     return { sourceId: await sourceFor(Number(params.display)) };
   }
   if (method === "input") {
-    if (!settings.allowControl) {
+    if (!settings.allowViewing) {
       note(peer.name, "refused");
       throw new Error("control");
     }
@@ -150,9 +150,9 @@ async function hostRequest(peerId: string, method: string, params: Record<string
     if (kind) note(peer.name, kind);
     return "sent";
   }
-  // Copy and paste with the computer on screen: only while it lets others click and type, like the keys that copy.
+  // Copy and paste with the computer on screen: only while it lets others see it, like the keys that copy.
   if (method === "clipboardGet" || method === "clipboardSet") {
-    if (!settings.allowControl) {
+    if (!settings.allowViewing) {
       note(peer.name, "refused");
       throw new Error("control");
     }
@@ -235,7 +235,6 @@ export async function current(): Promise<Link> {
     account: account.email(),
     computers,
     allowViewing: settings.allowViewing,
-    allowControl: settings.allowControl,
     log: log.slice(0, 50),
   };
 }

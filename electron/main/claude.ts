@@ -113,7 +113,7 @@ async function approved(computer: string, input: Input): Promise<boolean> {
 async function send(computer: string, input: Input): Promise<void> {
   // Why first: nobody should be asked to approve something the other computer would refuse anyway.
   if (computer !== HERE && !(await link.peerInfo(computer)).control) {
-    throw new Error("control: that computer does not allow clicks and typing (its Allow switch is off)");
+    throw new Error("control: that computer does not allow clicks and typing (seeing is off, or Accessibility is not allowed there)");
   }
   if (!(await approved(computer, input))) throw new Error("denied: the person at this computer said no");
   if (computer !== HERE) return link.peerInput(computer, input);

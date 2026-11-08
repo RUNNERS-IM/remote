@@ -56,7 +56,7 @@ pnpm check:locales  # check every locale against ko.json
 
 For an Intel Mac build on Apple silicon, also run `pnpm native --target x86_64-apple-darwin` (after `rustup target add x86_64-apple-darwin`).
 
-- `electron/main/` is the main process (tray, panel, viewer and Settings windows, status, updates), `electron/preload/` the bridge the page talks through, `src/` the panel, viewer and About pages.
+- `electron/main/` is the main process (tray, panel, viewer and Settings windows, status, updates), `electron/preload/` the bridge the page talks through, `src/` the panel, viewer and Settings pages.
 - `native/` is the one native module (napi-rs): display capture, posted clicks, the app in front, permission checks and the tray picture.
 - `electron/main/account.ts` signs in and keeps the tokens, `electron/main/relay.ts` keeps the relay connection, and `src/peer.ts` (in the Remote window, made hidden at launch) holds the WebRTC connections. `electron/main/link.ts` answers other devices and asks them for Claude; `electron/main/claude.ts` serves the MCP script.
 - Screen text lives in `locales/`, with `ko.json` as the source; the page and the main process read the same files.

@@ -7,12 +7,14 @@ import sense from './assets/runners-apps/sense.png'
 import split from './assets/runners-apps/split.png'
 import source from './runners-apps.json'
 
-/** 목록에는 한국어와 영어만 있다. 다른 화면 언어는 영어를 읽는다. */
-export type RunnersText = { ko?: string; en?: string }
+/** 목록에는 한국어 · 영어 · 아랍어가 있다. 다른 화면 언어는 영어를 읽는다. */
+export type RunnersText = { ko?: string; en?: string; ar?: string }
 
 export type RunnersAppItem = {
   id: string
   name: string
+  /** 한국어 이름을 쓰는 서비스의 영문 이름. 한국어가 아닌 화면에서 쓴다. */
+  nameEn?: string
   /** 아이콘 주소. 없으면 카드가 첫 글자를 대신 그린다. */
   iconUrl: string
   desc: RunnersText
@@ -50,6 +52,7 @@ export function loadRunnersAppGroups(selfId: string): RunnersAppGroup[] {
         .map((item) => ({
           id: item.id,
           name: item.name,
+          nameEn: (item as { nameEn?: string }).nameEn,
           iconUrl: ICONS[item.icon] ?? '',
           desc: item.desc,
           url: isSafeUrl(item.url.trim()) ? item.url.trim() : ''
@@ -58,7 +61,13 @@ export function loadRunnersAppGroups(selfId: string): RunnersAppGroup[] {
     .filter((group) => group.items.length > 0)
 }
 
-/** 한국어 화면은 한국어, 나머지는 영어. */
+/** 한국어 화면은 name, 다른 화면은 영문 이름이 있으면 그것을 쓴다. */
+export function pickName(item: RunnersAppItem, locale: string): string {
+  return locale === 'ko' ? item.name : (item.nameEn ?? item.name)
+}
+
+/** 한국어 · 아랍어 화면은 그 말, 나머지는 영어. */
 export function pickText(text: RunnersText, locale: string): string {
-  return (locale === 'ko' ? text.ko : text.en) || text.en || text.ko || ''
+  const own = locale === 'ko' ? text.ko : locale === 'ar' ? text.ar : text.en
+  return own || text.en || text.ko || ''
 }

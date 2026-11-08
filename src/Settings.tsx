@@ -3,7 +3,7 @@
 // (shared decision 2026-11-07, Remote 1B). The This Mac card in the Remote window, the panel and ⌘, open it.
 import { useCallback, useEffect, useState } from "react";
 import { CircleUser, History, Info, Laptop, Settings as SettingsIcon, type LucideIcon } from "lucide-react";
-import About from "./About";
+import { RunnersAbout, type RunnersT } from "./runners-account/runners-about";
 import { SignInSheet, type CodePurpose, type SignMode } from "./runners-account/runners-account";
 import { locale, statusText, t } from "./i18n";
 import * as native from "./native";
@@ -24,6 +24,13 @@ const TABS: { id: SettingsTab; label: () => string; Icon: LucideIcon }[] = [
   { id: "account", label: () => t("settings.tabAccount"), Icon: CircleUser },
   { id: "about", label: () => t("settings.tabAbout"), Icon: Info },
 ];
+
+const WEBSITE = "https://runners.im/remote";
+const GITHUB = "https://github.com/RUNNERS-IM/remote";
+const aboutT: RunnersT = (key, args) => t(key as Parameters<typeof t>[0], args);
+
+/** Loads THIRD_PARTY_NOTICES.md only when asked, so the 600 KB of notices does not slow down opening the window. */
+const loadNotices = () => import("../THIRD_PARTY_NOTICES.md?raw").then((file) => file.default);
 
 function logLine(entry: LogEntry): string {
   const time = new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -294,7 +301,19 @@ export default function Settings() {
         {tab === "account" && link && <Account link={link} onLink={setLink} />}
         {tab === "about" && (
           <div className="settings-about">
-            <About />
+            <RunnersAbout
+              embedded
+              appId="remote"
+              appName="Remote"
+              appIcon={appIcon}
+              website={WEBSITE}
+              github={GITHUB}
+              locale={locale}
+              t={aboutT}
+              version={native.version}
+              openExternal={native.openExternal}
+              loadNotices={loadNotices}
+            />
           </div>
         )}
       </div>

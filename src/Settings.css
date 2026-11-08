@@ -167,3 +167,5 @@ html[data-window='settings'] body { background: var(--rw-window-bg); overflow: h
 .s-ask-icon { width: 56px; height: 56px; }
 .s-ask-buttons { display: flex; justify-content: center; gap: 8px; margin-top: 6px; }
 .settings-about { flex: 1; min-height: 0; overflow-y: auto; }
+/* Why: twice the pad at the sides, so the cards in the About tab line up with the other tabs' cards. */
+.settings-about .about-embedded { padding-inline: calc(2 * var(--rw-pad)); }

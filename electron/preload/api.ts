@@ -31,6 +31,9 @@ export type MenuState = {
  *  download's progress while it is still downloading. */
 export type UpdateOffer = { version: string; notes: string[] | null; downloading: boolean; percent: number };
 
+/** Whether this person agreed to usage statistics; `unasked` until they answer the sheet. */
+export type UsageConsent = "unasked" | "granted" | "denied";
+
 export type Permissions = { screenRecording: boolean; accessibility: boolean };
 
 export type PermissionKind = keyof Permissions;
@@ -197,6 +200,11 @@ export type RemoteApi = {
   /** Called in the Remote window when a computer line was pressed in the panel. */
   onOpenComputer: (listener: (host: string) => void) => () => void;
   closeWindow: () => void;
+  usageConsent: () => Promise<UsageConsent>;
+  /** The sheet's or Settings' answer; turning it off also deletes what was counted and sent. */
+  setUsageConsent: (granted: boolean) => Promise<void>;
+  /** One use of a feature, by name only (`computer.open`); ignored unless the person agreed. */
+  countUsage: (feature: string) => void;
   /** What the update window shows, or null when no update is being offered. */
   updateOffer: () => Promise<UpdateOffer | null>;
   /** Called when the offer changes (download progress, download done). */

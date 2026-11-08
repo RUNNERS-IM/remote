@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CircleUser, History, Info, Laptop, Settings as SettingsIcon, type LucideIcon } from "lucide-react";
 import { RunnersAbout, type RunnersT } from "./runners-account/runners-about";
 import { SignInSheet, type CodePurpose, type SignMode } from "./runners-account/runners-account";
+import { usageText } from "./runners-account/runners-usage";
 import { locale, statusText, t } from "./i18n";
 import * as native from "./native";
 import type { Link, LogEntry, MenuCommand, MenuState, PermissionKind, SettingsTab, Status } from "./native";
@@ -170,8 +171,10 @@ function General() {
   const [state, setState] = useState<MenuState | null>(null);
   const [asking, setAsking] = useState(false);
   const [version, setVersion] = useState("");
+  const [usageGranted, setUsageGranted] = useState(false);
   useEffect(() => {
     void native.menuState().then(setState);
+    void native.usageConsent().then((consent) => setUsageGranted(consent === "granted"));
     void native.version().then(setVersion);
   }, []);
   const run = (name: MenuCommand) => void native.command(name).then(setState);
@@ -195,6 +198,17 @@ function General() {
               </Row>
             </>
           )}
+          <Separator />
+          <Row title={usageText(locale, "rowTitle")} hint={usageText(locale, "rowHint")}>
+            <Switch
+              label={usageText(locale, "rowTitle")}
+              on={usageGranted}
+              onChange={() => {
+                setUsageGranted(!usageGranted);
+                void native.setUsageConsent(!usageGranted);
+              }}
+            />
+          </Row>
           <Separator />
           <Row title={`Remote ${version}`}>
             <button type="button" className="rw-button" onClick={() => run("updates")}>

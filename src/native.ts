@@ -17,6 +17,7 @@ import type {
   RemoteApi,
   Status,
   UpdateOffer,
+  UsageConsent,
 } from "../electron/preload/api";
 
 declare global {
@@ -27,13 +28,16 @@ declare global {
 
 const api = () => window.remote;
 
-export type { Allow, Computer, Display, Input, Link, LogEntry, PeerInfo, MenuCommand, MenuState, PermissionKind, Permissions, SettingsTab, Status, UpdateOffer };
+export type { Allow, Computer, Display, Input, Link, LogEntry, PeerInfo, MenuCommand, MenuState, PermissionKind, Permissions, SettingsTab, Status, UpdateOffer, UsageConsent };
 
 /** Which window this page is: the Remote window, the panel, Settings or the update question. */
 export const page: "viewer" | "panel" | "settings" | "update" =
   location.hash === "#panel" ? "panel" : location.hash === "#settings" ? "settings" : location.hash === "#update" ? "update" : "viewer";
 
 export const status = () => api().status();
+export const usageConsent = () => api().usageConsent();
+export const setUsageConsent = (granted: boolean) => api().setUsageConsent(granted);
+export const countUsage = (feature: string) => api().countUsage(feature);
 export const displays = () => api().displays();
 export const capture = (display: number) => api().capture(display);
 export const requestPermission = (kind: PermissionKind) => api().requestPermission(kind);

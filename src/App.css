@@ -47,3 +47,9 @@ body,
   user-select: none;
   cursor: default;
 }
+
+/* The tray panel: Split's menu values from runners-menu.css (--rm-*). The OS draws the menu material behind it. */
+:root[data-window="panel"] {
+  color: var(--rm-text);
+  font-size: var(--rm-font);
+}

@@ -1,30 +1,8 @@
-/* About window: the shared window values (runners-window.css, design standard A) with a 96 icon and 28 below the
-   header. The window is see-through over the macOS blur, and draws the solid window colour where the OS has no blur
-   (Linux). */
-/* Why: Vite puts every stylesheet into one file for both windows, so these rules name the About window. */
-:root[data-window="about"] body {
-  background: var(--rw-window-bg);
-}
-
-:root[data-window="about"][data-translucent="true"] body {
-  background: transparent;
-}
-
-/* Why: grey text all but vanished over the blurred desktop, so secondary text is a little stronger over the blur. */
-:root[data-window="about"][data-translucent="true"] {
-  --rw-text-secondary: rgba(0, 0, 0, 0.62);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-window="about"][data-translucent="true"] {
-    --rw-text-secondary: rgba(255, 255, 255, 0.7);
-  }
-}
-
+/* The About tab of Settings: the shared window values (runners-window.css, design standard A) with a 96 icon and 28 below the header. */
 .about {
   box-sizing: border-box;
-  /* Why: 12 more on top for the title bar's traffic lights. */
-  padding: calc(var(--rw-pad) + 12px) var(--rw-pad) var(--rw-pad);
+  /* Why: twice the pad at the sides, so the cards line up with the other tabs' cards. */
+  padding: var(--rw-pad) calc(2 * var(--rw-pad));
 }
 
 .about-header {

@@ -1,6 +1,6 @@
-// The right-click tray menu, with the same groups as the left-click panel and as Monitor's: the status line,
-// Disconnect while someone is looking, Open Remote, the Allow switch once connected, the two settings,
-// About / Check for Updates… / Help & Feedback, Quit.
+// The tray menu on Linux, whose trays only open a menu set beforehand (macOS and Windows open the panel on either
+// click): the status line, Disconnect while someone is looking, Open Remote, the Allow switch once connected,
+// Settings… / Check for Updates… / Help & Feedback, Quit.
 // Icons are the Lucide PNGs from scripts/menu-icons.sh (resources/menu/).
 import { app, Menu, MenuItem, nativeImage, nativeTheme } from "electron";
 import { readFileSync } from "node:fs";
@@ -57,10 +57,8 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
           separator(),
         ]
       : []),
-    check("login", "menu.openAtLogin", "power", state.openAtLogin),
-    check("autoUpdate", "menu.autoUpdate", "download", state.autoUpdate),
-    separator(),
-    line("about", "menu.about", "info"),
+    // Why: the other on/off lines live in Settings › General (shared decision 2026-11-07 2A).
+    line("settings", "menu.settings", "settings", "CmdOrCtrl+,"),
     line("updates", "menu.checkUpdates", "refresh-cw"),
     line("help", "menu.help", "circle-help"),
     separator(),

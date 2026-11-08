@@ -6,10 +6,14 @@ export type MenuCommand =
   | "disconnect"
   | "login"
   | "autoUpdate"
-  | "about"
+  | "settings"
+  | "trayIcon"
   | "updates"
   | "help"
   | "quit";
+
+/** The tabs of the Settings window. */
+export type SettingsTab = "mac" | "log" | "general" | "account" | "about";
 
 /** `linked` is false until this computer is on the relay (signed in and connected); the two Allow lines show only after
  *  that. */
@@ -18,6 +22,9 @@ export type MenuState = {
   autoUpdate: boolean;
   linked: boolean;
   allowViewing: boolean;
+  trayIcon: boolean;
+  /** Whether the menu bar picture may be hidden; macOS only (see Settings.showTrayIcon). */
+  canHideIcon: boolean;
 };
 
 /** The update window's content: new version as people see it, the "What's new" lines (null hides the box) and the
@@ -183,6 +190,14 @@ export type RemoteApi = {
   menuState: () => Promise<MenuState>;
   /** Runs a menu line; resolves to the menu state after it. */
   command: (command: MenuCommand) => Promise<MenuState>;
+  /** Opens Settings on one tab. */
+  openSettings: (tab: SettingsTab) => void;
+  /** Called when Settings is already open and is asked to show another tab. */
+  onSettingsTab: (listener: (tab: SettingsTab) => void) => () => void;
+  /** Opens the Remote window on this computer (the panel's computer lines). */
+  openComputer: (host: string) => void;
+  /** Called in the Remote window when a computer line was pressed in the panel. */
+  onOpenComputer: (listener: (host: string) => void) => () => void;
   closeWindow: () => void;
   /** What the update window shows, or null when no update is being offered. */
   updateOffer: () => Promise<UpdateOffer | null>;

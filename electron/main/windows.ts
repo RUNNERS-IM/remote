@@ -1,73 +1,127 @@
-// The windows: the Remote window (every computer, one computer, and this Mac's settings), the About window and the
-// update question. There is no tray panel (decision 「[REMOTE] 메뉴 막대 패널 정리」 1C): the menu bar keeps the status
-// picture and a short native menu, and the work happens in the window.
-import { app, BrowserWindow, nativeTheme, type WebContents } from "electron";
+// The windows: the tray panel (frameless, OS blur, closes when focus leaves), Settings, the Remote window (every
+// computer and one computer's screens) and the update question (shared decision 2026-11-07, Remote 1B 2B).
+import { app, BrowserWindow, nativeTheme, screen, type Tray, type WebContents } from "electron";
 import { join } from "node:path";
+import type { SettingsTab } from "../preload/api";
 import { t } from "./i18n";
 
-const ABOUT_WIDTH = 520;
-/** First height only; the page then fits the window to its content. */
-const ABOUT_HEIGHT = 560;
+export const PANEL_WIDTH = 300;
+/** Space between the menu bar (or taskbar) and the panel. */
+const GAP = 4;
 const UPDATE_WIDTH = 400;
 /** Buttons and keys in the update window do nothing this long after it appears. */
 const UPDATE_GUARD_MS = 1000;
+/** Debug runs only: `REMOTE_SOLID=1` turns the blur off, because a page capture shows a see-through window as white. */
+const SOLID = !app.isPackaged && process.env.REMOTE_SOLID === "1";
 /** Whether the OS blurs what is behind a window; the page draws a solid background when it does not. */
-export const TRANSLUCENT = process.platform === "darwin" || process.platform === "win32";
+export const TRANSLUCENT = !SOLID && (process.platform === "darwin" || process.platform === "win32");
 
-function load(window: BrowserWindow, page: "viewer" | "about" | "update"): void {
-  if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}#${page}`);
-  else void window.loadFile(join(__dirname, "../renderer/index.html"), { hash: page });
+function load(window: BrowserWindow, page: "viewer" | "panel" | "settings" | "update", query = ""): void {
+  if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}${query ? `?${query}` : ""}#${page}`);
+  else void window.loadFile(join(__dirname, "../renderer/index.html"), { hash: page, search: query });
 }
 
 const preload = join(__dirname, "../preload/index.js");
 
 /** macOS gets the menu material Split's menu has, Windows gets Acrylic, Linux has no blur and stays solid. */
 function blur(): Electron.BrowserWindowConstructorOptions {
+  if (SOLID) return { backgroundColor: nativeTheme.shouldUseDarkColors ? "#2a2a2a" : "#ececec" };
   if (process.platform === "darwin") return { vibrancy: "menu", visualEffectState: "active", backgroundColor: "#00000000" };
   if (process.platform === "win32") return { backgroundMaterial: "acrylic", backgroundColor: "#00000000" };
   return { backgroundColor: nativeTheme.shouldUseDarkColors ? "#2a2a2a" : "#ececec" };
 }
 
-let about: BrowserWindow | null = null;
-
-/** Opens the About window, or brings the open one to the front. An ordinary window with a title bar. */
-export function showAbout(): void {
-  if (about && !about.isDestroyed()) {
-    about.show();
-    about.focus();
-    return;
-  }
-  about = new BrowserWindow({
-    width: ABOUT_WIDTH,
-    height: ABOUT_HEIGHT,
+export function createPanel(): BrowserWindow {
+  const panel = new BrowserWindow({
+    width: PANEL_WIDTH,
+    height: 360,
     useContentSize: true,
     show: false,
+    frame: false,
     resizable: false,
+    movable: false,
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
-    title: t("about.title"),
-    ...(process.platform === "darwin"
-      ? { vibrancy: "under-window" as const, visualEffectState: "active" as const, backgroundColor: "#00000000" }
-      : process.platform === "win32"
-        ? { backgroundMaterial: "acrylic" as const, backgroundColor: "#00000000" }
-        : {}),
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    hasShadow: true,
+    roundedCorners: true,
+    title: "Remote",
+    ...blur(),
+    webPreferences: { preload, sandbox: true, contextIsolation: true },
+  });
+  // Why: a menu shows over full-screen apps and on every Space, so the panel does too.
+  panel.setAlwaysOnTop(true, "pop-up-menu");
+  panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+  load(panel, "panel");
+  return panel;
+}
+
+/** Puts the panel just under the tray icon (above it on Windows), kept inside the screen the icon is on. */
+export function placeUnderTray(panel: BrowserWindow, tray: Tray | null): void {
+  const [width, height] = panel.getSize();
+  const icon = tray && !tray.isDestroyed() ? tray.getBounds() : null;
+  // Why: Linux trays do not report where the icon is, so the panel goes to the top-right corner there.
+  const anchor = icon && icon.width > 0 ? icon : null;
+  const display = anchor ? screen.getDisplayNearestPoint({ x: anchor.x, y: anchor.y }) : screen.getPrimaryDisplay();
+  const area = display.workArea;
+  let x: number;
+  let y: number;
+  if (anchor) {
+    x = Math.round(anchor.x + anchor.width / 2 - width / 2);
+    y = process.platform === "win32" ? anchor.y - height - GAP : anchor.y + anchor.height + GAP;
+  } else {
+    x = area.x + area.width - width - GAP;
+    y = area.y + GAP;
+  }
+  x = Math.min(Math.max(x, area.x + GAP), area.x + area.width - width - GAP);
+  y = Math.min(Math.max(y, area.y), area.y + area.height - height);
+  panel.setPosition(x, y, false);
+}
+
+const SETTINGS_WIDTH = 656;
+const SETTINGS_HEIGHT = 700;
+
+let settings: BrowserWindow | null = null;
+
+/** Opens Settings on `tab` (the first tab when none is named), or brings the open window forward on it. */
+export function showSettings(tab?: SettingsTab): void {
+  if (settings && !settings.isDestroyed()) {
+    if (tab) settings.webContents.send("remote:settingsTab", tab);
+    settings.show();
+    settings.focus();
+    // Why: Remote has no Dock icon while its window is closed, so without this Settings can stay behind the app in front.
+    app.focus({ steal: true });
+    return;
+  }
+  settings = new BrowserWindow({
+    width: SETTINGS_WIDTH,
+    height: SETTINGS_HEIGHT,
+    minWidth: SETTINGS_WIDTH,
+    minHeight: 420,
+    show: false,
+    maximizable: false,
+    fullscreenable: false,
+    title: t("settings.title"),
+    // Why: like Split's Settings, macOS keeps only the window buttons and the page draws the title centred above the tabs.
+    ...(process.platform === "darwin" ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 12, y: 10 } } : {}),
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1e1e1e" : "#ececec",
     autoHideMenuBar: true,
     webPreferences: { preload, sandbox: true, contextIsolation: true },
   });
-  about.setMenu(null);
-  // Why: the page's <title> is "Remote"; the window keeps its own localized "About Remote".
-  about.on("page-title-updated", (event) => event.preventDefault());
-  about.once("ready-to-show", () => {
-    about?.center();
-    about?.show();
-    // Why: Remote has no Dock icon, so without focus the window can open behind the app in front.
-    about?.focus();
+  settings.setMenu(null);
+  settings.on("page-title-updated", (event) => event.preventDefault());
+  settings.once("ready-to-show", () => {
+    settings?.center();
+    settings?.show();
+    settings?.focus();
+    app.focus({ steal: true });
   });
-  about.on("closed", () => {
-    about = null;
+  settings.on("closed", () => {
+    settings = null;
   });
-  load(about, "about");
+  load(settings, "settings", tab ? `tab=${tab}` : "");
 }
 
 const VIEWER_WIDTH = 960;

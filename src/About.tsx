@@ -1,54 +1,38 @@
-// Remote's About window, laid out like Split's: app icon, name, "version · free and open source", Website and
+// The About tab of Settings, laid out like Split's About window: app icon, name, "version · free and open source", Website and
 // GitHub buttons, the RUNNERS app cards, then "© RUNNERS · Open Source Notices", which opens the notices in a sheet
-// (same layout as Split's). It replaces the native macOS about panel, which cannot hold the cards (shared spec in _docs/작업 가이드/공통.md).
-import { useEffect, useMemo, useRef, useState } from "react";
+// (same layout as Split's).
+import { useEffect, useMemo, useState } from "react";
 import { RunnersApps } from "./components/RunnersApps";
 import { loadRunnersAppGroups } from "./runnersApps";
 import { locale, t } from "./i18n";
-import { closeWindow, fitHeight, openExternal, version as appVersion } from "./native";
+import { openExternal, version as appVersion } from "./native";
 import appIcon from "./assets/app-icon.png";
 import "./App.css";
 import "./runners-window.css";
 import "./About.css";
 
-// The window is 520 wide (electron/main/windows.ts); the height follows the content.
 const WEBSITE = "https://runners.im/remote";
 const GITHUB = "https://github.com/RUNNERS-IM/remote";
 
 export default function About() {
   const [version, setVersion] = useState("");
   const [notices, setNotices] = useState<string | null>(null);
-  const root = useRef<HTMLElement>(null);
   const groups = useMemo(() => loadRunnersAppGroups("remote"), []);
 
   useEffect(() => {
     appVersion().then(setVersion).catch(() => undefined);
     // Why: a debug run can open the notices sheet at launch (`VITE_REMOTE_EXPAND=notices`) so it can be captured.
     if (import.meta.env.DEV && import.meta.env.VITE_REMOTE_EXPAND === "notices") void openNotices(setNotices);
-    // Why: a small utility window closes with Escape, like other macOS about windows.
     // Why: with the notices sheet open, Escape closes only the sheet, like a macOS sheet.
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      if (document.querySelector(".notices")) setNotices(null);
-      else closeWindow();
+      if (event.key === "Escape") setNotices(null);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
 
-  // Why: descriptions wrap to one or two lines depending on the language, so the window grows or shrinks
-  // to fit instead of cutting off the last card or leaving a gap.
-  useEffect(() => {
-    const node = root.current;
-    if (!node) return;
-    const fit = () => fitHeight(Math.ceil(node.getBoundingClientRect().height));
-    const observer = new ResizeObserver(fit);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <main className="about" ref={root}>
+    <main className="about">
       <header className="about-header">
         <img className="about-icon" src={appIcon} alt="" draggable={false} />
         <h1 className="about-name">Remote</h1>

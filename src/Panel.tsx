@@ -73,7 +73,7 @@ export default function Panel() {
           )}
           <MenuSeparator />
           <div className="rm-heading">
-            {t("thisMac.title")} · {status.computer}
+            {t("thisMac.title")}
           </div>
           <MenuItem
             icon={icon(link.allowViewing ? Eye : EyeOff)}

@@ -141,7 +141,7 @@
   "general.cancel": "Peruuta",
   "panel.others": "Muut tietokoneet",
   "computer.online": "Päällä",
-  "panel.openAll": "Avaa kaikki tietokoneet",
+  "panel.openAll": "Kaikki tietokoneet",
   "panel.visible": "Näkyy muille tietokoneille",
   "panel.hidden": "Piilotettu muilta tietokoneilta",
   "thisMac.allowHint": "Kun tämä on käytössä, saman RUNNERS-tilin tietokoneet ja puhelimet voivat nähdä tämän näytön ja napsauttaa sitä.",

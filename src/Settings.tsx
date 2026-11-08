@@ -96,7 +96,7 @@ function ThisMac({ status, link, onLink }: { status: Status; link: Link; onLink:
             </button>
           </Row>
         </div>
-        <p className="s-section-hint">{statusText(status.state, status.reason)}</p>
+        {status.reason && <p className="s-section-hint">{statusText(status.state, status.reason)}</p>}
       </section>
       <section className="s-section">
         <h2 className="s-section-title">{t("permission.title")}</h2>

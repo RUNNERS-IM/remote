@@ -44,7 +44,7 @@ import * as native from "./native";
 import * as peer from "./peer";
 import type { Computer, Display, Input, Link, PeerInfo, Status } from "./native";
 import "./App.css";
-import "./runners-window.css";
+import "./runners-account/runners-window.css";
 import "./Viewer.css";
 
 const RETRY_MS = 1000;

@@ -44,7 +44,6 @@ const api: RemoteApi = {
   fitHeight: (height) => ipcRenderer.send("remote:fitHeight", height),
   version: () => ipcRenderer.invoke("remote:version"),
   openExternal: (url) => ipcRenderer.invoke("remote:openExternal", url),
-  accentColor: () => ipcRenderer.invoke("remote:accentColor"),
   menuState: () => ipcRenderer.invoke("remote:menuState"),
   command: (command) => ipcRenderer.invoke("remote:command", command),
   openSettings: (tab) => ipcRenderer.send("remote:openSettings", tab),

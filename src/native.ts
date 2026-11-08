@@ -72,18 +72,11 @@ export function errorCode(error: unknown): string {
   return text.replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
 }
 
-/** Marks the page see-through where the OS blurs behind the window, and takes the system accent colour. */
+/** Marks the menu-bar panel see-through where the OS blurs behind it; every other window has a solid background. */
 export function applyWindowLook(): void {
   void api()
     .translucent()
     .then((on) => {
-      document.documentElement.dataset.translucent = String(on);
-    });
-  void api()
-    .accentColor()
-    .then((color) => {
-      if (!color) return;
-      // Why: the window look (runners-window.css) follows the OS accent.
-      document.documentElement.style.setProperty("--rw-accent", color);
+      document.documentElement.dataset.translucent = String(on && page === "panel");
     });
 }

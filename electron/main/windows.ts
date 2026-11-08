@@ -16,6 +16,9 @@ const SOLID = !app.isPackaged && process.env.REMOTE_SOLID === "1";
 /** Whether the OS blurs what is behind a window; the page draws a solid background when it does not. */
 export const TRANSLUCENT = !SOLID && (process.platform === "darwin" || process.platform === "win32");
 
+/** The design system's window background (--rw-window-bg), so a window shows no other colour before its page paints. */
+const windowBackground = () => (nativeTheme.shouldUseDarkColors ? "#0a0a0a" : "#ffffff");
+
 function load(window: BrowserWindow, page: "viewer" | "panel" | "settings" | "update", query = ""): void {
   if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}${query ? `?${query}` : ""}#${page}`);
   else void window.loadFile(join(__dirname, "../renderer/index.html"), { hash: page, search: query });
@@ -106,7 +109,7 @@ export function showSettings(tab?: SettingsTab): void {
     title: t("settings.title"),
     // Why: like Split's Settings, macOS keeps only the window buttons and the page draws the title centred above the tabs.
     ...(process.platform === "darwin" ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 12, y: 10 } } : {}),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1e1e1e" : "#ececec",
+    backgroundColor: windowBackground(),
     autoHideMenuBar: true,
     webPreferences: { preload, sandbox: true, contextIsolation: true },
   });
@@ -149,7 +152,7 @@ export function prepareViewer(onHide: () => void): BrowserWindow {
     useContentSize: true,
     show: false,
     title: "Remote",
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1e1e20" : "#f6f6f6",
+    backgroundColor: windowBackground(),
     autoHideMenuBar: true,
     // Why: a hidden page is slowed down by default, which would stall the video other devices are watching.
     webPreferences: { preload, sandbox: true, contextIsolation: true, backgroundThrottling: false },
@@ -225,7 +228,7 @@ export function askUpdate(offer: UpdateOffer, focus: boolean): UpdatePrompt {
     roundedCorners: true,
     alwaysOnTop: true,
     title: "Remote",
-    ...blur(),
+    backgroundColor: windowBackground(),
     webPreferences: { preload, sandbox: true, contextIsolation: true },
   });
   const current = { window, offer: { ...offer }, answer: (_: UpdateAnswer) => {} };

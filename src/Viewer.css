@@ -92,7 +92,7 @@
 }
 
 .button:hover {
-  border-color: var(--accent);
+  border-color: var(--rw-primary);
 }
 
 .viewer-section {
@@ -134,7 +134,7 @@
 }
 
 .tab.chosen svg {
-  color: var(--accent);
+  color: var(--rw-primary);
 }
 
 .tab-badge {
@@ -226,7 +226,7 @@
 
 .screen.clickable {
   cursor: crosshair;
-  outline: 2px solid var(--accent);
+  outline: 2px solid #ffffff;
   outline-offset: -2px;
 }
 
@@ -335,12 +335,12 @@
 }
 
 .type-box:focus {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--rw-primary);
   outline-offset: -1px;
 }
 
 .screen-box:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
 
@@ -372,7 +372,7 @@
 }
 
 .tile:hover:not(:disabled) {
-  border-color: var(--accent);
+  border-color: var(--rw-primary);
 }
 
 .tile:disabled {
@@ -440,7 +440,7 @@
 }
 
 .this-mac:hover {
-  border-color: var(--accent);
+  border-color: var(--rw-primary);
 }
 
 .this-mac-text {
@@ -519,7 +519,7 @@
 .link-button {
   font: inherit;
   font-size: 11px;
-  color: var(--accent);
+  color: var(--rw-primary);
   background: none;
   border: 0;
   padding: 0;
@@ -568,12 +568,12 @@
 }
 
 .bar-menu-item:hover {
-  background: var(--rw-accent, var(--accent));
-  color: #ffffff;
+  background: var(--rw-primary);
+  color: var(--rw-on-primary);
 }
 
 .bar-menu-item:hover .hint {
-  color: rgba(255, 255, 255, 0.8);
+  color: color-mix(in srgb, var(--rw-on-primary) 80%, transparent);
 }
 
 /* Signed out: the grid's place says what signing in gives, with the same Sign In button as the top right. */
@@ -719,13 +719,13 @@
 .bar-button.end {
   margin-left: 4px;
   padding: 0 12px;
-  background: #ff453a;
+  background: var(--rw-danger);
   color: #ffffff;
   font-weight: 600;
 }
 
 .bar-button.end:hover {
-  background: #ff5b52 !important;
+  background: color-mix(in srgb, var(--rw-danger) 85%, #ffffff) !important;
 }
 
 .bar-name {

@@ -86,6 +86,14 @@ entries.push({
     `published with Electron ${electronPkg.version} at https://github.com/electron/electron/releases/tag/v${electronPkg.version}.`,
 });
 
+// Pretendard comes in as the kit's font file, so neither list above has it.
+entries.push({
+  name: "Pretendard",
+  version: "1.3.9",
+  license: "OFL-1.1",
+  text: readFileSync(join(root, "scripts", "pretendard-license.txt"), "utf8"),
+});
+
 entries.sort((a, b) => a.name.localeCompare(b.name));
 let apacheUsed = false;
 const parts = [

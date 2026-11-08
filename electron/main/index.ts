@@ -1,7 +1,7 @@
 // Remote's main process: a menu bar app whose picture shows whether this computer can be seen (off / waiting / being
 // viewed), a panel under it listing the other computers, the Remote window that shows every office computer and one
 // computer's screens with clicks and typing, and Settings for everything about this Mac.
-import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeTheme, shell, systemPreferences, type Tray } from "electron";
+import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeTheme, shell, type Tray } from "electron";
 import { writeFileSync } from "node:fs";
 import { uptime } from "node:os";
 import type { Allow, Input, PermissionKind, PressAt, SettingsTab } from "../preload/api";
@@ -208,12 +208,6 @@ function statusLoop(): void {
   setInterval(tick, STATUS_EVERY_MS);
 }
 
-function accentColor(): string | null {
-  if (process.platform !== "darwin" && process.platform !== "win32") return null;
-  const color = systemPreferences.getAccentColor();
-  return color ? `#${color.slice(0, 6)}` : null;
-}
-
 function requestPermission(kind: PermissionKind): void {
   if (!status.SUPPORTED) return;
   const granted = kind === "screenRecording" ? native.requestScreenRecording() : native.requestAccessibility();
@@ -246,7 +240,6 @@ function registerIpc(): void {
   });
   ipcMain.on("remote:openSettings", (_event, tab: SettingsTab) => openSettings(tab));
   ipcMain.handle("remote:version", () => displayVersion());
-  ipcMain.handle("remote:accentColor", () => accentColor());
   ipcMain.handle("remote:menuState", () => menuState());
   ipcMain.handle("remote:command", (_event, command: Command) => {
     run(command);

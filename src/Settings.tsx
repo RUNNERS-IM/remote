@@ -10,7 +10,7 @@ import * as native from "./native";
 import type { Link, LogEntry, MenuCommand, MenuState, PermissionKind, SettingsTab, Status } from "./native";
 import appIcon from "./assets/app-icon.png";
 import "./App.css";
-import "./runners-window.css";
+import "./runners-account/runners-window.css";
 import "./runners-account/runners-account.css";
 import "./Settings.css";
 
@@ -84,10 +84,21 @@ function Permission({ kind, on }: { kind: PermissionKind; on: boolean }) {
 function ThisMac({ status, link, onLink }: { status: Status; link: Link; onLink: (link: Link) => void }) {
   return (
     <main className="s-content">
+      <section className="s-card s-status">
+        <div className="s-status-text">
+          <div className="s-status-name">{status.computer}</div>
+          <div className="s-status-line">
+            <span className={`s-status-dot${status.viewers.length > 0 ? " on" : ""}`} />
+            {status.viewers.length > 0 ? t("status.viewers", { names: status.viewers.join(", ") }) : statusText(status.state, status.reason)}
+          </div>
+        </div>
+        {status.viewers.length > 0 && (
+          <button type="button" className="rw-button danger" onClick={() => void native.disconnect().then(onLink)}>
+            {t("menu.disconnect")}
+          </button>
+        )}
+      </section>
       <section className="s-section">
-        <h2 className="s-section-title">
-          {t("thisMac.title")} · {status.computer}
-        </h2>
         <div className="s-card">
           <Row title={t("menu.allowViewing")} hint={t("thisMac.allowHint")}>
             <Switch
@@ -96,14 +107,7 @@ function ThisMac({ status, link, onLink }: { status: Status; link: Link; onLink:
               onChange={() => void native.setAllow("allowViewing", !link.allowViewing).then(onLink)}
             />
           </Row>
-          <Separator />
-          <Row title={status.viewers.length > 0 ? t("status.viewers", { names: status.viewers.join(", ") }) : t("thisMac.nobody")}>
-            <button type="button" className="rw-button" disabled={status.viewers.length === 0} onClick={() => void native.disconnect().then(onLink)}>
-              {t("menu.disconnect")}
-            </button>
-          </Row>
         </div>
-        {status.reason && <p className="s-section-hint">{statusText(status.state, status.reason)}</p>}
       </section>
       <section className="s-section">
         <h2 className="s-section-title">{t("permission.title")}</h2>

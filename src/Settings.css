@@ -1,6 +1,5 @@
 /* The Settings window: frame, toolbar tabs, cards and switches as in Split's Settings (app/src/renderer/settings/settings.css). */
 :root {
-  --accent: var(--rw-accent, #007aff);
   --label: var(--rw-text);
   --secondary: var(--rw-text-secondary);
   --tertiary: rgba(0, 0, 0, 0.26);
@@ -67,8 +66,20 @@ html[data-window='settings'] body { background: var(--rw-window-bg); overflow: h
 }
 .toolbar-item.selected {
   background: var(--control-track);
-  color: var(--accent);
+  color: var(--rw-primary);
 }
+/* The top of the This Mac tab (decision `[RUNNERS] 디자인 시스템` 5A): the computer's name large, its state under it, and Disconnect Now while someone is looking. */
+.s-status {
+  display: flex;
+  align-items: center;
+  gap: var(--rw-row-gap);
+  padding: 20px var(--rw-row-pad-x);
+}
+.s-status-text { flex: 1; min-width: 0; }
+.s-status-name { font-size: 20px; font-weight: 700; line-height: 26px; color: var(--label); }
+.s-status-line { display: flex; align-items: center; gap: 6px; margin-top: 2px; color: var(--secondary); }
+.s-status-dot { flex: none; width: 7px; height: 7px; box-sizing: border-box; border: 1.5px solid var(--label); border-radius: 50%; }
+.s-status-dot.on { background: var(--label); }
 .s-section {
   display: flex;
   flex-direction: column;
@@ -140,7 +151,7 @@ html[data-window='settings'] body { background: var(--rw-window-bg); overflow: h
   transition: background-color 0.15s;
 }
 .switch.on {
-  background: var(--accent);
+  background: var(--rw-primary);
 }
 .switch-knob {
   position: absolute;
@@ -153,6 +164,7 @@ html[data-window='settings'] body { background: var(--rw-window-bg); overflow: h
   transition: transform 0.15s;
 }
 .switch.on .switch-knob {
+  background: var(--rw-on-primary);
   transform: translateX(10px);
 }
 .s-content { display: flex; flex-direction: column; gap: var(--rw-box-gap); width: 100%; max-width: 600px; margin: 0 auto; padding: var(--rw-pad); box-sizing: border-box; }

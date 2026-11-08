@@ -268,11 +268,13 @@ export default function Viewer() {
         <LinkNote link={link} />
       )}
       {computers.length > 0 && (
-        <section className="grid" aria-label={t("grid.title")}>
-          {computers.map((c) => (
-            <Tile key={c.host} computer={c} visible={visible} onOpen={() => setComputer(c.host)} />
-          ))}
-        </section>
+        <div className="grid-scroll">
+          <section className="grid" aria-label={t("grid.title")}>
+            {computers.map((c) => (
+              <Tile key={c.host} computer={c} visible={visible} onOpen={() => setComputer(c.host)} />
+            ))}
+          </section>
+        </div>
       )}
       {status && (
         <button type="button" className="card this-mac" onClick={() => native.openSettings("mac")}>

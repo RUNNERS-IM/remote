@@ -351,6 +351,9 @@
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
   align-content: start;
+}
+
+.grid-scroll {
   overflow-y: auto;
 }
 

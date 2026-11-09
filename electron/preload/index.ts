@@ -51,9 +51,6 @@ const api: RemoteApi = {
   openComputer: (host) => ipcRenderer.send("remote:openComputer", host),
   onOpenComputer: (listener) => listen("remote:openComputer", listener),
   closeWindow: () => ipcRenderer.send("remote:closeWindow"),
-  usageConsent: () => ipcRenderer.invoke("remote:usageConsent"),
-  setUsageConsent: (granted) => ipcRenderer.invoke("remote:setUsageConsent", granted),
-  countUsage: (feature) => ipcRenderer.send("remote:countUsage", feature),
   updateOffer: () => ipcRenderer.invoke("remote:updateOffer"),
   onUpdateOffer: (listener) => {
     const relay = (_event: Electron.IpcRendererEvent, offer: UpdateOffer) => listener(offer);

@@ -38,7 +38,6 @@ import {
   Type,
 } from "lucide-react";
 import { AccountButton, SignInSheet, type CodePurpose, type SignMode } from "./runners-account/runners-account";
-import { UsageConsentSheet } from "./runners-account/runners-usage";
 import { locale, statusText, t } from "./i18n";
 import { keyInput } from "./keys";
 import * as native from "./native";
@@ -149,7 +148,6 @@ export default function Viewer() {
   /** The computer opened from the grid, or null for the grid. */
   const [computer, setComputer] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
-  const [askUsage, setAskUsage] = useState(false);
   const closeSignIn = useCallback(() => setSigningIn(false), []);
   // The shared sheet reads the failure's short code (bad, exists) from the error's message.
   const signIn = useCallback(
@@ -177,8 +175,6 @@ export default function Viewer() {
     const check = () => {
       void native.status().then(setStatus);
       void native.link().then(setLink);
-      // Why here: the question can also be answered in Settings while this window is open.
-      void native.usageConsent().then((consent) => setAskUsage(consent === "unasked"));
     };
     check();
     const timer = setInterval(check, STATUS_EVERY_MS);
@@ -304,16 +300,6 @@ export default function Viewer() {
           onClose={closeSignIn}
         />
       )}
-      {askUsage && !signingIn && (
-        <UsageConsentSheet
-          lang={locale}
-          app="Remote"
-          onChoose={(granted) => {
-            setAskUsage(false);
-            void native.setUsageConsent(granted);
-          }}
-        />
-      )}
     </main>
   );
 }
@@ -402,7 +388,6 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   const [info, setInfo] = useState<PeerInfo | null>(null);
   const [displays, setDisplays] = useState<Display[]>([]);
   const [chosen, setChosen] = useState<number | null>(null);
-  useEffect(() => native.countUsage("computer.open"), [host]);
   /** Every display side by side instead of the chosen one, each its own video. */
   const [all, setAll] = useState(false);
   const [allStreams, setAllStreams] = useState<MediaStream[]>([]);
@@ -565,7 +550,6 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   // click, a double click, a right click and a drag all happen as made. Moves are sent at most every MOVE_MS.
   const onPointerDown = (event: PointerEvent<HTMLVideoElement>) => {
     if (!sendClicks || chosen === null || (event.button !== 0 && event.button !== 2)) return;
-    native.countUsage("input.click");
     const at = spotOn(video.current, event.clientX, event.clientY, false);
     if (!at) return;
     event.preventDefault();
@@ -660,14 +644,12 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
     // Copy and paste (2C): Command-V first puts the text copied here on that computer; after Command-C or Command-X
     // the text copied there is brought here.
     if (command && input.code === KEY_V) {
-      native.countUsage("clipboard.paste");
       queue.current = queue.current
         .then(async () => peer.ask(host, "clipboardSet", { text: await native.readClipboard() }))
         .catch((error) => setClickError(inputError(error)));
     }
     post(input);
     if (command && (input.code === KEY_C || input.code === KEY_X)) {
-      native.countUsage("clipboard.copy");
       queue.current = queue.current
         .then(() => wait(COPY_WAIT_MS))
         .then(() => peer.ask(host, "clipboardGet"))
@@ -709,7 +691,6 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
   const sendText = (event: FormEvent) => {
     event.preventDefault();
     if (!text) return;
-    native.countUsage("text.send");
     peer
       .ask(host, "input", { input: { kind: "text", text } satisfies Input })
       .then(() => {

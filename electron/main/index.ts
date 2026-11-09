@@ -14,7 +14,6 @@ import { currentLocale, t } from "./i18n";
 import { native } from "./native";
 import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
-import * as usage from "./usage";
 import { createTray, showState } from "./tray";
 import { checkNow, displayVersion, startUpdates } from "./updates";
 import { allowClose, answerUpdate, askUpdate, createPanel, placeUnderTray, prepareViewer, showSettings, showViewer, TRANSLUCENT, updateOffer, viewerContents } from "./windows";
@@ -281,9 +280,6 @@ function registerIpc(): void {
     link.disconnect();
     return link.current();
   });
-  ipcMain.handle("remote:usageConsent", () => usage.consent());
-  ipcMain.handle("remote:setUsageConsent", (_event, granted: unknown) => usage.setConsent(granted === true));
-  ipcMain.on("remote:countUsage", (_event, feature: unknown) => usage.count(String(feature)));
   ipcMain.handle("remote:updateOffer", () => updateOffer());
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
@@ -362,7 +358,6 @@ function start(): void {
   prepareViewer(viewerHidden);
   startClaude();
   startUpdates();
-  usage.startSending();
   if (DEV) debugHooks();
   else if (!startedAtLogin()) openViewer();
 }
@@ -378,7 +373,6 @@ if (!app.requestSingleInstanceLock()) {
     if (process.uptime() > 5 || !startedAtLogin()) openViewer();
   });
   app.on("before-quit", allowClose);
-  app.on("before-quit", usage.save);
   // Why: closing a window must not quit a tray app.
   app.on("window-all-closed", () => undefined);
   void app.whenReady().then(start);

@@ -3,7 +3,7 @@
 // counts is runners/usage-stats.ts.
 import { app } from "electron";
 import { join } from "node:path";
-import { accessToken, accessTokenExpiry, API_URL, refresh } from "./account";
+import { accessToken, accessTokenExpiry, API_URL, refresh, userAgent } from "./account";
 import { createUsageStats, type UsageConsent, type UsageStats } from "./runners/usage-stats";
 import { displayVersion } from "./updates";
 
@@ -24,6 +24,7 @@ function usage(): UsageStats {
     version: displayVersion(),
     filePath: join(app.getPath("userData"), "usage-stats.json"),
     token: freshToken,
+    userAgent: userAgent(),
     // Why: a debug run sends only to the test server it was pointed at (null sends nothing), never to the real one.
     endpoint: app.isPackaged ? undefined : process.env.REMOTE_API_URL ? `${API_URL}/api/mobile/usage` : null,
   });

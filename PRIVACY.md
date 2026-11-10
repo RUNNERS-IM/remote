@@ -14,7 +14,7 @@ Remote takes pictures of this computer's screen only when something asks for the
 
 Remote also reads the list of displays and whether it has the Screen Recording and Accessibility permissions.
 
-When you are looking at another computer in the Remote window and turn on **Send Clicks**, your clicks, scrolls and keys on its picture are sent to that computer, not to this one. Remote clicks and types on this computer only when another device of the same account sends input while **Let Other Computers Click and Type** is on, or when Claude does so with the approval described in the README. It does nothing else with your mouse or keyboard.
+When you are looking at another computer in the Remote window, your clicks, scrolls and keys on its picture are sent to that computer, not to this one. Remote clicks and types on this computer only when another device of the same account sends input while **Let Other Computers See This** is on and Accessibility is allowed for Remote, or when Claude does so with the approval described in the README. It does nothing else with your mouse or keyboard.
 
 ## Network
 
@@ -37,8 +37,8 @@ id) and passes the short messages that set up a connection between two of them. 
 through the server: they go directly between the two devices over WebRTC, encrypted (DTLS-SRTP). To find a direct path
 each device asks a public STUN server (`stun.l.google.com`) for its own internet address; nothing else is sent to it.
 
-- Another computer or phone of the same account sees this one only while **Let Other Computers See This** is on, and can click and
-  type only while **Let Other Computers Click and Type** is also on. **Disconnect Now** turns seeing off at once.
+- Another computer or phone of the same account sees this one only while **Let Other Computers See This** is on, and while it is on
+  can also click and type if Accessibility is allowed for Remote. **Disconnect Now** turns seeing off at once.
 - Remote answers only devices the relay lists for the same account; Remote does not listen on any port of this
   computer. **Sign Out** in the window ends the relay connection and every connection to another device.
 - The connection log (who viewed, clicked or typed, and when; never the text typed) stays in memory on this computer
@@ -73,7 +73,7 @@ Remote 는 요청이 올 때만 이 컴퓨터 화면을 찍습니다. 요청하�
 
 모니터 목록과, 화면 기록 · 손쉬운 사용 권한이 켜졌는지도 읽습니다.
 
-Remote 창에서 다른 컴퓨터 화면을 보며 **클릭 보내기** 를 켜면, 그 화면 그림 위의 클릭 · 스크롤 · 키 입력이 이 컴퓨터가 아니라 그 컴퓨터로 갑니다. Remote 가 이 컴퓨터에 클릭 · 입력하는 것은 **다른 컴퓨터의 클릭 · 키 입력 허용** 이 켜져 있을 때 같은 계정의 다른 기기가 보낸 입력과, README 에 적은 승인을 거친 Claude 의 입력뿐입니다. 그 밖에는 마우스나 키보드에 아무것도 하지 않습니다.
+Remote 창에서 다른 컴퓨터 화면을 볼 때, 그 화면 그림 위의 클릭 · 스크롤 · 키 입력이 이 컴퓨터가 아니라 그 컴퓨터로 갑니다. Remote 가 이 컴퓨터에 클릭 · 입력하는 것은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있고 손쉬운 사용 권한이 있을 때 같은 계정의 다른 기기가 보낸 입력과, README 에 적은 승인을 거친 Claude 의 입력뿐입니다. 그 밖에는 마우스나 키보드에 아무것도 하지 않습니다.
 
 ## 인터넷 연결
 
@@ -95,8 +95,8 @@ Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연
 길을 찾으려고 기기마다 공개 STUN 서버(`stun.l.google.com`)에 자기 인터넷 주소를 묻고, 그 밖에는 아무것도 보내지
 않습니다.
 
-- 같은 계정의 다른 컴퓨터 · 휴대폰은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 이 컴퓨터를 보고, **다른 컴퓨터의 클릭 ·
-  키 입력 허용** 까지 켜져 있을 때만 클릭 · 입력합니다. **지금 끊기** 는 보기를 바로 끕니다.
+- 같은 계정의 다른 컴퓨터 · 휴대폰은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 이 컴퓨터를 보고, 그때 손쉬운 사용
+  권한이 있으면 클릭 · 입력도 합니다. **지금 끊기** 는 보기를 바로 끕니다.
 - Remote 는 중계가 같은 계정이라고 알려 준 기기에만 답하고, 이 컴퓨터의 어떤 포트에서도 연결을 기다리지 않습니다.
   창의 **로그아웃** 은 중계 연결과 다른 기기와의 연결을 모두 끊습니다.
 - 접속 기록(누가 언제 보거나 클릭 · 입력했는지. 친 글자 내용은 적지 않습니다)은 이 컴퓨터 메모리에만 있고 Remote 를

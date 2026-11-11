@@ -219,9 +219,8 @@ export default function Viewer() {
       <header className="window-head">
         <div className="window-head-text">
           <div className="title">{t("grid.title")}</div>
-          <div className="subtitle">
-            {signedOut ? t("grid.subtitleSignedOut") : t("grid.subtitle", { count: computers.length })}
-          </div>
+          {/* Why only with computers: signed out, the card below says the same; with none, LinkNote says why. */}
+          {computers.length > 0 && <div className="subtitle">{t("grid.subtitle", { count: computers.length })}</div>}
         </div>
         {link?.account && (
           <AccountButton

@@ -4,6 +4,7 @@
   "status.viewing": "Se está viendo",
   "status.reason.platform": "Solo macOS",
   "status.reason.screenRecording": "Se necesita Grabación de pantalla",
+  "status.reason.signedOut": "Sesión no iniciada",
   "status.note.platform": "Por ahora, Remote solo funciona en macOS.",
   "status.viewers": "Visto por: {{names}}",
   "menu.open": "Abrir Remote",
@@ -109,7 +110,6 @@
   "log.subtitle": "Quién ha visto o pulsado en este ordenador. El texto escrito nunca se guarda y el registro desaparece al salir de Remote.",
   "thisMac.title": "Este Mac",
   "thisMac.summary": "Permisos · Visible para otros ordenadores · Registro de conexiones · General",
-  "grid.subtitleSignedOut": "Inicia sesión con tu cuenta RUNNERS para ver aquí los ordenadores de la cuenta",
   "account.emptyTitle": "Inicia sesión para ver aquí todos tus ordenadores",
   "account.online": "{{count}} ordenadores encendidos en esta cuenta",
   "account.online.one": "{{count}} ordenador encendido en esta cuenta",
@@ -146,6 +146,7 @@
   "panel.openAll": "Todos los ordenadores",
   "panel.visible": "Visible para otros ordenadores",
   "panel.hidden": "Oculto para otros ordenadores",
+  "panel.signedOut": "Visible al iniciar sesión",
   "thisMac.allowHint": "Si está activado, los ordenadores y teléfonos de la misma cuenta RUNNERS pueden ver esta pantalla y hacer clic en ella.",
   "thisMac.nobody": "Ningún ordenador está viendo ahora"
 }

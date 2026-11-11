@@ -4,6 +4,7 @@
   "status.viewing": "Sedang dilihat",
   "status.reason.platform": "Hanya macOS",
   "status.reason.screenRecording": "Perlu Perekaman Layar",
+  "status.reason.signedOut": "Belum masuk",
   "status.note.platform": "Untuk saat ini Remote hanya berfungsi di macOS.",
   "status.viewers": "Dilihat oleh: {{names}}",
   "menu.open": "Buka Remote",
@@ -108,7 +109,6 @@
   "log.subtitle": "Siapa yang melihat atau mengklik komputer ini. Teks yang diketik tidak pernah dicatat, dan log hilang saat Remote ditutup.",
   "thisMac.title": "Mac Ini",
   "thisMac.summary": "Izin · Terlihat oleh komputer lain · Log koneksi · Umum",
-  "grid.subtitleSignedOut": "Masuk dengan akun RUNNERS untuk melihat komputer akun ini di sini",
   "account.emptyTitle": "Masuk untuk melihat semua komputer Anda di sini",
   "account.online": "{{count}} komputer menyala di akun ini",
   "account.thisMac": "Pengaturan Mac ini",
@@ -144,6 +144,7 @@
   "panel.openAll": "Semua Komputer",
   "panel.visible": "Terlihat oleh komputer lain",
   "panel.hidden": "Tersembunyi dari komputer lain",
+  "panel.signedOut": "Terlihat setelah masuk",
   "thisMac.allowHint": "Jika aktif, komputer dan ponsel dengan akun RUNNERS yang sama dapat melihat layar ini dan mengekliknya.",
   "thisMac.nobody": "Tidak ada komputer yang melihat saat ini"
 }

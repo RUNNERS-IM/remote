@@ -4,6 +4,7 @@
   "status.viewing": "İzleniyor",
   "status.reason.platform": "Yalnızca macOS",
   "status.reason.screenRecording": "Ekran Kaydı izni gerekli",
+  "status.reason.signedOut": "Giriş yapılmadı",
   "status.note.platform": "Remote şimdilik yalnızca macOS'te çalışır.",
   "status.viewers": "İzleyenler: {{names}}",
   "menu.open": "Remote'u Aç",
@@ -109,7 +110,6 @@
   "log.subtitle": "Bu bilgisayarı kimin görüntülediği veya tıkladığı. Yazılan metin asla kaydedilmez ve günlük Remote kapanınca silinir.",
   "thisMac.title": "Bu Mac",
   "thisMac.summary": "İzinler · Diğer bilgisayarlara görünür · Bağlantı günlüğü · Genel",
-  "grid.subtitleSignedOut": "Hesabın bilgisayarlarını burada görmek için RUNNERS hesabınla giriş yap",
   "account.emptyTitle": "Tüm bilgisayarlarını burada görmek için giriş yap",
   "account.online": "Bu hesapta açık {{count}} bilgisayar",
   "account.online.one": "Bu hesapta açık {{count}} bilgisayar",
@@ -146,6 +146,7 @@
   "panel.openAll": "Tüm Bilgisayarlar",
   "panel.visible": "Diğer bilgisayarlara görünür",
   "panel.hidden": "Diğer bilgisayarlardan gizli",
+  "panel.signedOut": "Giriş yapınca görünür",
   "thisMac.allowHint": "Açıkken aynı RUNNERS hesabındaki bilgisayarlar ve telefonlar bu ekranı görebilir ve üzerine tıklayabilir.",
   "thisMac.nobody": "Şu anda izleyen bilgisayar yok"
 }

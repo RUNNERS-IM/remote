@@ -4,6 +4,7 @@
   "status.viewing": "Katsotaan",
   "status.reason.platform": "Vain macOS",
   "status.reason.screenRecording": "Näytön tallennus tarvitaan",
+  "status.reason.signedOut": "Ei kirjautunut",
   "status.note.platform": "Remote toimii toistaiseksi vain macOS:ssä.",
   "status.viewers": "Katsojat: {{names}}",
   "menu.open": "Avaa Remote",
@@ -109,7 +110,6 @@
   "log.subtitle": "Kuka on katsonut tätä tietokonetta tai klikannut siinä. Kirjoitettua tekstiä ei tallenneta, ja loki katoaa, kun Remote suljetaan.",
   "thisMac.title": "Tämä Mac",
   "thisMac.summary": "Oikeudet · Näkyy muille tietokoneille · Yhteysloki · Yleiset",
-  "grid.subtitleSignedOut": "Kirjaudu RUNNERS-tilillä, niin tilin tietokoneet näkyvät tässä",
   "account.emptyTitle": "Kirjaudu, niin kaikki tietokoneesi näkyvät tässä",
   "account.online": "Tilillä päällä {{count}} tietokonetta",
   "account.online.one": "Tilillä päällä {{count}} tietokone",
@@ -146,6 +146,7 @@
   "panel.openAll": "Kaikki tietokoneet",
   "panel.visible": "Näkyy muille tietokoneille",
   "panel.hidden": "Piilotettu muilta tietokoneilta",
+  "panel.signedOut": "Näkyy kirjautumisen jälkeen",
   "thisMac.allowHint": "Kun tämä on käytössä, saman RUNNERS-tilin tietokoneet ja puhelimet voivat nähdä tämän näytön ja napsauttaa sitä.",
   "thisMac.nobody": "Yksikään tietokone ei katso nyt"
 }

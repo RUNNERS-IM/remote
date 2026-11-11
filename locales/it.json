@@ -4,6 +4,7 @@
   "status.viewing": "In visione",
   "status.reason.platform": "Solo macOS",
   "status.reason.screenRecording": "Serve Registrazione schermo",
+  "status.reason.signedOut": "Accesso non effettuato",
   "status.note.platform": "Per ora Remote funziona solo su macOS.",
   "status.viewers": "Visto da: {{names}}",
   "menu.open": "Apri Remote",
@@ -109,7 +110,6 @@
   "log.subtitle": "Chi ha guardato o cliccato su questo computer. Il testo digitato non viene mai registrato e il registro sparisce alla chiusura di Remote.",
   "thisMac.title": "Questo Mac",
   "thisMac.summary": "Permessi · Visibile ad altri computer · Registro connessioni · Generali",
-  "grid.subtitleSignedOut": "Accedi con il tuo account RUNNERS per vedere qui i computer dell'account",
   "account.emptyTitle": "Accedi per vedere qui tutti i tuoi computer",
   "account.online": "{{count}} computer accesi in questo account",
   "account.online.one": "{{count}} computer acceso in questo account",
@@ -146,6 +146,7 @@
   "panel.openAll": "Tutti i computer",
   "panel.visible": "Visibile agli altri computer",
   "panel.hidden": "Nascosto agli altri computer",
+  "panel.signedOut": "Visibile dopo l’accesso",
   "thisMac.allowHint": "Se attivo, i computer e i telefoni dello stesso account RUNNERS possono vedere questo schermo e farvi clic.",
   "thisMac.nobody": "Nessun computer sta guardando ora"
 }

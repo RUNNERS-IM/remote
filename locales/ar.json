@@ -4,6 +4,7 @@
   "status.viewing": "قيد المشاهدة",
   "status.reason.platform": "لنظام macOS فقط",
   "status.reason.screenRecording": "يلزم إذن تسجيل الشاشة",
+  "status.reason.signedOut": "لم يتم تسجيل الدخول",
   "status.note.platform": "يعمل Remote على macOS فقط حاليًا.",
   "status.viewers": "يشاهده: {{names}}",
   "menu.open": "فتح Remote",
@@ -116,7 +117,6 @@
   "log.subtitle": "من شاهد هذا الكمبيوتر أو نقر عليه. لا يُسجَّل النص المكتوب أبدًا، ويختفي السجل عند إنهاء Remote.",
   "thisMac.title": "جهاز Mac هذا",
   "thisMac.summary": "الأذونات · مرئي لأجهزة أخرى · سجل الاتصالات · عام",
-  "grid.subtitleSignedOut": "سجّل الدخول بحساب RUNNERS لترى حواسيب الحساب هنا",
   "account.emptyTitle": "سجّل الدخول لترى كل حواسيبك هنا",
   "account.online": "{{count}} حاسوب مشغّل في هذا الحساب",
   "account.online.zero": "لا حواسيب مشغّلة في هذا الحساب",
@@ -157,6 +157,7 @@
   "panel.openAll": "كل الأجهزة",
   "panel.visible": "ظاهر للأجهزة الأخرى",
   "panel.hidden": "مخفي عن الأجهزة الأخرى",
+  "panel.signedOut": "يظهر بعد تسجيل الدخول",
   "thisMac.allowHint": "عند التشغيل، يمكن للأجهزة والهواتف في حساب RUNNERS نفسه رؤية هذه الشاشة والنقر عليها.",
   "thisMac.nobody": "لا يوجد جهاز يشاهد الآن"
 }

@@ -4,6 +4,7 @@
   "status.viewing": "En cours de visualisation",
   "status.reason.platform": "macOS uniquement",
   "status.reason.screenRecording": "Enregistrement de l’écran requis",
+  "status.reason.signedOut": "Non connecté",
   "status.note.platform": "Pour l’instant, Remote fonctionne uniquement sur macOS.",
   "status.viewers": "Vu par : {{names}}",
   "menu.open": "Ouvrir Remote",
@@ -109,7 +110,6 @@
   "log.subtitle": "Qui a regardé ou cliqué sur cet ordinateur. Le texte saisi n’est jamais enregistré, et le journal disparaît quand Remote se ferme.",
   "thisMac.title": "Ce Mac",
   "thisMac.summary": "Autorisations · Visible par les autres ordinateurs · Journal des connexions · Général",
-  "grid.subtitleSignedOut": "Connectez-vous avec votre compte RUNNERS pour voir ici les ordinateurs du compte",
   "account.emptyTitle": "Connectez-vous pour voir ici tous vos ordinateurs",
   "account.online": "{{count}} ordinateurs allumés sur ce compte",
   "account.online.one": "{{count}} ordinateur allumé sur ce compte",
@@ -146,6 +146,7 @@
   "panel.openAll": "Tous les ordinateurs",
   "panel.visible": "Visible par les autres ordinateurs",
   "panel.hidden": "Masqué aux autres ordinateurs",
+  "panel.signedOut": "Visible après connexion",
   "thisMac.allowHint": "Si cette option est activée, les ordinateurs et téléphones du même compte RUNNERS peuvent voir cet écran et cliquer dessus.",
   "thisMac.nobody": "Aucun ordinateur ne regarde pour le moment"
 }

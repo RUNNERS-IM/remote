@@ -4,6 +4,7 @@
   "status.viewing": "Идёт просмотр",
   "status.reason.platform": "Только macOS",
   "status.reason.screenRecording": "Нужна запись экрана",
+  "status.reason.signedOut": "Вход не выполнен",
   "status.note.platform": "Пока Remote работает только в macOS.",
   "status.viewers": "Смотрят: {{names}}",
   "menu.open": "Открыть Remote",
@@ -114,7 +115,6 @@
   "log.subtitle": "Кто смотрел этот компьютер или нажимал на нём. Набранный текст не сохраняется, а журнал исчезает при выходе из Remote.",
   "thisMac.title": "Этот Mac",
   "thisMac.summary": "Разрешения · Виден другим компьютерам · Журнал подключений · Общие",
-  "grid.subtitleSignedOut": "Войдите с учётной записью RUNNERS, чтобы видеть здесь компьютеры этой записи",
   "account.emptyTitle": "Войдите, чтобы видеть здесь все свои компьютеры",
   "account.online": "Включённых компьютеров в этой учётной записи: {{count}}",
   "account.online.one": "{{count}} включённый компьютер в этой учётной записи",
@@ -153,6 +153,7 @@
   "panel.openAll": "Все компьютеры",
   "panel.visible": "Виден другим компьютерам",
   "panel.hidden": "Скрыт от других компьютеров",
+  "panel.signedOut": "Виден после входа",
   "thisMac.allowHint": "Если включено, компьютеры и телефоны с той же учётной записью RUNNERS могут видеть этот экран и нажимать на нём.",
   "thisMac.nobody": "Сейчас никто не смотрит"
 }

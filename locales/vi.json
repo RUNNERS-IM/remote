@@ -4,6 +4,7 @@
   "status.viewing": "Đang được xem",
   "status.reason.platform": "Chỉ macOS",
   "status.reason.screenRecording": "Cần quyền Ghi màn hình",
+  "status.reason.signedOut": "Chưa đăng nhập",
   "status.note.platform": "Hiện tại Remote chỉ hoạt động trên macOS.",
   "status.viewers": "Đang xem: {{names}}",
   "menu.open": "Mở Remote",
@@ -108,7 +109,6 @@
   "log.subtitle": "Ai đã xem hoặc nhấp vào máy tính này. Văn bản đã gõ không bao giờ được ghi lại, và nhật ký mất khi thoát Remote.",
   "thisMac.title": "Máy Mac này",
   "thisMac.summary": "Quyền · Cho máy khác xem · Nhật ký kết nối · Chung",
-  "grid.subtitleSignedOut": "Đăng nhập bằng tài khoản RUNNERS để xem các máy tính của tài khoản tại đây",
   "account.emptyTitle": "Đăng nhập để xem tất cả máy tính của bạn tại đây",
   "account.online": "{{count}} máy tính đang bật trong tài khoản này",
   "account.thisMac": "Cài đặt của máy Mac này",
@@ -144,6 +144,7 @@
   "panel.openAll": "Tất cả máy tính",
   "panel.visible": "Máy tính khác có thể thấy",
   "panel.hidden": "Ẩn với máy tính khác",
+  "panel.signedOut": "Hiện sau khi đăng nhập",
   "thisMac.allowHint": "Khi bật, máy tính và điện thoại cùng tài khoản RUNNERS có thể xem màn hình này và nhấp vào đó.",
   "thisMac.nobody": "Hiện không có máy tính nào đang xem"
 }

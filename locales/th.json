@@ -4,6 +4,7 @@
   "status.viewing": "กำลังถูกดู",
   "status.reason.platform": "เฉพาะ macOS",
   "status.reason.screenRecording": "ต้องใช้สิทธิ์การอัดหน้าจอ",
+  "status.reason.signedOut": "ยังไม่ได้เข้าสู่ระบบ",
   "status.note.platform": "ขณะนี้ Remote ใช้ได้เฉพาะบน macOS",
   "status.viewers": "กำลังดูโดย: {{names}}",
   "menu.open": "เปิด Remote",
@@ -108,7 +109,6 @@
   "log.subtitle": "ใครดูหรือคลิกคอมพิวเตอร์เครื่องนี้ ไม่บันทึกข้อความที่พิมพ์ และบันทึกจะหายไปเมื่อปิด Remote",
   "thisMac.title": "Mac เครื่องนี้",
   "thisMac.summary": "สิทธิ์ · ให้เครื่องอื่นเห็น · บันทึกการเชื่อมต่อ · ทั่วไป",
-  "grid.subtitleSignedOut": "เข้าสู่ระบบด้วยบัญชี RUNNERS เพื่อดูคอมพิวเตอร์ของบัญชีที่นี่",
   "account.emptyTitle": "เข้าสู่ระบบเพื่อดูคอมพิวเตอร์ทั้งหมดของคุณที่นี่",
   "account.online": "คอมพิวเตอร์ที่เปิดอยู่ในบัญชีนี้ {{count}} เครื่อง",
   "account.thisMac": "การตั้งค่า Mac เครื่องนี้",
@@ -144,6 +144,7 @@
   "panel.openAll": "คอมพิวเตอร์ทั้งหมด",
   "panel.visible": "คอมพิวเตอร์อื่นมองเห็น",
   "panel.hidden": "ซ่อนจากคอมพิวเตอร์อื่น",
+  "panel.signedOut": "มองเห็นได้หลังเข้าสู่ระบบ",
   "thisMac.allowHint": "เมื่อเปิด คอมพิวเตอร์และโทรศัพท์ที่ใช้บัญชี RUNNERS เดียวกันจะเห็นหน้าจอนี้และคลิกได้",
   "thisMac.nobody": "ขณะนี้ไม่มีคอมพิวเตอร์ที่กำลังดู"
 }

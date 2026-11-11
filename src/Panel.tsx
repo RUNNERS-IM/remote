@@ -76,8 +76,9 @@ export default function Panel() {
             {t("thisMac.title")}
           </div>
           <MenuItem
-            icon={icon(link.allowViewing ? Eye : EyeOff)}
-            label={t(link.allowViewing ? "panel.visible" : "panel.hidden")}
+            icon={icon(link.allowViewing && link.account ? Eye : EyeOff)}
+            // Why: signed out, no other computer can reach this one, so it is not visible even with seeing on.
+            label={t(!link.allowViewing ? "panel.hidden" : link.account ? "panel.visible" : "panel.signedOut")}
             onSelect={() => native.openSettings("mac")}
           />
           {status.viewers.length > 0 && (

@@ -4,6 +4,7 @@
   "status.viewing": "正在被檢視",
   "status.reason.platform": "僅限 macOS",
   "status.reason.screenRecording": "需要螢幕錄製權限",
+  "status.reason.signedOut": "未登入",
   "status.note.platform": "Remote 目前僅支援 macOS。",
   "status.viewers": "正在檢視的電腦：{{names}}",
   "menu.open": "打開 Remote",
@@ -108,7 +109,6 @@
   "log.subtitle": "記錄誰檢視或點按了這台電腦。不記錄輸入的文字內容，結束 Remote 後記錄會消失。",
   "thisMac.title": "這台 Mac",
   "thisMac.summary": "權限 · 讓其他電腦檢視 · 連線記錄 · 一般",
-  "grid.subtitleSignedOut": "使用 RUNNERS 帳號登入後，同一帳號的電腦會顯示在這裡",
   "account.emptyTitle": "登入後，你的所有電腦都會顯示在這裡",
   "account.online": "此帳號中開著的電腦 {{count}} 台",
   "account.thisMac": "這台 Mac 的設定",
@@ -144,6 +144,7 @@
   "panel.openAll": "所有電腦",
   "panel.visible": "其他電腦可見",
   "panel.hidden": "對其他電腦隱藏",
+  "panel.signedOut": "登入後可見",
   "thisMac.allowHint": "開啟後，同一 RUNNERS 帳號的電腦和手機可以檢視此螢幕並點按。",
   "thisMac.nobody": "現在沒有電腦在檢視"
 }

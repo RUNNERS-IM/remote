@@ -4,6 +4,7 @@
   "status.viewing": "Wordt bekeken",
   "status.reason.platform": "Alleen macOS",
   "status.reason.screenRecording": "Schermopname nodig",
+  "status.reason.signedOut": "Niet ingelogd",
   "status.note.platform": "Remote werkt voorlopig alleen op macOS.",
   "status.viewers": "Bekeken door: {{names}}",
   "menu.open": "Open Remote",
@@ -109,7 +110,6 @@
   "log.subtitle": "Wie deze computer heeft bekeken of erop heeft geklikt. Getypte tekst wordt nooit opgeslagen en het logboek verdwijnt als Remote stopt.",
   "thisMac.title": "Deze Mac",
   "thisMac.summary": "Rechten · Zichtbaar voor andere computers · Verbindingslogboek · Algemeen",
-  "grid.subtitleSignedOut": "Log in met je RUNNERS-account om de computers van het account hier te zien",
   "account.emptyTitle": "Log in om al je computers hier te zien",
   "account.online": "{{count}} computers aan in dit account",
   "account.online.one": "{{count}} computer aan in dit account",
@@ -146,6 +146,7 @@
   "panel.openAll": "Alle computers",
   "panel.visible": "Zichtbaar voor andere computers",
   "panel.hidden": "Verborgen voor andere computers",
+  "panel.signedOut": "Zichtbaar na inloggen",
   "thisMac.allowHint": "Als dit aan staat, kunnen computers en telefoons met hetzelfde RUNNERS-account dit scherm zien en erop klikken.",
   "thisMac.nobody": "Er kijkt nu geen computer mee"
 }

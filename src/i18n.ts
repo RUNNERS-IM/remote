@@ -42,7 +42,7 @@ export function t(key: Key, args: Record<string, string | number> = {}): string 
 }
 
 /** "RUNNERS Mac Studio · Remote Off · Screen Recording Needed": the computer, the state and, while off, why. */
-export function statusText(state: "off" | "waiting" | "viewing", reason: "platform" | "screenRecording" | null): string {
+export function statusText(state: "off" | "waiting" | "viewing", reason: "platform" | "screenRecording" | "signedOut" | null): string {
   const parts = [t(`status.${state}`)];
   if (reason) parts.push(t(`status.reason.${reason}`));
   return parts.join(" · ");

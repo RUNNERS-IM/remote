@@ -4,6 +4,7 @@
   "status.viewing": "Wird angesehen",
   "status.reason.platform": "Nur macOS",
   "status.reason.screenRecording": "Bildschirmaufnahme erforderlich",
+  "status.reason.signedOut": "Nicht angemeldet",
   "status.note.platform": "Remote funktioniert vorerst nur unter macOS.",
   "status.viewers": "Angesehen von: {{names}}",
   "menu.open": "Remote öffnen",
@@ -109,7 +110,6 @@
   "log.subtitle": "Wer diesen Computer angesehen oder angeklickt hat. Eingegebener Text wird nie gespeichert, und das Protokoll verschwindet, wenn Remote beendet wird.",
   "thisMac.title": "Dieser Mac",
   "thisMac.summary": "Berechtigungen · Für andere Computer sichtbar · Verbindungsprotokoll · Allgemein",
-  "grid.subtitleSignedOut": "Melde dich mit deinem RUNNERS-Konto an, um die Computer des Kontos hier zu sehen",
   "account.emptyTitle": "Melde dich an, um all deine Computer hier zu sehen",
   "account.online": "{{count}} Computer in diesem Konto eingeschaltet",
   "account.online.one": "{{count}} Computer in diesem Konto eingeschaltet",
@@ -146,6 +146,7 @@
   "panel.openAll": "Alle Computer",
   "panel.visible": "Für andere Computer sichtbar",
   "panel.hidden": "Für andere Computer verborgen",
+  "panel.signedOut": "Nach der Anmeldung sichtbar",
   "thisMac.allowHint": "Wenn aktiviert, können Computer und Telefone mit demselben RUNNERS-Konto diesen Bildschirm sehen und darauf klicken.",
   "thisMac.nobody": "Derzeit sieht kein Computer zu"
 }

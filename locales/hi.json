@@ -4,6 +4,7 @@
   "status.viewing": "देखा जा रहा है",
   "status.reason.platform": "केवल macOS",
   "status.reason.screenRecording": "स्क्रीन रिकॉर्डिंग अनुमति ज़रूरी",
+  "status.reason.signedOut": "लॉग इन नहीं है",
   "status.note.platform": "Remote अभी केवल macOS पर काम करता है।",
   "status.viewers": "देख रहे हैं: {{names}}",
   "menu.open": "Remote खोलें",
@@ -109,7 +110,6 @@
   "log.subtitle": "किसने इस कंप्यूटर को देखा या उस पर क्लिक किया। टाइप किया गया टेक्स्ट कभी दर्ज नहीं होता, और Remote बंद होने पर लॉग मिट जाता है।",
   "thisMac.title": "यह Mac",
   "thisMac.summary": "अनुमतियाँ · दूसरे कंप्यूटरों को दिखना · कनेक्शन लॉग · सामान्य",
-  "grid.subtitleSignedOut": "खाते के कंप्यूटर यहाँ देखने के लिए अपने RUNNERS खाते से लॉग इन करें",
   "account.emptyTitle": "अपने सभी कंप्यूटर यहाँ देखने के लिए लॉग इन करें",
   "account.online": "इस खाते में {{count}} कंप्यूटर चालू हैं",
   "account.online.one": "इस खाते में {{count}} कंप्यूटर चालू है",
@@ -146,6 +146,7 @@
   "panel.openAll": "सभी कंप्यूटर",
   "panel.visible": "दूसरे कंप्यूटरों को दिख रहा है",
   "panel.hidden": "दूसरे कंप्यूटरों से छिपा है",
+  "panel.signedOut": "लॉग इन करने पर दिखेगा",
   "thisMac.allowHint": "चालू होने पर, उसी RUNNERS खाते के कंप्यूटर और फ़ोन यह स्क्रीन देख सकते हैं और उस पर क्लिक कर सकते हैं।",
   "thisMac.nobody": "अभी कोई कंप्यूटर नहीं देख रहा"
 }

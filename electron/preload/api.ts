@@ -39,7 +39,7 @@ export type PermissionKind = keyof Permissions;
 export type State = "off" | "waiting" | "viewing";
 
 /** Why Remote is off: not macOS (the only system it works on for now), or Screen Recording is not allowed. */
-export type OffReason = "platform" | "screenRecording";
+export type OffReason = "platform" | "screenRecording" | "signedOut";
 
 export type Status = {
   computer: string;

@@ -291,6 +291,12 @@ function registerIpc(): void {
 function debugHooks(): void {
   const theme = process.env.REMOTE_THEME;
   if (theme === "dark" || theme === "light") nativeTheme.themeSource = theme;
+  // Why: `REMOTE_MENU_DUMP=1` prints the Linux tray menu's lines (as a signed-in user sees them), since a native menu
+  // cannot be captured on a Mac.
+  if (process.env.REMOTE_MENU_DUMP === "1") {
+    const lines = buildMenu(status.current(), { ...menuState(), linked: true }, run).items;
+    console.log("menu:", JSON.stringify(lines.filter((i) => i.type !== "separator").map((i) => ({ label: i.label, checked: i.checked, enabled: i.enabled }))));
+  }
   const which = process.env.REMOTE_OPEN;
   // Why: the tray icon needs a moment before it reports where it sits.
   if (which === "viewer") setTimeout(openViewer, 1500);

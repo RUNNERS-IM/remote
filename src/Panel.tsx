@@ -75,12 +75,21 @@ export default function Panel() {
           <div className="rm-heading">
             {t("thisMac.title")}
           </div>
-          <MenuItem
-            icon={icon(link.allowViewing && link.account ? Eye : EyeOff)}
-            // Why: signed out, no other computer can reach this one, so it is not visible even with seeing on.
-            label={t(!link.allowViewing ? "panel.hidden" : link.account ? "panel.visible" : "panel.signedOut")}
-            onSelect={() => native.openSettings("mac")}
-          />
+          {status.supported ? (
+            <MenuItem
+              icon={icon(link.allowViewing && link.account ? Eye : EyeOff)}
+              // Why: signed out, no other computer can reach this one, so it is not visible even with seeing on.
+              label={t(!link.allowViewing ? "panel.hidden" : link.account ? "panel.visible" : "panel.signedOut")}
+              onSelect={() => native.openSettings("mac")}
+            />
+          ) : (
+            // Why: Windows and Linux cannot share their screen yet, so the line reads hidden and cannot be pressed
+            // (the kit's MenuItem is always a button, hence a plain line here).
+            <div className="rm-item panel-off" aria-disabled="true">
+              {icon(EyeOff)}
+              <span className="rm-label">{t("panel.hidden")}</span>
+            </div>
+          )}
           {status.viewers.length > 0 && (
             <>
               <div className="rm-note">{t("status.viewers", { names: status.viewers.join(", ") })}</div>

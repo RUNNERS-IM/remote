@@ -43,8 +43,8 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
     });
   // Why: on/off lines keep the native check mark (decision 「[PROGRAM] 켬 끔 토글」 2A) and an icon like every other line;
   // macOS draws the check in its own column to the left of the icon, so all labels line up.
-  const check = (id: Command, key: string, iconName: string, on: boolean) =>
-    new MenuItem({ id, label: t(key), icon: icon(iconName), type: "checkbox", checked: on, click: () => run(id) });
+  const check = (id: Command, key: string, iconName: string, on: boolean, enabled = true) =>
+    new MenuItem({ id, label: t(key), icon: icon(iconName), type: "checkbox", checked: on, enabled, click: () => run(id) });
   const separator = () => new MenuItem({ type: "separator" });
   return Menu.buildFromTemplate([
     { label: statusLine(status), icon: icon(DOT[status.state]), enabled: false },
@@ -53,7 +53,8 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
     separator(),
     ...(state.linked
       ? [
-          check("allowViewing", "menu.allowViewing", "eye", state.allowViewing),
+          // Why: Windows and Linux cannot share their screen yet, so the line reads off and cannot be pressed there.
+          check("allowViewing", "menu.allowViewing", "eye", status.supported && state.allowViewing, status.supported),
           separator(),
         ]
       : []),

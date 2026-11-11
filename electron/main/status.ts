@@ -5,11 +5,14 @@
 // Other computers reach this one through the connection (link.ts), which calls remoteFrameSent for every picture it
 // hands out.
 import type { OffReason, Permissions, State, Status } from "../preload/api";
+import { app } from "electron";
 import * as account from "./account";
 import { native } from "./native";
 
-/** Windows and Linux capture and input are not written yet (plan stage 6). */
-export const SUPPORTED = process.platform === "darwin";
+/** Windows and Linux capture and input are not written yet (plan stage 6). Debug runs can pretend to be another system
+ *  with `REMOTE_TEST_PLATFORM=win32|linux`, so the Windows and Linux pages can be captured on a Mac. */
+const PLATFORM = (!app.isPackaged && process.env.REMOTE_TEST_PLATFORM) || process.platform;
+export const SUPPORTED = PLATFORM === "darwin";
 
 /** A viewer asks for a picture about every 200 ms, so a longer gap means nobody is looking any more. */
 const VIEWING_GAP_MS = 1500;

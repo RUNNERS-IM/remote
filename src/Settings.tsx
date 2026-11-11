@@ -109,15 +109,18 @@ function ThisMac({ status, link, onLink }: { status: Status; link: Link; onLink:
           </Row>
         </div>
       </section>
-      <section className="s-section">
-        <h2 className="s-section-title">{t("permission.title")}</h2>
-        <div className="s-card">
-          <Permission kind="screenRecording" on={status.permissions.screenRecording} />
-          <Separator />
-          <Permission kind="accessibility" on={status.permissions.accessibility} />
-        </div>
-        {!status.permissions.screenRecording && <p className="s-section-hint">{t("permission.restartNote")}</p>}
-      </section>
+      {/* Why: Screen Recording and Accessibility are macOS permissions; Windows and Linux have nothing to turn on. */}
+      {status.supported && (
+        <section className="s-section">
+          <h2 className="s-section-title">{t("permission.title")}</h2>
+          <div className="s-card">
+            <Permission kind="screenRecording" on={status.permissions.screenRecording} />
+            <Separator />
+            <Permission kind="accessibility" on={status.permissions.accessibility} />
+          </div>
+          {!status.permissions.screenRecording && <p className="s-section-hint">{t("permission.restartNote")}</p>}
+        </section>
+      )}
     </main>
   );
 }

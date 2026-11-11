@@ -163,6 +163,10 @@ html[data-window='settings'] body { background: var(--rw-window-bg); overflow: h
   background: #fff;
   transition: transform 0.15s;
 }
+.switch:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
 .switch.on .switch-knob {
   background: var(--rw-on-primary);
   transform: translateX(10px);

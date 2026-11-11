@@ -149,5 +149,6 @@
   "panel.hidden": "Hidden from Other Computers",
   "panel.signedOut": "Visible After You Log In",
   "thisMac.allowHint": "When on, computers and phones on the same RUNNERS account can see this screen and click on it.",
+  "thisMac.allowHintUnsupported": "This screen can't be shown to other computers on this operating system yet.",
   "thisMac.nobody": "No computer is viewing now"
 }

@@ -42,9 +42,17 @@ function rethrowCode(error: unknown): never {
   throw new Error(native.errorCode(error));
 }
 
-function Switch({ label, on, onChange }: { label: string; on: boolean; onChange: () => void }) {
+function Switch({ label, on, onChange, disabled }: { label: string; on: boolean; onChange: () => void; disabled?: boolean }) {
   return (
-    <button type="button" role="switch" aria-label={label} aria-checked={on} className={on ? "switch on" : "switch"} onClick={onChange}>
+    <button
+      type="button"
+      role="switch"
+      aria-label={label}
+      aria-checked={on}
+      className={on ? "switch on" : "switch"}
+      disabled={disabled}
+      onClick={onChange}
+    >
       <span className="switch-knob" />
     </button>
   );
@@ -100,10 +108,12 @@ function ThisMac({ status, link, onLink }: { status: Status; link: Link; onLink:
       </section>
       <section className="s-section">
         <div className="s-card">
-          <Row title={t("menu.allowViewing")} hint={t("thisMac.allowHint")}>
+          {/* Why: Windows and Linux cannot share their screen yet, so the switch reads off there and cannot be pressed. */}
+          <Row title={t("menu.allowViewing")} hint={t(status.supported ? "thisMac.allowHint" : "thisMac.allowHintUnsupported")}>
             <Switch
               label={t("menu.allowViewing")}
-              on={link.allowViewing}
+              on={status.supported && link.allowViewing}
+              disabled={!status.supported}
               onChange={() => void native.setAllow("allowViewing", !link.allowViewing).then(onLink)}
             />
           </Row>

@@ -147,5 +147,6 @@
   "panel.hidden": "Tersembunyi dari komputer lain",
   "panel.signedOut": "Terlihat setelah masuk",
   "thisMac.allowHint": "Jika aktif, komputer dan ponsel dengan akun RUNNERS yang sama dapat melihat layar ini dan mengekliknya.",
+  "thisMac.allowHintUnsupported": "Di sistem operasi ini, layar ini belum bisa ditampilkan ke komputer lain.",
   "thisMac.nobody": "Tidak ada komputer yang melihat saat ini"
 }

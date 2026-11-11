@@ -149,5 +149,6 @@
   "panel.hidden": "Für andere Computer verborgen",
   "panel.signedOut": "Nach der Anmeldung sichtbar",
   "thisMac.allowHint": "Wenn aktiviert, können Computer und Telefone mit demselben RUNNERS-Konto diesen Bildschirm sehen und darauf klicken.",
+  "thisMac.allowHintUnsupported": "Auf diesem Betriebssystem kann dieser Bildschirm anderen Computern noch nicht gezeigt werden.",
   "thisMac.nobody": "Derzeit sieht kein Computer zu"
 }

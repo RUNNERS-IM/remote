@@ -308,6 +308,9 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
   const [info, setInfo] = useState<PeerInfo | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [picture, setPicture] = usePicture();
+  /** Remote is on there (the relay lists it) but no connection opened; pressing the tile tries again at once. */
+  const [unreachable, setUnreachable] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!visible || !computer.online) return;
@@ -329,9 +332,11 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
             setPicture(bytes);
             setProblem(null);
           }
+          setUnreachable(false);
         } catch (error) {
           if (!running) break;
           setProblem(captureError(error));
+          setUnreachable(native.errorCode(error) === "unreachable");
           setPicture(null);
         }
         await wait(TILE_MS);
@@ -340,17 +345,25 @@ function Tile({ computer, visible, onOpen }: { computer: Computer; visible: bool
     return () => {
       running = false;
     };
-  }, [visible, computer.host, computer.online, setPicture]);
+  }, [visible, computer.host, computer.online, setPicture, attempt]);
 
-  const shown = computer.online ? problem : t("computer.offline");
+  const shown = computer.online ? problem : t("computer.offlineNote");
+  const retry = () => {
+    setProblem(null);
+    setUnreachable(false);
+    setAttempt((n) => n + 1);
+  };
   const monitors = info?.displays.length ?? 0;
   return (
-    <button type="button" className="tile" disabled={!computer.online} onClick={onOpen}>
+    <button type="button" className="tile" disabled={!computer.online} onClick={computer.online && unreachable ? retry : onOpen}>
       <div className="tile-screen">
         {picture && !shown ? (
           <img src={picture} alt="" draggable={false} />
         ) : (
-          <div className="empty">{shown ?? t("view.loading")}</div>
+          <div className="empty">
+            {shown ?? t("view.loading")}
+            {computer.online && unreachable && <span className="tile-retry">{t("session.retry")}</span>}
+          </div>
         )}
       </div>
       <div className="tile-label">
@@ -446,7 +459,7 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
     if (!online) {
       // Why: the relay already said it left, so nobody waits for a connection that cannot come.
       setInfo(null);
-      setProblem(t("computer.offline"));
+      setProblem(t("computer.offlineNote"));
       return;
     }
     const check = () => void loadDisplays().then(() => setSerial(peer.serial(host)));

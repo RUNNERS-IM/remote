@@ -172,6 +172,19 @@ export function prepareViewer(onHide: () => void): BrowserWindow {
   window.on("closed", () => {
     viewer = null;
   });
+  // Why: this page holds the connections other devices open to this computer. Its process ended on one Mac while the
+  // app kept running, so the relay still listed it as on and every connection to it failed; the page is loaded again.
+  // Past five reloads in a minute it waits a minute, so a page that cannot start does not take the CPU.
+  const reloads: number[] = [];
+  window.webContents.on("render-process-gone", (_event, details) => {
+    if (quitting || details.reason === "clean-exit") return;
+    console.error("viewer page gone:", details.reason);
+    const now = Date.now();
+    reloads.splice(0, reloads.length, ...reloads.filter((at) => now - at < 60_000), now);
+    setTimeout(() => {
+      if (!window.isDestroyed()) window.webContents.reload();
+    }, reloads.length > 5 ? 60_000 : 1000);
+  });
   load(window, "viewer");
   return window;
 }

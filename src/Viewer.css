@@ -403,6 +403,17 @@
   padding: 8px;
 }
 
+/* Why: the tile itself is the button (a button inside a button is not allowed), so this only looks like one. */
+.tile-retry {
+  display: block;
+  width: fit-content;
+  margin: 8px auto 0;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
 .tile-label {
   display: flex;
   align-items: center;

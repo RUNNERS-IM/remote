@@ -175,6 +175,9 @@ class Outgoing {
       const timer = setTimeout(() => {
         this.waiting.delete(id);
         reject(new Error("unreachable"));
+        // Why close: when the other computer's page restarts, this side can still look connected for a long while, and
+        // every try would wait on the dead connection again; closing it makes the next try connect afresh.
+        this.close();
       }, ASK_TIMEOUT_MS);
       this.waiting.set(id, {
         resolve: (value) => {

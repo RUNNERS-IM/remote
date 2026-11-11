@@ -7,6 +7,7 @@ import { uptime } from "node:os";
 import type { Allow, Input, PermissionKind, PressAt, SettingsTab } from "../preload/api";
 import { startClaude } from "./claude";
 import * as input from "./input";
+import * as keepAlive from "./keepAlive";
 import * as link from "./link";
 import * as login from "./login";
 import { buildMenu, forgetIcons, type Command, type MenuState } from "./menu";
@@ -341,6 +342,7 @@ function start(): void {
   app.dock?.hide();
   registerIpc();
   login.applyDefault();
+  keepAlive.start();
   setAppMenu();
   panel = createPanel();
   panel.on("blur", () => {

@@ -8,7 +8,7 @@ import { SignInSheet, type CodePurpose, type SignMode } from "./runners-account/
 import { locale, statusText, t } from "./i18n";
 import * as native from "./native";
 import type { Link, LogEntry, MenuCommand, MenuState, PermissionKind, SettingsTab, Status } from "./native";
-import appIcon from "./assets/app-icon.png";
+import { useAppIcon } from "./appIcon";
 import "./App.css";
 import "./runners-account/runners-window.css";
 import "./runners-account/runners-account.css";
@@ -147,6 +147,7 @@ function Log({ link }: { link: Link }) {
 
 /** Split's question before the icon goes: hiding it leaves only the Applications folder as a way back. */
 function HideAsk({ onCancel, onHide }: { onCancel: () => void; onHide: () => void }) {
+  const appIcon = useAppIcon();
   return (
     <div className="ra-cover" onMouseDown={(event) => event.target === event.currentTarget && onCancel()}>
       <div className="ra-sheet s-ask" role="alertdialog" aria-label={t("general.hideAsk")}>
@@ -264,6 +265,7 @@ function Account({ link, onLink }: { link: Link; onLink: (link: Link) => void })
 }
 
 export default function Settings() {
+  const appIcon = useAppIcon();
   const first = new URLSearchParams(location.search).get("tab");
   const [tab, setTab] = useState<SettingsTab>(TABS.find((x) => x.id === first)?.id ?? TABS[0].id);
   const [status, setStatus] = useState<Status | null>(null);

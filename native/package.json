@@ -2,7 +2,7 @@
   "name": "@remote/native",
   "private": true,
   "version": "0.0.0",
-  "description": "Remote's native module (napi-rs). Built into remote-native.<platform>-<arch>[-abi].node in this folder.",
+  "description": "Remotrol's native module (napi-rs). Built into remote-native.<platform>-<arch>[-abi].node in this folder.",
   "napi": {
     "binaryName": "remote-native",
     "targets": [

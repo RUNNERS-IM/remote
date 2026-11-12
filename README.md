@@ -1,27 +1,27 @@
-# Remote
+# Remotrol
 
 **English** · [한국어](README.ko.md)
 
 See the screens of the other computers in your office, one monitor at a time, and click or type on them remotely. Claude sessions can use the same remote screens through MCP tools.
 
-Remote is made by RUNNERS-IM for the computers in our office. It is written with [Electron](https://www.electronjs.org) and one Rust native module, like Monitor.
+Remotrol is made by RUNNERS-IM for the computers in our office. It is written with [Electron](https://www.electronjs.org) and one Rust native module, like Monitor.
 
-**Remote is in early development.** The first release is 2.6.1102 ([Releases](https://github.com/RUNNERS-IM/remote/releases)). Computers connect when they are signed in to the same RUNNERS account; the system server that signs in and relays is not up yet, so for now this works only against `scripts/relay-dev.mjs` (see Building from source).
+**Remotrol is in early development.** The first release is 2.6.1102 ([Releases](https://github.com/RUNNERS-IM/remotrol/releases)). Computers connect when they are signed in to the same RUNNERS account; the system server that signs in and relays is not up yet, so for now this works only against `scripts/relay-dev.mjs` (see Building from source).
 
 ## What works now
 
-- Remote sits in the menu bar without a Dock icon. The menu-bar picture shows the state: a frame only when **Remote Off**, an arrow when **Waiting**, and a moving arrow while **Being Viewed**. When Remote is off, the status line says why (**macOS Only** or **Screen Recording Needed**).
+- Remotrol sits in the menu bar without a Dock icon. The menu-bar picture shows the state: a frame only when **Remote Off**, an arrow when **Waiting**, and a moving arrow while **Being Viewed**. When Remotrol is off, the status line says why (**macOS Only** or **Screen Recording Needed**).
 - Clicking or right-clicking the menu-bar icon opens the same panel: the other computers (pressing one opens its screens), Open All Computers, whether this Mac can be seen, Disconnect while someone is looking, then Settings… ⌘, · Help & Feedback · Quit. On Linux, whose trays only open a menu, the same lines are a native menu.
-- The Remote window shows this Mac's displays as tabs and a live picture of the chosen display, about five pictures a second. Pictures are taken with ScreenCaptureKit and sent to the window as JPEG; other computers' screens come as video (below).
-- Remote needs two macOS permissions:
+- The Remotrol window shows this Mac's displays as tabs and a live picture of the chosen display, about five pictures a second. Pictures are taken with ScreenCaptureKit and sent to the window as JPEG; other computers' screens come as video (below).
+- Remotrol needs two macOS permissions:
   - **Screen Recording**, to take pictures of the screen
   - **Accessibility**, to send clicks and keystrokes
 - Clicks are posted with CGEvent, at positions mapped to the chosen display. There is no switch on the viewing side: once the other computer allows clicks, clicking the picture clicks there.
-- **Other computers** (stages 2 and 3): sign in to a RUNNERS account in the Remote window. Remote keeps one connection to the system server's relay (`electron/main/relay.ts`), which lists the computers and phones of the same account that are online and carries the messages that set up a WebRTC connection between two of them (`src/peer.ts`). The screen goes over that connection as video (up to 15 pictures a second), and info, still pictures and clicks over its data channel; nothing of the screen passes through the server. Every computer of the account that has Remote running gets a tile in the Remote window; choosing one shows its monitors and screen, and clicking the picture clicks there and keys typed after clicking go there (a text box sends Korean and other composed text). Remote answers only devices the relay lists for the same account, and the names in the connection log are the ones the relay lists.
+- **Other computers** (stages 2 and 3): sign in to a RUNNERS account in the Remotrol window. Remotrol keeps one connection to the system server's relay (`electron/main/relay.ts`), which lists the computers and phones of the same account that are online and carries the messages that set up a WebRTC connection between two of them (`src/peer.ts`). The screen goes over that connection as video (up to 15 pictures a second), and info, still pictures and clicks over its data channel; nothing of the screen passes through the server. Every computer of the account that has Remotrol running gets a tile in the Remotrol window; choosing one shows its monitors and screen, and clicking the picture clicks there and keys typed after clicking go there (a text box sends Korean and other composed text). Remotrol answers only devices the relay lists for the same account, and the names in the connection log are the ones the relay lists.
 - **Account**: signed out, the window shows a sign-in form (email and password, or making an account); **Settings › Account** shows the account with a **Sign Out** button. The password is sent as its SHA-256, and the tokens are kept encrypted by the OS (`electron/main/account.ts`).
-- On the computer being looked at: **Let Other Computers See This** (on by default) in the panel and the menu, which covers seeing, clicking and typing together (clicks and keys also need the Accessibility permission on that computer), the yellow **Being Viewed** state with who is looking, **Disconnect Now**, which turns seeing off at once, and a connection log in the Remote window (who started viewing, clicked, pressed keys or typed; never what was typed).
+- On the computer being looked at: **Let Other Computers See This** (on by default) in the panel and the menu, which covers seeing, clicking and typing together (clicks and keys also need the Accessibility permission on that computer), the yellow **Being Viewed** state with who is looking, **Disconnect Now**, which turns seeing off at once, and a connection log in the Remotrol window (who started viewing, clicked, pressed keys or typed; never what was typed).
 - **Claude** (stage 4): `resources/mcp/remote-mcp.mjs` is an MCP server with six tools: `remote_computers`, `remote_displays`, `remote_screenshot`, `remote_click`, `remote_type`, `remote_key`. Looking needs no approval (the other computer's switch decides). Clicking and typing follow the allow list: in an app on it Claude acts at once; in any other app a person at the computer Claude runs on approves first and can add the app to the list; in a macOS security window (password prompts, System Settings) a person approves every time. Claude cannot click a computer that has **Let Other Computers See This** off or has not been given Accessibility, and nobody is asked in that case.
-- Remote checks for updates once a day (see [PRIVACY.md](PRIVACY.md)) and opens at login unless that line is turned off.
+- Remotrol checks for updates once a day (see [PRIVACY.md](PRIVACY.md)) and opens at login unless that line is turned off.
 - Screen text in 20 languages: Arabic, Chinese (Simplified), Chinese (Traditional), Dutch, English, Finnish, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish, Thai, Turkish and Vietnamese.
 
 ## Roadmap
@@ -32,15 +32,15 @@ Remote is made by RUNNERS-IM for the computers in our office. It is written with
 4. MCP tools for Claude sessions with approval (done)
 5. Windows and Linux receiving side, phone apps for the viewing side (not started; Windows and Linux builds can view other computers but cannot be viewed)
 
-## Using Remote with Claude
+## Using Remotrol with Claude
 
 ```sh
-claude mcp add remote -- env ELECTRON_RUN_AS_NODE=1 /Applications/Remote.app/Contents/MacOS/Remote \
-  /Applications/Remote.app/Contents/Resources/mcp/remote-mcp.mjs
+claude mcp add remote -- env ELECTRON_RUN_AS_NODE=1 /Applications/Remotrol.app/Contents/MacOS/Remotrol \
+  /Applications/Remotrol.app/Contents/Resources/mcp/remote-mcp.mjs
 ```
 
-Remote must be running. The script talks to it over a socket only your user can open (`claude.sock` in Remote's
-folder under Application Support).
+Remotrol must be running. The script talks to it over a socket only your user can open (`claude.sock` in the Remote
+folder under Application Support, which keeps its name from before the rename).
 
 ## Building from source
 
@@ -58,14 +58,14 @@ For an Intel Mac build on Apple silicon, also run `pnpm native --target x86_64-a
 
 - `electron/main/` is the main process (tray, panel, viewer and Settings windows, status, updates), `electron/preload/` the bridge the page talks through, `src/` the panel, viewer and Settings pages.
 - `native/` is the one native module (napi-rs): display capture, posted clicks, the app in front, permission checks and the tray picture.
-- `electron/main/account.ts` signs in and keeps the tokens, `electron/main/relay.ts` keeps the relay connection, and `src/peer.ts` (in the Remote window, made hidden at launch) holds the WebRTC connections. `electron/main/link.ts` answers other devices and asks them for Claude; `electron/main/claude.ts` serves the MCP script.
+- `electron/main/account.ts` signs in and keeps the tokens, `electron/main/relay.ts` keeps the relay connection, and `src/peer.ts` (in the Remotrol window, made hidden at launch) holds the WebRTC connections. `electron/main/link.ts` answers other devices and asks them for Claude; `electron/main/claude.ts` serves the MCP script.
 - Screen text lives in `locales/`, with `ko.json` as the source; the page and the main process read the same files.
 - Debug runs take `REMOTE_OPEN=panel|viewer|settings[:tab]` `REMOTE_THEME=dark|light`, and `REMOTE_SHOT=<file.png>` to save the opened window as a picture. A packaged app ignores them.
 - To try two computers on one Mac without the server: `node scripts/relay-dev.mjs` (a stand-in relay and login on 127.0.0.1:8790 that takes any email), then start each copy with `REMOTE_API_URL=http://127.0.0.1:8790`, its own `--user-data-dir`, and `REMOTE_FAKE_SCREEN=1` to send a drawn test screen instead of the real one.
 
-When run with `pnpm dev`, macOS asks for permissions on behalf of the terminal app that started Remote, not Remote itself.
+When run with `pnpm dev`, macOS asks for permissions on behalf of the terminal app that started Remotrol, not Remotrol itself.
 
-So far Remote has been built and checked on macOS (Apple silicon) only. On Windows and Linux it only says that Remote works on macOS for now.
+So far Remotrol has been built and checked on macOS (Apple silicon) only. On Windows and Linux it only says that Remotrol works on macOS for now.
 
 ## Releasing
 
@@ -88,8 +88,8 @@ Korean screens read the `## 한국어` list, every other language the `## Englis
 
 ## Uninstall
 
-1. Choose **Quit Remote** from the menu bar.
-2. Move Remote from Applications to the Trash.
+1. Choose **Quit Remotrol** from the menu bar.
+2. Move Remotrol from Applications to the Trash.
 3. Remove the permissions in System Settings → Privacy & Security → Screen & System Audio Recording and Accessibility, or run:
 
 ```sh
@@ -99,7 +99,7 @@ tccutil reset Accessibility im.runners.remote
 
 ## Privacy
 
-Remote collects nothing for Runners. Screens travel only between computers in the same private network. See [PRIVACY.md](PRIVACY.md).
+Remotrol collects nothing for Runners. Screens travel only between computers in the same private network. See [PRIVACY.md](PRIVACY.md).
 
 ## License
 

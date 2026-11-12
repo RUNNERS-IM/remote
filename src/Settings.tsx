@@ -210,7 +210,7 @@ function General() {
             </>
           )}
           <Separator />
-          <Row title={`Remote ${version}`}>
+          <Row title={`Remotrol ${version}`}>
             <button type="button" className="rw-button" onClick={() => run("updates")}>
               {t("menu.checkUpdates")}
             </button>
@@ -323,7 +323,7 @@ export default function Settings() {
             <RunnersAbout
               embedded
               appId="remote"
-              appName="Remote"
+              appName="Remotrol"
               appIcon={appIcon}
               website={WEBSITE}
               github={GITHUB}

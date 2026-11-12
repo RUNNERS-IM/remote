@@ -99,7 +99,7 @@ let apacheUsed = false;
 const parts = [
   "# Third-Party Notices",
   "",
-  "Remote includes software from the projects below. Their copyright and license notices follow.",
+  "Remotrol includes software from the projects below. Their copyright and license notices follow.",
   "The menu icons are drawn from Lucide (ISC License), listed under lucide-react.",
 ];
 for (const e of entries) {

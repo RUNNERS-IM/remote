@@ -50,7 +50,7 @@ export function createPanel(): BrowserWindow {
     alwaysOnTop: true,
     hasShadow: true,
     roundedCorners: true,
-    title: "Remote",
+    title: "Remotrol",
     ...blur(),
     webPreferences: { preload, sandbox: true, contextIsolation: true },
   });
@@ -151,7 +151,7 @@ export function prepareViewer(onHide: () => void): BrowserWindow {
     minHeight: 400,
     useContentSize: true,
     show: false,
-    title: "Remote",
+    title: "Remotrol",
     backgroundColor: windowBackground(),
     autoHideMenuBar: true,
     // Why: a hidden page is slowed down by default, which would stall the video other devices are watching.
@@ -240,7 +240,7 @@ export function askUpdate(offer: UpdateOffer, focus: boolean): UpdatePrompt {
     hasShadow: true,
     roundedCorners: true,
     alwaysOnTop: true,
-    title: "Remote",
+    title: "Remotrol",
     backgroundColor: windowBackground(),
     webPreferences: { preload, sandbox: true, contextIsolation: true },
   });

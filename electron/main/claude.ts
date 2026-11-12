@@ -99,7 +99,7 @@ async function approved(computer: string, input: Input): Promise<boolean> {
   const buttons = security ? [t("claude.allowOnce"), t("claude.deny")] : [t("claude.allowOnce"), t("claude.allowApp"), t("claude.deny")];
   const { response } = await dialog.showMessageBox({
     type: security ? "warning" : "question",
-    title: "Remote",
+    title: "Remotrol",
     message: t("claude.ask", { computer: where, app: app?.name || t("claude.unknownApp") }),
     detail: `${describe(input)}${security ? `\n\n${t("claude.security")}` : ""}`,
     buttons,
@@ -119,7 +119,7 @@ async function send(computer: string, input: Input): Promise<void> {
   if (!(await approved(computer, input))) throw new Error("denied: the person at this computer said no");
   if (computer !== HERE) return link.peerInput(computer, input);
   if (!status.SUPPORTED) throw new Error("unsupported");
-  if (!status.permissions().accessibility) throw new Error("accessibility: allow Remote in Accessibility first");
+  if (!status.permissions().accessibility) throw new Error("accessibility: allow Remotrol in Accessibility first");
   screens.sendInput(input);
 }
 

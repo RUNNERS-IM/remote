@@ -37,6 +37,13 @@ export declare function requestScreenRecording(): boolean
  */
 export declare function sendInput(json: string): Array<number>
 
+/**
+ * Windows and Linux: posts one input (JSON, shape in `input.rs`) at screen pixel `x`, `y`, which the main process
+ * works out from Electron's display list; keys and text ignore the spot. Returns the point like `sendInput`.
+ * Rejects with `unsupported` where input cannot be posted (a Wayland-only desktop), `blocked` when Windows refused it.
+ */
+export declare function sendInputAt(json: string, x: number, y: number): Array<number>
+
 /** How many pictures one bob of the arrow has, and how long each one shows (milliseconds). */
 export declare function trayFrames(): Array<number>
 

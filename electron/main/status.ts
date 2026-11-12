@@ -9,10 +9,17 @@ import { app } from "electron";
 import * as account from "./account";
 import { native } from "./native";
 
-/** Windows and Linux capture and input are not written yet (plan stage 6). Debug runs can pretend to be another system
- *  with `REMOTE_TEST_PLATFORM=win32|linux`, so the Windows and Linux pages can be captured on a Mac. */
+/** Debug runs can pretend to be another system with `REMOTE_TEST_PLATFORM=win32|linux|wayland`, so the Windows and
+ *  Linux pages can be captured on a Mac. */
 const PLATFORM = (!app.isPackaged && process.env.REMOTE_TEST_PLATFORM) || process.platform;
-export const SUPPORTED = PLATFORM === "darwin";
+/** Linux under Wayland lets no program read the screen or post input without its own consent prompts (portals), which
+ *  are not written yet; X11 desktops work like Windows. */
+const WAYLAND = PLATFORM === "wayland" || (PLATFORM === "linux" && process.env.XDG_SESSION_TYPE === "wayland");
+export const SUPPORTED = PLATFORM === "darwin" || PLATFORM === "win32" || (PLATFORM === "linux" && !WAYLAND);
+/** Which system this is, told to viewers so their shortcut buttons fit it. */
+export const SYSTEM: "mac" | "windows" | "linux" = PLATFORM === "darwin" ? "mac" : PLATFORM === "win32" ? "windows" : "linux";
+/** Only macOS has permissions to ask for (Screen Recording, Accessibility); Windows and X11 let any program do both. */
+export const ASKS_PERMISSIONS = PLATFORM === "darwin";
 
 /** A viewer asks for a picture about every 200 ms, so a longer gap means nobody is looking any more. */
 const VIEWING_GAP_MS = 1500;
@@ -42,6 +49,7 @@ export function forgetViewers(): void {
 
 export function permissions(): Permissions {
   if (!SUPPORTED) return { screenRecording: false, accessibility: false };
+  if (!ASKS_PERMISSIONS) return { screenRecording: true, accessibility: true };
   return JSON.parse(native.permissions()) as Permissions;
 }
 
@@ -65,5 +73,5 @@ export function current(): Status {
   }
   const watching = state === "waiting" ? viewers() : [];
   if (watching.length > 0) state = "viewing";
-  return { computer, state, reason, supported: SUPPORTED, permissions: allowed, viewers: watching };
+  return { computer, state, reason, supported: SUPPORTED, asksPermissions: ASKS_PERMISSIONS, permissions: allowed, viewers: watching };
 }

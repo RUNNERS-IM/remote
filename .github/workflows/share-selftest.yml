@@ -1,0 +1,93 @@
+# Windows · Linux 에서 화면 공유 받는 쪽(화면 목록 · 정지 사진 · 포인터 · 클릭 · 스크롤 · 키 · 글자)이 실제로 되는지 본다.
+# 사무실에 Windows · Linux 기계가 없어서 GitHub 기계에서 앱을 REMOTE_SELFTEST 로 한 번 띄워 결과를 남긴다.
+# 결과(selftest.json · 화면 사진 · 설정 창 사진)는 실행 첨부 파일로 받는다.
+name: Share selftest
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/share-win-linux]
+
+jobs:
+  selftest:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            runner: windows-latest
+          - os: linux
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/native/target.noindex
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native -> target.noindex
+
+      # Xvfb 는 화면 없는 X 서버다. XTest 확장이 켜져 있어 입력을 보낼 수 있고, 창 관리자가 있어야 창이 포커스를 받는다.
+      - name: Install the X server for Linux
+        if: matrix.os == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb openbox x11-utils
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm native
+      - run: pnpm build
+
+      - name: Run the selftest
+        shell: bash
+        run: |
+          set -uo pipefail
+          OUT="$RUNNER_TEMP/selftest"; mkdir -p "$OUT"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+          ELECTRON=./node_modules/.bin/electron
+          if [ "${{ matrix.os }}" = linux ]; then
+            Xvfb :99 -screen 0 1920x1080x24 +extension XTEST & sleep 3
+            export DISPLAY=:99
+            openbox & sleep 2
+            xdpyinfo | grep -E "dimensions|XTEST" || true
+            ARGS=(--no-sandbox)
+          else
+            ARGS=()
+          fi
+          REMOTE_SELFTEST="$OUT" timeout 90 $ELECTRON . "${ARGS[@]}" --lang=ko 2>&1 | tee "$OUT/selftest.log"
+          for THEME in light dark; do
+            REMOTE_OPEN=settings:mac REMOTE_THEME=$THEME REMOTE_SHOT="$OUT/settings-$THEME.png" timeout 40 $ELECTRON . "${ARGS[@]}" --lang=ko > "$OUT/settings-$THEME.log" 2>&1
+          done
+          ls -la "$OUT"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: selftest-${{ matrix.os }}
+          path: ${{ env.OUT }}
+
+      # 판정: 화면이 하나 이상, 화면마다 사진, 포인터가 보낸 곳에 있음, 시험 창이 클릭 · 키 · 글자를 받음.
+      - name: Check the result
+        shell: bash
+        run: |
+          node -e '
+            const r = require(process.env.OUT + "/selftest.json");
+            const bad = [];
+            if (!r.displays?.length) bad.push("no displays");
+            for (const d of r.displays ?? []) if (!r["capture-" + d.id]?.bytes) bad.push("capture " + d.id + ": " + JSON.stringify(r["capture-" + d.id]));
+            const m = r.move ?? {};
+            if (!m.sentTo || Math.abs(m.sentTo[0] - m.pointerNow?.x) > 2 || Math.abs(m.sentTo[1] - m.pointerNow?.y) > 2) bad.push("pointer: " + JSON.stringify(m));
+            for (const k of ["mousedown", "wheel", "keydown"]) if (!r.received?.events?.includes(k)) bad.push("window got no " + k);
+            if (!r.received?.text?.includes("Remote 안녕")) bad.push("text: " + JSON.stringify(r.received?.text));
+            console.log(JSON.stringify({ status: r.status, received: r.received, move: r.move }, null, 2));
+            if (bad.length) { console.log("::error::" + bad.join("; ")); process.exit(1); }
+          '

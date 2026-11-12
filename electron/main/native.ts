@@ -19,6 +19,9 @@ export interface Native {
   requestAccessibility(): boolean;
   /** Posts one input (JSON); returns the global point `[x, y]` a click or move went to, or `[]`. */
   sendInput(json: string): number[];
+  /** Windows and Linux: posts one input at screen pixel `x`, `y` (keys and text ignore it); returns `[x, y]` or `[]`.
+   *  Throws `unsupported` (no X server), `blocked` (Windows refused it), `position` or a message. */
+  sendInputAt(json: string, x: number, y: number): number[];
   /** JSON `{ bundleId, name }` of the app in front, or `null`. */
   frontApp(): string;
   trayPng(status: string, frame: number, r: number, g: number, b: number): Buffer;

@@ -46,8 +46,10 @@ export type Status = {
   state: State;
   /** Set only while off. */
   reason: OffReason | null;
-  /** False on Windows and Linux, where nothing works yet. */
+  /** False only on Linux under Wayland, where nothing works yet. */
   supported: boolean;
+  /** True on macOS, the only system with permissions to ask for; the permission rows show only there. */
+  asksPermissions: boolean;
   permissions: Permissions;
   /** The computers looking at this one right now; empty unless the state is viewing. */
   viewers: string[];
@@ -112,6 +114,8 @@ export type PeerInfo = {
   viewing: boolean;
   control: boolean;
   reason: OffReason | null;
+  /** The other computer's system, for the shortcut buttons; computers on older versions leave it out (they are Macs). */
+  system?: "mac" | "windows" | "linux";
 };
 
 /** Where the press that asked for a click happened, in screen points, so Remote can tell its own click coming back. */

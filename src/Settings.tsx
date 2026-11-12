@@ -120,7 +120,7 @@ function ThisMac({ status, link, onLink }: { status: Status; link: Link; onLink:
         </div>
       </section>
       {/* Why: Screen Recording and Accessibility are macOS permissions; Windows and Linux have nothing to turn on. */}
-      {status.supported && (
+      {status.asksPermissions && (
         <section className="s-section">
           <h2 className="s-section-title">{t("permission.title")}</h2>
           <div className="s-card">

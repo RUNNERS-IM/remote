@@ -85,9 +85,11 @@ jobs:
             const bad = [];
             if (!r.displays?.length) bad.push("no displays");
             for (const d of r.displays ?? []) if (!r["capture-" + d.id]?.bytes) bad.push("capture " + d.id + ": " + JSON.stringify(r["capture-" + d.id]));
-            const m = r.move ?? {};
-            if (!m.sentTo || Math.abs(m.sentTo[0] - m.pointerNow?.x) > 2 || Math.abs(m.sentTo[1] - m.pointerNow?.y) > 2) bad.push("pointer: " + JSON.stringify(m));
-            for (const k of ["mousedown", "wheel", "keydown"]) if (!r.received?.events?.includes(k)) bad.push("window got no " + k);
+            // 클릭은 시험 창(600x400) 가운데에 보냈으므로 창 안 좌표 (300, 200) 근처에 떨어져야 한다.
+            const down = (r.received?.events ?? []).find((e) => e.startsWith("mousedown "));
+            const [cx, cy] = (down ?? "mousedown -99,-99").slice(10).split(",").map(Number);
+            if (Math.abs(cx - 300) > 3 || Math.abs(cy - 200) > 3) bad.push("click landed at " + down);
+            for (const k of ["wheel", "keydown"]) if (!r.received?.events?.some((e) => e.startsWith(k))) bad.push("window got no " + k);
             if (!r.received?.text?.includes("Remote 안녕")) bad.push("text: " + JSON.stringify(r.received?.text));
             console.log(JSON.stringify({ status: r.status, received: r.received, move: r.move }, null, 2));
             if (bad.length) { console.log("::error::" + bad.join("; ")); process.exit(1); }

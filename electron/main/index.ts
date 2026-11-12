@@ -301,11 +301,11 @@ async function runSelftest(folder: string): Promise<void> {
   steps.displays = list;
   const main = list[0];
   // Why: a window of our own records what reaches it, so the run shows the input landed, not only that it was posted.
-  const probe = new BrowserWindow({ width: 600, height: 400, show: false, title: "Remote selftest" });
+  const probe = new BrowserWindow({ width: 600, height: 400, useContentSize: true, show: false, title: "Remote selftest" });
   await probe.loadURL(
     "data:text/html;charset=utf-8," +
       encodeURIComponent(
-        '<textarea id="t" style="width:100%;height:100%"></textarea><script>window.got=[];for(const k of ["mousedown","wheel","keydown"])addEventListener(k,()=>got.push(k));</script>',
+        '<textarea id="t" style="width:100%;height:100%"></textarea><script>window.got=[];addEventListener("mousedown",(e)=>got.push("mousedown "+e.clientX+","+e.clientY));addEventListener("wheel",()=>got.push("wheel"));addEventListener("keydown",(e)=>got.push("keydown "+e.key));</script>',
       ),
   );
   if (main) probe.setPosition(main.x + 100, main.y + 100);
@@ -323,7 +323,7 @@ async function runSelftest(folder: string): Promise<void> {
     });
   }
   if (main) {
-    const box = probe.getBounds();
+    const box = probe.getContentBounds();
     const x = (box.x + box.width / 2 - main.x) / main.width;
     const y = (box.y + box.height / 2 - main.y) / main.height;
     await step("move", () => {

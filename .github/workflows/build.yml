@@ -99,15 +99,25 @@ jobs:
           mkdir -p "$SECRETS" && chmod 700 "$SECRETS"
           KEYCHAIN="$RUNNER_TEMP/remote-signing.keychain-db"
           KEYCHAIN_PASSWORD="$(uuidgen)"
-          # The search list is put back as it was when the run ends.
-          security list-keychains -d user | tr -d '" ' > "$SECRETS/keychains-before"
+          # 맥 스튜디오에서는 다른 앱(Split · Draw …)의 출시 작업도 같은 사용자 키체인 목록을 고친다.
+          # 목록 전체를 저장했다 되돌리면 그사이 다른 작업이 넣은 키체인이 빠져 그 작업의 codesign 이
+          # "no identity found" 로 멈춘다(2026-11-12 Remote run 43197215234 · Split run 43195273439).
+          # 그래서 이 키체인 하나만 지금 목록에 넣고 빼는 작은 스크립트를 두고, 서명 직전마다 다시 넣는다.
+          cat > "$RUNNER_TEMP/remote-keychain-on.sh" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+          K="$RUNNER_TEMP/remote-signing.keychain-db"
+          OTHERS=$(security list-keychains -d user | tr -d '" ' | grep -vxF "$K" || true)
+          security list-keychains -d user -s "$K" $OTHERS
+          SH
+          chmod 700 "$RUNNER_TEMP/remote-keychain-on.sh"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 3600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           echo "$DEVELOPER_ID_P12_BASE64" | base64 --decode > "$SECRETS/developer-id.p12"
           security import "$SECRETS/developer-id.p12" -k "$KEYCHAIN" -P "$DEVELOPER_ID_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
-          security list-keychains -d user -s "$KEYCHAIN" $(cat "$SECRETS/keychains-before")
+          "$RUNNER_TEMP/remote-keychain-on.sh"
           rm "$SECRETS/developer-id.p12"
           security find-identity -v -p codesigning "$KEYCHAIN"
           printf '%s' "$ASC_API_KEY_P8" > "$SECRETS/AuthKey_${ASC_API_KEY_ID}.p8"
@@ -136,7 +146,8 @@ jobs:
           # Why: stapling inside electron-builder fails now and then when Apple's ticket server drops the
           # connection (NSURLErrorDomain -1005, stapler error 68); a second try a little later goes through.
           for TRY in 1 2 3; do
-            ${HEAVY:-} pnpm exec electron-builder --config electron-builder.config.cjs ${{ inputs.builder }} --publish never && break
+            # heavy-run 차례를 기다리는 동안 다른 작업이 키체인 목록을 바꿀 수 있어, 차례를 받은 뒤 다시 넣는다.
+            ${HEAVY:-} bash -c '[ "${{ inputs.os }}" != macos ] || "$RUNNER_TEMP/remote-keychain-on.sh"; exec pnpm exec electron-builder --config electron-builder.config.cjs ${{ inputs.builder }} --publish never' && break
             [ "$TRY" = 3 ] && exit 1
             echo "::warning::electron-builder failed (try $TRY), trying again in 30 seconds"
             sleep 30
@@ -151,6 +162,7 @@ jobs:
         run: |
           set -euo pipefail
           for DMG in dist.noindex/*.dmg; do
+            "$RUNNER_TEMP/remote-keychain-on.sh"
             # electron-builder signs the app inside but not the DMG; Gatekeeper wants the DMG signed too.
             codesign --sign "$DEVELOPER_ID_SHA1" --keychain "$CSC_KEYCHAIN" --timestamp "$DMG"
             xcrun notarytool submit "$DMG" --key "$APPLE_API_KEY_PATH" --key-id "$ASC_API_KEY_ID" --issuer "$ASC_API_ISSUER_ID" --wait
@@ -196,9 +208,11 @@ jobs:
         if: always() && inputs.os == 'macos'
         run: |
           SECRETS="$RUNNER_TEMP/remote-secrets"
-          if [ -f "$SECRETS/keychains-before" ]; then
-            security list-keychains -d user -s $(cat "$SECRETS/keychains-before")
-          fi
+          K="$RUNNER_TEMP/remote-signing.keychain-db"
+          # 지금 목록에서 이 키체인만 뺀다. 다른 작업이 넣은 키체인은 그대로 둔다.
+          OTHERS=$(security list-keychains -d user | tr -d '" ' | grep -vxF "$K" || true)
+          security list-keychains -d user -s $OTHERS
+          rm -f "$RUNNER_TEMP/remote-keychain-on.sh"
           security delete-keychain "$RUNNER_TEMP/remote-signing.keychain-db" 2>/dev/null || true
           rm -rf "$SECRETS"
           # Why: on an office Mac the machine stays after the job. Fail the run when the signing key is still

@@ -85,6 +85,41 @@ jobs:
       - run: ${HEAVY:-} pnpm build
         shell: bash
 
+      # 사무실 맥의 서명 차례. 앱마다 저장소 러너가 따로 있어 Mac 판 작업이 동시에 돌 수 있는데, 작업마다 같은 사용자의
+      # 키체인 검색 목록을 바꾸고 끝날 때 시작 때 모습으로 되돌린다. 그래서 한 작업이 끝나는 순간 아직 서명 중인 다른 작업의
+      # 임시 키체인이 목록에서 빠져 서명이 깨졌다(2026-11-12 Split · Prompt: errSecInternalComponent, no identity found).
+      # 키체인 준비부터 키체인 지우기까지를 그 맥 전체에서 한 번에 하나만 돌게 한다.
+      #   잠금: ~/.runners/signing.lock 디렉터리(mkdir 은 한 번에 한 작업만 성공). 안의 owner 파일에 누가 잡았는지 적는다.
+      #   풀기: 맨 끝 always 단계에서, owner 가 자기일 때만 지운다. 휴대폰 EAS · fastlane 빌드도 같은 경로와 방식을 쓴다.
+      #   오래된 잠금: 150분(작업 시간 제한 120분보다 김)이 지난 것은 주인이 죽은 것으로 보고 치운다. 60분을 기다려도 못 잡으면 실패.
+      - name: Wait for the signing turn on an office Mac
+        if: inputs.os == 'macos' && runner.environment == 'self-hosted'
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOCK="$HOME/.runners/signing.lock"
+          OWNER="$GITHUB_REPOSITORY run $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT"
+          mkdir -p "$HOME/.runners"
+          START=$(date +%s)
+          until mkdir "$LOCK" 2>/dev/null; do
+            NOW=$(date +%s)
+            HELD=$(( NOW - $(stat -f %m "$LOCK" 2>/dev/null || echo "$NOW") ))
+            if [ "$HELD" -gt 9000 ]; then
+              echo "::warning::Removing a signing lock held for $HELD s by $(cat "$LOCK/owner" 2>/dev/null)"
+              rm -rf "$LOCK"
+              continue
+            fi
+            if [ $(( NOW - START )) -gt 3600 ]; then
+              echo "::error::Waited 60 minutes for the signing lock held by $(cat "$LOCK/owner" 2>/dev/null)"
+              exit 1
+            fi
+            echo "Waiting for the signing lock held by $(cat "$LOCK/owner" 2>/dev/null) for $HELD s"
+            sleep 20
+          done
+          echo "$OWNER" > "$LOCK/owner"
+          echo "SIGNING_LOCK_OWNER=$OWNER" >> "$GITHUB_ENV"
+          echo "Took the signing lock after $(( $(date +%s) - START )) s"
+
       # Split 과 같은 방식: 이 실행 동안만 쓰는 임시 키체인에 Developer ID 를 넣고, 끝나면 지운다.
       - name: Prepare a temporary signing keychain
         if: inputs.os == 'macos'
@@ -206,6 +241,7 @@ jobs:
 
       - name: Remove the temporary keychain and keys
         if: always() && inputs.os == 'macos'
+        shell: bash
         run: |
           SECRETS="$RUNNER_TEMP/remote-secrets"
           K="$RUNNER_TEMP/remote-signing.keychain-db"
@@ -221,3 +257,16 @@ jobs:
             echo "::error::The signing keychain is still on this machine"; exit 1
           fi
           echo "Keychains left on this machine:"; security list-keychains -d user
+
+      # 앞 단계가 실패해도 잠금은 돌려준다. 자기가 잡은 잠금일 때만 지운다.
+      - name: Give the signing lock back
+        if: always() && env.SIGNING_LOCK_OWNER != ''
+        shell: bash
+        run: |
+          LOCK="$HOME/.runners/signing.lock"
+          if [ "$(cat "$LOCK/owner" 2>/dev/null)" = "$SIGNING_LOCK_OWNER" ]; then
+            rm -rf "$LOCK"
+            echo "Gave the signing lock back"
+          else
+            echo "::warning::The signing lock is no longer ours: $(cat "$LOCK/owner" 2>/dev/null)"
+          fi

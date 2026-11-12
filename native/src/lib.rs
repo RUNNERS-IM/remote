@@ -1,11 +1,12 @@
 //! Remote's native module, loaded by the Electron main process (electron/main/native.ts).
 //! Why one module: RUNNERS apps reach OS features through a single Node native module instead of helper programs.
 //! Taking a picture runs off the main thread and returns a Promise; the rest is quick and answers at once.
-//! Everything here works on macOS only for now; on Windows and Linux the same calls answer "unsupported" or empty,
-//! and the app says so on screen.
+//! Pictures, displays and permissions are macOS only (Windows and Linux use Electron's own capture and screen list);
+//! input works on macOS, Windows and Linux (X11).
 
 mod capture;
 mod input;
+mod keymap;
 mod permissions;
 mod tray;
 
@@ -110,7 +111,17 @@ pub fn front_app() -> Result<String> {
 #[napi]
 pub fn send_input(json: String) -> Result<Vec<f64>> {
     let input: input::Input = serde_json::from_str(&json).map_err(|e| Error::from_reason(e.to_string()))?;
-    let at = input::send(&input).map_err(Error::from_reason)?;
+    let at = input::send(&input, None).map_err(Error::from_reason)?;
+    Ok(at.map_or_else(Vec::new, |(x, y)| vec![x, y]))
+}
+
+/// Windows and Linux: posts one input (JSON, shape in `input.rs`) at screen pixel `x`, `y`, which the main process
+/// works out from Electron's display list; keys and text ignore the spot. Returns the point like `sendInput`.
+/// Rejects with `unsupported` where input cannot be posted (a Wayland-only desktop), `blocked` when Windows refused it.
+#[napi]
+pub fn send_input_at(json: String, x: f64, y: f64) -> Result<Vec<f64>> {
+    let input: input::Input = serde_json::from_str(&json).map_err(|e| Error::from_reason(e.to_string()))?;
+    let at = input::send(&input, Some((x, y))).map_err(Error::from_reason)?;
     Ok(at.map_or_else(Vec::new, |(x, y)| vec![x, y]))
 }
 

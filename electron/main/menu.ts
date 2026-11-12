@@ -1,6 +1,6 @@
-// The right-click tray menu, with the same groups as the left-click panel and as Monitor's: the status line,
-// Disconnect while someone is looking, Open Remote, the Allow switch once connected, the two settings,
-// About / Check for Updates… / Help & Feedback, Quit.
+// The tray menu on Linux, whose trays only open a menu set beforehand (macOS and Windows open the panel on either
+// click): the status line, Disconnect while someone is looking, Open Remote, the Allow switch once connected,
+// Settings… / Check for Updates… / Help & Feedback, Quit.
 // Icons are the Lucide PNGs from scripts/menu-icons.sh (resources/menu/).
 import { app, Menu, MenuItem, nativeImage, nativeTheme } from "electron";
 import { readFileSync } from "node:fs";
@@ -43,8 +43,8 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
     });
   // Why: on/off lines keep the native check mark (decision 「[PROGRAM] 켬 끔 토글」 2A) and an icon like every other line;
   // macOS draws the check in its own column to the left of the icon, so all labels line up.
-  const check = (id: Command, key: string, iconName: string, on: boolean) =>
-    new MenuItem({ id, label: t(key), icon: icon(iconName), type: "checkbox", checked: on, click: () => run(id) });
+  const check = (id: Command, key: string, iconName: string, on: boolean, enabled = true) =>
+    new MenuItem({ id, label: t(key), icon: icon(iconName), type: "checkbox", checked: on, enabled, click: () => run(id) });
   const separator = () => new MenuItem({ type: "separator" });
   return Menu.buildFromTemplate([
     { label: statusLine(status), icon: icon(DOT[status.state]), enabled: false },
@@ -53,14 +53,13 @@ export function buildMenu(status: Status, state: MenuState, run: (command: Comma
     separator(),
     ...(state.linked
       ? [
-          check("allowViewing", "menu.allowViewing", "eye", state.allowViewing),
+          // Why: Windows and Linux cannot share their screen yet, so the line reads off and cannot be pressed there.
+          check("allowViewing", "menu.allowViewing", "eye", status.supported && state.allowViewing, status.supported),
           separator(),
         ]
       : []),
-    check("login", "menu.openAtLogin", "power", state.openAtLogin),
-    check("autoUpdate", "menu.autoUpdate", "download", state.autoUpdate),
-    separator(),
-    line("about", "menu.about", "info"),
+    // Why: the other on/off lines live in Settings › General (shared decision 2026-11-07 2A).
+    line("settings", "menu.settings", "settings", "CmdOrCtrl+,"),
     line("updates", "menu.checkUpdates", "refresh-cw"),
     line("help", "menu.help", "circle-help"),
     separator(),

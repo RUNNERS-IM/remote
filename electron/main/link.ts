@@ -13,9 +13,10 @@
 // clicking is a bigger trust step, so it starts off. Disconnect turns seeing off, which also stops clicking.
 import { app, clipboard, desktopCapturer, ipcMain, nativeImage, type WebContents } from "electron";
 import { randomUUID } from "node:crypto";
-import type { Allow, Computer, Input, Link, LogEntry, PeerInfo } from "../preload/api";
+import type { Allow, Computer, Display, Input, Link, LogEntry, PeerInfo } from "../preload/api";
 import * as account from "./account";
 import { native } from "./native";
+import * as screens from "./screens";
 import * as relay from "./relay";
 import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
@@ -33,7 +34,7 @@ const FAKE_SCREEN = DEV && process.env.REMOTE_FAKE_SCREEN === "1";
  *  viewing on a Mac with one. */
 const FAKE_DISPLAYS = FAKE_SCREEN ? Math.min(4, Number(process.env.REMOTE_FAKE_DISPLAYS) || 0) : 0;
 
-function fakeDisplays(): unknown[] {
+function fakeDisplays(): Display[] {
   return Array.from({ length: FAKE_DISPLAYS }, (_, i) => {
     const [width, height] = i === 1 ? [1496, 967] : [2560, 1440];
     return { id: i + 1, name: `Test ${i + 1}`, main: i === 0, x: i * 2560, y: 0, width, height, pixelWidth: width * 2, pixelHeight: height * 2 };
@@ -61,10 +62,11 @@ function info(): PeerInfo {
   return {
     computer: now.computer,
     // Why: with seeing off, even the monitor names stay private.
-    displays: !shown ? [] : FAKE_DISPLAYS ? fakeDisplays() : JSON.parse(native.displays()),
+    displays: !shown ? [] : FAKE_DISPLAYS ? fakeDisplays() : screens.displays(),
     viewing: settings.allowViewing && (now.reason === null || FAKE_SCREEN),
     control: settings.allowViewing && now.permissions.accessibility,
     reason: FAKE_SCREEN ? null : now.reason,
+    system: status.SYSTEM,
   };
 }
 
@@ -133,7 +135,7 @@ async function hostRequest(peerId: string, method: string, params: Record<string
   if (method === "frame") {
     if (FAKE_SCREEN) return shrink(fakePicture(), params.width);
     if (!status.SUPPORTED) throw new Error("unsupported");
-    const jpeg = await native.capture(Number(params.display));
+    const jpeg = await screens.capture(Number(params.display));
     if (status.remoteFrameSent(peer.name)) note(peer.name, "view");
     return shrink(jpeg, params.width);
   }
@@ -154,7 +156,7 @@ async function hostRequest(peerId: string, method: string, params: Record<string
     else {
       if (!status.SUPPORTED) throw new Error("unsupported");
       if (!now.permissions.accessibility) throw new Error("accessibility");
-      native.sendInput(JSON.stringify(input));
+      screens.sendInput(input);
     }
     const kind = logKind(input);
     if (kind) note(peer.name, kind);

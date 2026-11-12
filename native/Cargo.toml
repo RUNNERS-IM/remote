@@ -34,6 +34,15 @@ objc2-image-io = { version = "=0.3.2", default-features = false, features = ["st
 core-graphics = { version = "0.25", features = ["highsierra"] }
 core-foundation = "0.10"
 
+# Why: SendInput and SetCursorPos for input on Windows.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+
+# Why: XTest for input on Linux. x11rb speaks the X protocol itself, so the module needs no X library to load and still
+# loads on a Wayland-only desktop.
+[target.'cfg(target_os = "linux")'.dependencies]
+x11rb = { version = "0.14", default-features = false, features = ["xtest"] }
+
 [build-dependencies]
 napi-build = "2"
 

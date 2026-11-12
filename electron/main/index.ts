@@ -1,25 +1,34 @@
 // Remote's main process: a menu bar app whose picture shows whether this computer can be seen (off / waiting / being
-// viewed), with a short native menu on right click, and the Remote window (opened by a click on the picture) that shows
-// every office computer, one computer's screens with clicks and typing, and this Mac's settings.
-import { app, BrowserWindow, clipboard, ipcMain, nativeTheme, shell, systemPreferences, type Tray } from "electron";
+// viewed), a panel under it listing the other computers, the Remote window that shows every office computer and one
+// computer's screens with clicks and typing, and Settings for everything about this Mac.
+import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeTheme, screen, shell, type Tray } from "electron";
 import { writeFileSync } from "node:fs";
 import { uptime } from "node:os";
-import type { Allow, Input, PermissionKind, PressAt } from "../preload/api";
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
+import type { Allow, Input, PermissionKind, PressAt, SettingsTab } from "../preload/api";
 import { startClaude } from "./claude";
 import * as input from "./input";
+import * as keepAlive from "./keepAlive";
 import * as link from "./link";
 import * as login from "./login";
 import { buildMenu, forgetIcons, type Command, type MenuState } from "./menu";
-import { currentLocale } from "./i18n";
+import { currentLocale, t } from "./i18n";
 import { native } from "./native";
+import * as screens from "./screens";
 import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
 import { createTray, showState } from "./tray";
 import { checkNow, displayVersion, startUpdates } from "./updates";
-import { allowClose, answerUpdate, askUpdate, prepareViewer, showAbout, showViewer, TRANSLUCENT, updateOffer, viewerContents } from "./windows";
+import { allowClose, answerUpdate, askUpdate, createPanel, placeUnderTray, prepareViewer, showSettings, showViewer, TRANSLUCENT, updateOffer, viewerContents } from "./windows";
 
 const ISSUES_URL = "https://github.com/RUNNERS-IM/remote/issues";
 const STATUS_EVERY_MS = 2000;
+// Why: the tray click that opens the panel can also send it a focus-lost event right away, so blur is ignored this long after opening.
+const BLUR_GRACE_MS = 200;
+// Why: clicking the tray while the panel is open first takes focus from the panel (which hides it); a click that
+// soon after is that same click and must not open it again.
+const REOPEN_GUARD_MS = 300;
 /** System Settings pages for each permission, opened when macOS no longer shows its own prompt. */
 const SETTINGS_PAGE: Record<PermissionKind, string> = {
   screenRecording: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
@@ -32,6 +41,28 @@ const DEV = !app.isPackaged;
 if (DEV) app.setPath("userData", `${app.getPath("userData")}-dev`);
 
 let tray: Tray | null = null;
+let panel: BrowserWindow | null = null;
+let shownAt = 0;
+let hiddenByBlurAt = 0;
+
+function hidePanel(): void {
+  panel?.hide();
+}
+
+function togglePanel(): void {
+  if (!panel) return;
+  if (panel.isVisible()) {
+    hidePanel();
+    return;
+  }
+  if (Date.now() - hiddenByBlurAt < REOPEN_GUARD_MS) return;
+  placeUnderTray(panel, tray);
+  shownAt = Date.now();
+  panel.show();
+  panel.focus();
+  if (process.platform === "darwin") app.focus({ steal: true });
+}
+
 /** Opens the Remote window. While it is open Remote also shows in the Dock, so it can be found like any app's window;
  *  closed, Remote is back to the menu bar only (2026-11-02: menu bar, plus the Dock while the window is open). */
 function viewerHidden(): void {
@@ -41,6 +72,7 @@ function viewerHidden(): void {
 }
 
 function openViewer(): void {
+  hidePanel();
   if (process.platform === "darwin") {
     void app.dock?.show();
     app.focus({ steal: true });
@@ -58,6 +90,11 @@ function startedAtLogin(): boolean {
   return app.getLoginItemSettings().wasOpenedAtLogin || uptime() < 120;
 }
 
+function openSettings(tab?: SettingsTab): void {
+  hidePanel();
+  showSettings(tab);
+}
+
 function menuState(): MenuState {
   const settings = readSettings();
   return {
@@ -65,6 +102,8 @@ function menuState(): MenuState {
     autoUpdate: settings.autoUpdate,
     linked: link.hasServer(),
     allowViewing: settings.allowViewing,
+    trayIcon: settings.showTrayIcon,
+    canHideIcon: process.platform === "darwin",
   };
 }
 
@@ -85,13 +124,19 @@ function run(command: Command): void {
     case "autoUpdate":
       writeSettings({ autoUpdate: !readSettings().autoUpdate });
       break;
-    case "about":
-      showAbout();
+    case "settings":
+      openSettings();
+      break;
+    case "trayIcon":
+      writeSettings({ showTrayIcon: !readSettings().showTrayIcon });
+      updateTray();
       break;
     case "updates":
+      hidePanel();
       checkNow();
       break;
     case "help":
+      hidePanel();
       void shell.openExternal(ISSUES_URL);
       break;
     case "quit":
@@ -112,6 +157,52 @@ function refreshLinuxMenu(): void {
   tray.setContextMenu(buildMenu(now, menuState(), run));
 }
 
+/** Makes or removes the menu bar picture to match the setting. */
+function updateTray(): void {
+  if (process.platform === "darwin" && !readSettings().showTrayIcon) {
+    tray?.destroy();
+    tray = null;
+    return;
+  }
+  if (tray) return;
+  const icon = createTray(status.current().state);
+  tray = icon;
+  showState(icon, status.current().state);
+  if (process.platform === "linux") {
+    linuxMenuText = "";
+    refreshLinuxMenu();
+  } else {
+    icon.on("click", togglePanel);
+    icon.on("right-click", togglePanel);
+  }
+}
+
+/** macOS only: the app menu, so ⌘, opens Settings from whichever Remote window is in front. Why a menu and not a key
+ *  listener: while keys go to another computer the Remote window turns menu shortcuts off (remote:keysToPeer), so ⌘,
+ *  reaches that computer then. The other menus are the ones Electron gives by default (copy and paste need them). */
+function setAppMenu(): void {
+  if (process.platform !== "darwin") return;
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      {
+        label: app.name,
+        submenu: [
+          { label: t("menu.settings"), accelerator: "CmdOrCtrl+,", click: () => openSettings() },
+          { type: "separator" },
+          { role: "hide" },
+          { role: "hideOthers" },
+          { role: "unhide" },
+          { type: "separator" },
+          { label: t("menu.quit"), accelerator: "CmdOrCtrl+Q", click: () => app.quit() },
+        ],
+      },
+      { role: "editMenu" },
+      { role: "viewMenu" },
+      { role: "windowMenu" },
+    ]),
+  );
+}
+
 function statusLoop(): void {
   const tick = () => {
     if (tray) showState(tray, status.current().state);
@@ -121,14 +212,8 @@ function statusLoop(): void {
   setInterval(tick, STATUS_EVERY_MS);
 }
 
-function accentColor(): string | null {
-  if (process.platform !== "darwin" && process.platform !== "win32") return null;
-  const color = systemPreferences.getAccentColor();
-  return color ? `#${color.slice(0, 6)}` : null;
-}
-
 function requestPermission(kind: PermissionKind): void {
-  if (!status.SUPPORTED) return;
+  if (!status.ASKS_PERMISSIONS) return;
   const granted = kind === "screenRecording" ? native.requestScreenRecording() : native.requestAccessibility();
   // Why: macOS shows each prompt only once per app; after that the switch is only in System Settings.
   if (!granted) void shell.openExternal(SETTINGS_PAGE[kind]);
@@ -136,10 +221,10 @@ function requestPermission(kind: PermissionKind): void {
 
 function registerIpc(): void {
   ipcMain.handle("remote:status", () => status.current());
-  ipcMain.handle("remote:displays", () => (status.SUPPORTED ? JSON.parse(native.displays()) : []));
+  ipcMain.handle("remote:displays", () => (status.SUPPORTED ? screens.displays() : []));
   ipcMain.handle("remote:capture", (_event, display: number) => {
     if (!status.SUPPORTED) throw new Error("unsupported");
-    return native.capture(Number(display));
+    return screens.capture(Number(display));
   });
   ipcMain.handle("remote:requestPermission", (_event, kind: PermissionKind) => {
     if (kind === "screenRecording" || kind === "accessibility") requestPermission(kind);
@@ -153,8 +238,12 @@ function registerIpc(): void {
   });
   ipcMain.on("remote:keysToPeer", (event, on: unknown) => event.sender.setIgnoreMenuShortcuts(Boolean(on)));
   ipcMain.handle("remote:translucent", () => TRANSLUCENT);
+  ipcMain.on("remote:openComputer", (_event, host: unknown) => {
+    openViewer();
+    viewerContents()?.send("remote:openComputer", String(host));
+  });
+  ipcMain.on("remote:openSettings", (_event, tab: SettingsTab) => openSettings(tab));
   ipcMain.handle("remote:version", () => displayVersion());
-  ipcMain.handle("remote:accentColor", () => accentColor());
   ipcMain.handle("remote:menuState", () => menuState());
   ipcMain.handle("remote:command", (_event, command: Command) => {
     run(command);
@@ -199,16 +288,91 @@ function registerIpc(): void {
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
 
-/** Debug runs only: `REMOTE_OPEN=viewer|about|update|update-progress` opens that window at launch, so it can be
+/** The `REMOTE_SELFTEST` run: each step is written down with its result or error, so one failure does not hide the rest. */
+async function runSelftest(folder: string): Promise<void> {
+  const steps: Record<string, unknown> = { platform: process.platform, status: status.current() };
+  const step = async (name: string, work: () => unknown) => {
+    try {
+      steps[name] = await work();
+    } catch (error) {
+      steps[name] = { error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+  const list = screens.displays();
+  steps.displays = list;
+  const main = list[0];
+  // Why: a window of our own records what reaches it, so the run shows the input landed, not only that it was posted.
+  const probe = new BrowserWindow({ width: 600, height: 400, useContentSize: true, show: false, title: "Remote selftest" });
+  await probe.loadURL(
+    "data:text/html;charset=utf-8," +
+      encodeURIComponent(
+        '<textarea id="t" style="width:100%;height:100%"></textarea><script>window.got=[];addEventListener("mousedown",(e)=>got.push("mousedown "+e.clientX+","+e.clientY));addEventListener("wheel",()=>got.push("wheel"));addEventListener("keydown",(e)=>got.push("keydown "+e.key));</script>',
+      ),
+  );
+  if (main) probe.setPosition(main.x + 100, main.y + 100);
+  probe.show();
+  probe.focus();
+  await probe.webContents.executeJavaScript("t.focus()");
+  const settle = () => new Promise((done) => setTimeout(done, 500));
+  await settle();
+  // Why after the window: an empty test display is one flat colour, and the window shows the picture is real.
+  for (const display of list) {
+    await step(`capture-${display.id}`, async () => {
+      const jpeg = await screens.capture(display.id);
+      writeFileSync(join(folder, `capture-${display.id}.jpg`), jpeg);
+      return { bytes: jpeg.length };
+    });
+  }
+  if (main) {
+    const box = probe.getContentBounds();
+    const x = (box.x + box.width / 2 - main.x) / main.width;
+    const y = (box.y + box.height / 2 - main.y) / main.height;
+    await step("move", () => {
+      const at = screens.sendInput({ kind: "move", display: main.id, x, y });
+      return { sentTo: at, pointerNow: screen.getCursorScreenPoint(), window: box };
+    });
+    await step("click", () => screens.sendInput({ kind: "click", display: main.id, x, y, button: "left", count: 1 }));
+    await settle();
+    await step("scroll", () => screens.sendInput({ kind: "scroll", display: main.id, x, y, dx: 0, dy: 120 }));
+  }
+  await step("key", () => screens.sendInput({ kind: "key", code: 49, modifiers: [] }));
+  await step("text", () => screens.sendInput({ kind: "text", text: "Remote 안녕" }));
+  await settle();
+  steps.received = await probe.webContents.executeJavaScript("({ events: got, text: t.value })");
+  // Why: `REMOTE_SELFTEST_XDOTOOL=1` (Linux CI) types with xdotool too, to tell our input from what Chromium can read.
+  if (process.env.REMOTE_SELFTEST_XDOTOOL === "1") {
+    await step("xdotool", () => execFileSync("xdotool", ["type", "--delay", "100", "다C"]).toString());
+    await settle();
+    steps.receivedAfterXdotool = await probe.webContents.executeJavaScript("({ events: got.slice(-4), text: t.value })");
+  }
+  probe.destroy();
+  writeFileSync(join(folder, "selftest.json"), JSON.stringify(steps, null, 2));
+  console.log("selftest:", JSON.stringify(steps));
+}
+
+/** Debug runs only: `REMOTE_OPEN=viewer|panel|settings[:tab]|update|update-progress` opens that window at launch, so it can be
  *  captured without clicking the tray (`update` / `update-progress` show the update question with made-up notes,
  *  downloaded or still downloading, and install nothing), and `REMOTE_THEME=dark|light` forces the look. */
 function debugHooks(): void {
   const theme = process.env.REMOTE_THEME;
   if (theme === "dark" || theme === "light") nativeTheme.themeSource = theme;
+  // Why: `REMOTE_MENU_DUMP=1` prints the Linux tray menu's lines (as a signed-in user sees them), since a native menu
+  // cannot be captured on a Mac.
+  if (process.env.REMOTE_MENU_DUMP === "1") {
+    const lines = buildMenu(status.current(), { ...menuState(), linked: true }, run).items;
+    console.log("menu:", JSON.stringify(lines.filter((i) => i.type !== "separator").map((i) => ({ label: i.label, checked: i.checked, enabled: i.enabled }))));
+  }
   const which = process.env.REMOTE_OPEN;
   // Why: the tray icon needs a moment before it reports where it sits.
-  if (which === "about") setTimeout(showAbout, 1500);
   if (which === "viewer") setTimeout(openViewer, 1500);
+  // Why showInactive: a capture run must not take focus, and a panel that never had focus does not close on blur.
+  if (which === "panel")
+    setTimeout(() => {
+      if (!panel) return;
+      placeUnderTray(panel, tray);
+      panel.showInactive();
+    }, 1500);
+  if (which?.startsWith("settings")) setTimeout(() => openSettings((which.split(":")[1] as SettingsTab | undefined) || undefined), 1500);
   // Why: `REMOTE_SHOT=<file.png>` saves the opened window as the app draws it, for the dark and light screenshots
   // asked for before a release, without giving the terminal the screen recording permission.
   // Why: `REMOTE_CLICK=<css selector>` presses that element in the opened window 3.5 s in, so pages reached by a click
@@ -220,6 +384,11 @@ function debugHooks(): void {
       void window?.webContents.executeJavaScript(`document.querySelector(${JSON.stringify(press)})?.click()`);
     }, 3500);
   }
+  // Why: `REMOTE_SELFTEST=<folder>` runs the receiving side once on this system (display list, a still picture of each
+  // display, a pointer move, a key and text) and writes what happened to <folder>/selftest.json, then quits, so a
+  // Windows or Linux machine in CI can show it works without anyone at the screen.
+  const selftest = process.env.REMOTE_SELFTEST;
+  if (selftest) setTimeout(() => void runSelftest(selftest).finally(() => app.quit()), 3000);
   const shot = process.env.REMOTE_SHOT;
   if (shot && which) {
     setTimeout(() => {
@@ -249,12 +418,15 @@ function start(): void {
   app.dock?.hide();
   registerIpc();
   login.applyDefault();
-  tray = createTray(status.current().state);
-  if (process.platform === "linux") refreshLinuxMenu();
-  else {
-    tray.on("click", openViewer);
-    tray.on("right-click", () => tray?.popUpContextMenu(buildMenu(status.current(), menuState(), run)));
-  }
+  keepAlive.start();
+  setAppMenu();
+  panel = createPanel();
+  panel.on("blur", () => {
+    if (Date.now() - shownAt < BLUR_GRACE_MS) return;
+    hiddenByBlurAt = Date.now();
+    hidePanel();
+  });
+  updateTray();
   nativeTheme.on("updated", () => {
     forgetIcons();
     refreshLinuxMenu();

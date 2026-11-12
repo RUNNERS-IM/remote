@@ -28,7 +28,8 @@ let timer: NodeJS.Timeout | null = null;
 export function createTray(state: State): Tray {
   const tray = new Tray(picture(state, 0));
   tray.setToolTip("Remote");
-  shown = state;
+  // Why not `state`: a tray made again while someone is looking must start bobbing, which only showState does.
+  shown = null;
   return tray;
 }
 

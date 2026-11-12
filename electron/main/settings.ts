@@ -16,6 +16,8 @@ export type Settings = {
   claudeApps: string[];
   /** This computer's id on the relay, made at first start (account.ts). */
   deviceId: string | null;
+  /** The picture in the menu bar. macOS only; other systems always keep it, or nothing would lead back to Remote. */
+  showTrayIcon: boolean;
 };
 
 const DEFAULTS: Settings = {
@@ -24,6 +26,7 @@ const DEFAULTS: Settings = {
   allowViewing: true,
   claudeApps: [],
   deviceId: null,
+  showTrayIcon: true,
 };
 
 function file(): string {

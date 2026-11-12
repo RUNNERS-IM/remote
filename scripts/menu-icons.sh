@@ -1,5 +1,5 @@
 #!/bin/bash
-# Makes the right-click tray menu icons in resources/menu/ from the official Lucide SVGs.
+# Makes the Linux tray menu icons in resources/menu/ from the official Lucide SVGs.
 # Each icon comes in black (light menus) and white (dark menus) at 36 px, which is 2x of the 18 pt slot the native menu draws icons in.
 # The status dots are filled circles in the system green, yellow and grey.
 # The menu bar picture is not made here: native/src/tray.rs draws it when the app starts, one picture per status.
@@ -8,7 +8,7 @@ set -euo pipefail
 
 LUCIDE_VERSION=1.63.0
 PIXELS=36
-ICONS=(app-window info refresh-cw circle-help square-x unplug eye power download)
+ICONS=(app-window settings refresh-cw circle-help square-x unplug eye)
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/resources/menu"

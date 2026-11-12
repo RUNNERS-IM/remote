@@ -15,6 +15,7 @@ import type { Display, Input } from "../preload/api";
 import { t } from "./i18n";
 import * as link from "./link";
 import { native } from "./native";
+import * as screens from "./screens";
 import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
 
@@ -67,7 +68,7 @@ function computerOf(params: Record<string, unknown>): string {
 }
 
 async function displaysOf(computer: string): Promise<Display[]> {
-  if (computer === HERE) return status.SUPPORTED ? (JSON.parse(native.displays()) as Display[]) : [];
+  if (computer === HERE) return status.SUPPORTED ? (screens.displays() as Display[]) : [];
   return (await link.peerInfo(computer)).displays;
 }
 
@@ -119,7 +120,7 @@ async function send(computer: string, input: Input): Promise<void> {
   if (computer !== HERE) return link.peerInput(computer, input);
   if (!status.SUPPORTED) throw new Error("unsupported");
   if (!status.permissions().accessibility) throw new Error("accessibility: allow Remote in Accessibility first");
-  native.sendInput(JSON.stringify(input));
+  screens.sendInput(input);
 }
 
 /** Turns Claude's pixel point in the last screenshot into the fraction of the display the input format takes. */
@@ -145,7 +146,7 @@ async function run(method: string, params: Record<string, unknown>): Promise<unk
       const list = await displaysOf(computer);
       const display = params.display === undefined ? list[0]?.id : Number(params.display);
       if (display === undefined) throw new Error("no display");
-      const jpeg = computer === HERE ? await native.capture(display) : await link.peerCapture(computer, display);
+      const jpeg = computer === HERE ? await screens.capture(display) : await link.peerCapture(computer, display);
       const size = jpegSize(jpeg);
       if (size) shotSize.set(`${computer}/${display}`, size);
       return { display, width: size?.width ?? 0, height: size?.height ?? 0, jpeg: jpeg.toString("base64") };

@@ -26,9 +26,15 @@ const table: Table = tables[locale];
 document.documentElement.lang = locale;
 document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
 
-/** Looks up `key` and fills `{{name}}` slots; a key this language lacks reads in English, never as the bare key. */
+const plurals = new Intl.PluralRules(locale);
+
+/**
+ * Looks up `key` and fills `{{name}}` slots; a key this language lacks reads in English, never as the bare key.
+ * A numeric `count` first tries the plural form `<key>.<category>` (`grid.subtitle.few`); the plain key is the `other` form.
+ */
 export function t(key: Key, args: Record<string, string | number> = {}): string {
-  let text = table[key] ?? tables.en?.[key] ?? key;
+  const form = typeof args.count === "number" ? `${key}.${plurals.select(args.count)}` : key;
+  let text = table[form] ?? table[key] ?? tables.en?.[form] ?? tables.en?.[key] ?? key;
   for (const [name, value] of Object.entries(args)) {
     text = text.replaceAll(`{{${name}}}`, String(value));
   }
@@ -36,7 +42,7 @@ export function t(key: Key, args: Record<string, string | number> = {}): string 
 }
 
 /** "RUNNERS Mac Studio · Remote Off · Screen Recording Needed": the computer, the state and, while off, why. */
-export function statusText(state: "off" | "waiting" | "viewing", reason: "platform" | "screenRecording" | null): string {
+export function statusText(state: "off" | "waiting" | "viewing", reason: "platform" | "screenRecording" | "signedOut" | null): string {
   const parts = [t(`status.${state}`)];
   if (reason) parts.push(t(`status.reason.${reason}`));
   return parts.join(" · ");

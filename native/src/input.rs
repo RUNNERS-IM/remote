@@ -385,10 +385,11 @@ mod linux {
     use super::{wheel_clicks, Button, Input};
     use crate::keymap::{self, Held};
 
-    /// Why a pause after changing the keyboard map and after pressing a borrowed key: apps read the new map only when
-    /// they get the change notice, and look a key up only when they handle it, so a change on either side of the key
-    /// that arrives too close would type the wrong character or none (seen on Xvfb with Chromium: Korean went missing).
-    const REMAP_WAIT: Duration = Duration::from_millis(40);
+    /// Why a pause after changing the keyboard map: apps read the new map only after they get the change notice,
+    /// and a key that is handled first types the old character or none (seen on Xvfb with Chromium: Korean went
+    /// missing). Chrome Remote Desktop's X11 text input keeps its borrowed keys for 200 ms for the same reason.
+    const REMAP_WAIT: Duration = Duration::from_millis(100);
+    const CLEAR_WAIT: Duration = Duration::from_millis(200);
 
     /// One connection to the X server, kept between inputs and opened again after an error.
     struct X {
@@ -539,34 +540,46 @@ mod linux {
             self.sync()
         }
 
-        /// Types text: characters on the keyboard map as their keys, the rest (Korean, emoji…) by putting the character
-        /// on a spare keycode for a moment and pressing that, then taking it off again.
+        /// Types text: characters on the keyboard map as their keys, the rest (Korean, emoji…) by putting each such
+        /// character on a spare keycode of its own and pressing that, then taking them all off again once typed.
         fn type_text(&mut self, text: &str) -> Result<(), String> {
-            let mut borrowed: Option<Keycode> = None;
+            // Why one keycode per character and the late clear: apps look a key up when they handle it, which can be
+            // after the next change to the map, so a key is not given another character while it may still be read.
+            let mut borrowed: Vec<(Keysym, Keycode)> = Vec::new();
             let mut result = Ok(());
             for ch in text.chars() {
                 let keysym = keymap::char_keysym(ch);
                 if let Some((code, shift)) = self.keycode(keysym) {
                     result = self.tap(code, shift);
                 } else {
-                    let Some(spare) = borrowed.or_else(|| self.spare()) else {
-                        result = Err("key".into());
-                        break;
-                    };
-                    borrowed = Some(spare);
-                    result = self.remap(spare, keysym).and_then(|_| {
-                        self.tap(spare, false)?;
-                        self.sync()?;
-                        // Why: apps look the key up when they handle it, so the character stays on the key until then.
-                        sleep(REMAP_WAIT);
-                        Ok(())
+                    // Why: long text in many scripts can use up the spare keycodes, so give them back and go on.
+                    if self.spare().is_none() && !borrowed.is_empty() {
+                        result = self.give_back(&mut borrowed);
+                    }
+                    result = result.and_then(|_| {
+                        let spare = self.spare().ok_or("key")?;
+                        borrowed.push((keysym, spare));
+                        self.remap(spare, keysym)?;
+                        self.tap(spare, false)
                     });
                 }
                 if result.is_err() {
                     break;
                 }
             }
-            if let Some(spare) = borrowed {
+            let cleared = self.give_back(&mut borrowed);
+            result.and(cleared)
+        }
+
+        /// Takes the borrowed characters off their keycodes, once the keys pressed so far have had time to be read.
+        fn give_back(&mut self, borrowed: &mut Vec<(Keysym, Keycode)>) -> Result<(), String> {
+            if borrowed.is_empty() {
+                return Ok(());
+            }
+            self.sync()?;
+            sleep(CLEAR_WAIT);
+            let mut result = Ok(());
+            for (_, spare) in borrowed.drain(..) {
                 let cleared = self.remap(spare, 0);
                 result = result.and(cleared);
             }

@@ -2,9 +2,8 @@
 // viewed), a panel under it listing the other computers, the Remote window that shows every office computer and one
 // computer's screens with clicks and typing, and Settings for everything about this Mac.
 import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeTheme, screen, shell, type Tray } from "electron";
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { uptime } from "node:os";
-import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import type { Allow, Input, PermissionKind, PressAt, SettingsTab } from "../preload/api";
 import { startClaude } from "./claude";
@@ -288,6 +287,45 @@ function registerIpc(): void {
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
 
+/** Where the selftest window sits and what reached it, from our own window or from the separate probe program. */
+interface Probe {
+  bounds: Electron.Rectangle;
+  received: () => Promise<unknown>;
+  close: () => void;
+}
+
+async function openProbe(file: string | undefined, main: { x: number; y: number } | undefined): Promise<Probe> {
+  if (file) {
+    const read = () => JSON.parse(readFileSync(file, "utf8")) as { window: Electron.Rectangle; events: string[]; text: string };
+    for (let tries = 0; tries < 40 && !existsSync(file); tries++) await new Promise((done) => setTimeout(done, 500));
+    const { window } = read();
+    return {
+      bounds: window,
+      received: async () => {
+        const { events, text } = read();
+        return { events, text };
+      },
+      close: () => {},
+    };
+  }
+  const window = new BrowserWindow({ width: 600, height: 400, useContentSize: true, show: false, title: "Remote selftest" });
+  await window.loadURL(
+    "data:text/html;charset=utf-8," +
+      encodeURIComponent(
+        '<textarea id="t" style="width:100%;height:100%"></textarea><script>window.got=[];addEventListener("mousedown",(e)=>got.push("mousedown "+e.clientX+","+e.clientY));addEventListener("wheel",()=>got.push("wheel"));addEventListener("keydown",(e)=>got.push("keydown "+e.key));</script>',
+      ),
+  );
+  if (main) window.setPosition(main.x + 100, main.y + 100);
+  window.show();
+  window.focus();
+  await window.webContents.executeJavaScript("t.focus()");
+  return {
+    bounds: window.getContentBounds(),
+    received: () => window.webContents.executeJavaScript("({ events: got, text: t.value })"),
+    close: () => window.destroy(),
+  };
+}
+
 /** The `REMOTE_SELFTEST` run: each step is written down with its result or error, so one failure does not hide the rest. */
 async function runSelftest(folder: string): Promise<void> {
   const steps: Record<string, unknown> = { platform: process.platform, status: status.current() };
@@ -301,19 +339,11 @@ async function runSelftest(folder: string): Promise<void> {
   const list = screens.displays();
   steps.displays = list;
   const main = list[0];
-  // Why: a window of our own records what reaches it, so the run shows the input landed, not only that it was posted.
-  const probe = new BrowserWindow({ width: 600, height: 400, useContentSize: true, show: false, title: "Remote selftest" });
-  await probe.loadURL(
-    "data:text/html;charset=utf-8," +
-      encodeURIComponent(
-        '<textarea id="t" style="width:100%;height:100%"></textarea><script>window.got=[];addEventListener("mousedown",(e)=>got.push("mousedown "+e.clientX+","+e.clientY));addEventListener("wheel",()=>got.push("wheel"));addEventListener("keydown",(e)=>got.push("keydown "+e.key));</script>',
-      ),
-  );
-  if (main) probe.setPosition(main.x + 100, main.y + 100);
-  probe.show();
-  probe.focus();
-  await probe.webContents.executeJavaScript("t.focus()");
   const settle = () => new Promise((done) => setTimeout(done, 500));
+  // Why: a window records what reaches it, so the run shows the input landed, not only that it was posted.
+  // `REMOTE_SELFTEST_PROBE=<file>` (Linux CI) uses the window of scripts/selftest-probe.cjs, a separate program, as a
+  // real user's other app would be; otherwise the window is our own.
+  const probe = await openProbe(process.env.REMOTE_SELFTEST_PROBE, main);
   await settle();
   // Why after the window: an empty test display is one flat colour, and the window shows the picture is real.
   for (const display of list) {
@@ -324,7 +354,7 @@ async function runSelftest(folder: string): Promise<void> {
     });
   }
   if (main) {
-    const box = probe.getContentBounds();
+    const box = probe.bounds;
     const x = (box.x + box.width / 2 - main.x) / main.width;
     const y = (box.y + box.height / 2 - main.y) / main.height;
     await step("move", () => {
@@ -338,14 +368,8 @@ async function runSelftest(folder: string): Promise<void> {
   await step("key", () => screens.sendInput({ kind: "key", code: 49, modifiers: [] }));
   await step("text", () => screens.sendInput({ kind: "text", text: "Remote 안녕" }));
   await settle();
-  steps.received = await probe.webContents.executeJavaScript("({ events: got, text: t.value })");
-  // Why: `REMOTE_SELFTEST_XDOTOOL=1` (Linux CI) types with xdotool too, to tell our input from what Chromium can read.
-  if (process.env.REMOTE_SELFTEST_XDOTOOL === "1") {
-    await step("xdotool", () => execFileSync("xdotool", ["type", "--delay", "100", "다C"]).toString());
-    await settle();
-    steps.receivedAfterXdotool = await probe.webContents.executeJavaScript("({ events: got.slice(-4), text: t.value })");
-  }
-  probe.destroy();
+  steps.received = await probe.received();
+  probe.close();
   writeFileSync(join(folder, "selftest.json"), JSON.stringify(steps, null, 2));
   console.log("selftest:", JSON.stringify(steps));
 }

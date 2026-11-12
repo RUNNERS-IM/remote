@@ -41,7 +41,7 @@ jobs:
       # Xvfb 는 화면 없는 X 서버다. XTest 확장이 켜져 있어 입력을 보낼 수 있고, 창 관리자가 있어야 창이 포커스를 받는다.
       - name: Install the X server for Linux
         if: matrix.os == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y xvfb openbox x11-utils x11-xserver-utils xdotool
+        run: sudo apt-get update && sudo apt-get install -y xvfb openbox x11-utils x11-xserver-utils fonts-noto-cjk
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm native
@@ -64,37 +64,19 @@ jobs:
           else
             ARGS=()
           fi
-          [ "${{ matrix.os }}" = linux ] && export REMOTE_SELFTEST_XDOTOOL=1
+          # Linux: 시험 창을 Remote 와 다른 프로그램으로 먼저 띄운다. 같은 앱 안의 창에는 빌린 키로 친 한글이 들어가지 않았고,
+          # 따로 띄운 Electron 앱에는 들어갔다(2026-11-12 run 43214831011). 사용자가 받는 곳도 늘 다른 프로그램이다.
+          if [ "${{ matrix.os }}" = linux ]; then
+            export REMOTE_SELFTEST_PROBE="$OUT/probe.json"
+            REMOTE_PROBE_OUT="$REMOTE_SELFTEST_PROBE" $ELECTRON scripts/selftest-probe.cjs --no-sandbox > "$OUT/probe.log" 2>&1 & PROBE=$!
+            sleep 5
+          fi
           REMOTE_SELFTEST="$OUT" timeout 90 $ELECTRON . "${ARGS[@]}" --lang=ko 2>&1 | tee "$OUT/selftest.log" || true
+          [ -n "${PROBE:-}" ] && kill $PROBE
           for THEME in light dark; do
             REMOTE_OPEN=settings:mac REMOTE_THEME=$THEME REMOTE_SHOT="$OUT/settings-$THEME.png" timeout 40 $ELECTRON . "${ARGS[@]}" --lang=ko > "$OUT/settings-$THEME.log" 2>&1 || true  # 사진을 찍은 뒤에도 앱이 켜져 있어 timeout 이 끈다(124)
           done
           ls -la "$OUT"
-
-      # 비교: Chromium 이 아닌 X 프로그램(xev)에 같은 네이티브 모듈과 xdotool 로 「안녕」을 쳐서, 키 기호가 X 에서 맞게
-      # 나오는지 본다. Chromium 시험 창만 글자를 못 읽는 것인지 가르기 위해서다.
-      - name: Compare text input outside Chromium
-        if: matrix.os == 'linux'
-        shell: bash
-        run: |
-          set -uo pipefail
-          export DISPLAY=:99
-          sudo apt-get install -y xdotool >/dev/null 2>&1 || true
-          xev -event keyboard > "$OUT/xev.txt" 2>&1 & XEV=$!
-          sleep 2
-          xdotool search --sync --name "Event Tester" windowactivate --sync 2>/dev/null || true
-          sleep 1
-          node -e '
-            const dir = "native";
-            const f = require("fs").readdirSync(dir).find((n) => n.startsWith("remote-native.linux") && n.endsWith(".node"));
-            const m = require(require("path").resolve(dir, f));
-            console.log("native:", m.sendInputAt(JSON.stringify({ kind: "text", text: "가A" }), 0, 0));
-          '
-          sleep 1
-          xdotool type --delay 100 "나B"
-          sleep 1
-          kill $XEV || true
-          grep -A2 "KeyPress" "$OUT/xev.txt" | grep -E "keysym|XLookupString" | head -40
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -116,13 +98,7 @@ jobs:
             const [cx, cy] = (down ?? "mousedown -99,-99").slice(10).split(",").map(Number);
             if (Math.abs(cx - 300) > 3 || Math.abs(cy - 200) > 3) bad.push("click landed at " + down);
             for (const k of ["wheel", "keydown"]) if (!r.received?.events?.some((e) => e.startsWith(k))) bad.push("window got no " + k);
-            // Linux: Chromium(이 시험 창)은 빌린 키에 올린 한글을 읽지 못한다. xdotool 로 쳐도 같다(2026-11-12 run 43212474414).
-            // 그래서 Linux 에서는 영어 글자가 창에 들어갔는지와, Chromium 이 아닌 xev 가 한글 키 기호(U+AC00 가)를 받았는지를 본다.
-            if (process.platform === "linux") {
-              if (!r.received?.text?.includes("Remote")) bad.push("text: " + JSON.stringify(r.received?.text));
-              const xev = require("fs").existsSync(process.env.OUT + "/xev.txt") ? require("fs").readFileSync(process.env.OUT + "/xev.txt", "utf8") : "";
-              if (!xev.includes("UAC00")) bad.push("xev got no U+AC00");
-            } else if (!r.received?.text?.includes("Remote 안녕")) bad.push("text: " + JSON.stringify(r.received?.text));
+            if (!r.received?.text?.includes("Remote 안녕")) bad.push("text: " + JSON.stringify(r.received?.text));
             console.log(JSON.stringify({ status: r.status, received: r.received, move: r.move }, null, 2));
             if (bad.length) { console.log("::error::" + bad.join("; ")); process.exit(1); }
           '

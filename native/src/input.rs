@@ -385,9 +385,10 @@ mod linux {
     use super::{wheel_clicks, Button, Input};
     use crate::keymap::{self, Held};
 
-    /// Why a pause after changing the keyboard map: apps read the new map only when they get the change notice, and a
-    /// key that arrives first would type the old character.
-    const REMAP_WAIT: Duration = Duration::from_millis(20);
+    /// Why a pause after changing the keyboard map and after pressing a borrowed key: apps read the new map only when
+    /// they get the change notice, and look a key up only when they handle it, so a change on either side of the key
+    /// that arrives too close would type the wrong character or none (seen on Xvfb with Chromium: Korean went missing).
+    const REMAP_WAIT: Duration = Duration::from_millis(40);
 
     /// One connection to the X server, kept between inputs and opened again after an error.
     struct X {
@@ -533,8 +534,9 @@ mod linux {
                 }
                 Input::Text { text } => self.type_text(text)?,
             }
-            self.conn.flush().map_err(err)?;
-            Ok(())
+            // Why a round trip, not a flush: the pointer is read back right after (screens.ts, the selftest) and the
+            // server must have moved it by then.
+            self.sync()
         }
 
         /// Types text: characters on the keyboard map as their keys, the rest (Korean, emoji…) by putting the character
@@ -554,7 +556,10 @@ mod linux {
                     borrowed = Some(spare);
                     result = self.remap(spare, keysym).and_then(|_| {
                         self.tap(spare, false)?;
-                        self.sync()
+                        self.sync()?;
+                        // Why: apps look the key up when they handle it, so the character stays on the key until then.
+                        sleep(REMAP_WAIT);
+                        Ok(())
                     });
                 }
                 if result.is_err() {

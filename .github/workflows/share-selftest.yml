@@ -63,9 +63,9 @@ jobs:
           else
             ARGS=()
           fi
-          REMOTE_SELFTEST="$OUT" timeout 90 $ELECTRON . "${ARGS[@]}" --lang=ko 2>&1 | tee "$OUT/selftest.log"
+          REMOTE_SELFTEST="$OUT" timeout 90 $ELECTRON . "${ARGS[@]}" --lang=ko 2>&1 | tee "$OUT/selftest.log" || true
           for THEME in light dark; do
-            REMOTE_OPEN=settings:mac REMOTE_THEME=$THEME REMOTE_SHOT="$OUT/settings-$THEME.png" timeout 40 $ELECTRON . "${ARGS[@]}" --lang=ko > "$OUT/settings-$THEME.log" 2>&1
+            REMOTE_OPEN=settings:mac REMOTE_THEME=$THEME REMOTE_SHOT="$OUT/settings-$THEME.png" timeout 40 $ELECTRON . "${ARGS[@]}" --lang=ko > "$OUT/settings-$THEME.log" 2>&1 || true  # 사진을 찍은 뒤에도 앱이 켜져 있어 timeout 이 끈다(124)
           done
           ls -la "$OUT"
 

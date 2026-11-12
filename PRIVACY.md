@@ -1,6 +1,6 @@
 # Remote Privacy Policy
 
-Last updated: November 5, 2026
+Last updated: November 10, 2026
 
 Remote is an app made by Runners Co., Ltd for seeing and clicking the screens of other computers. This policy covers every version of Remote.
 
@@ -14,7 +14,9 @@ Remote takes pictures of this computer's screen only when something asks for the
 
 Remote also reads the list of displays and whether it has the Screen Recording and Accessibility permissions.
 
-When you are looking at another computer in the Remote window and turn on **Send Clicks**, your clicks, scrolls and keys on its picture are sent to that computer, not to this one. Remote clicks and types on this computer only when another device of the same account sends input while **Let Other Computers Click and Type** is on, or when Claude does so with the approval described in the README. It does nothing else with your mouse or keyboard.
+When you are looking at another computer in the Remote window, your clicks, scrolls and keys on its picture are sent to that computer, not to this one. Remote clicks and types on this computer only when another device of the same account sends input while **Let Other Computers See This** is on and Accessibility is allowed for Remote, or when Claude does so with the approval described in the README. It does nothing else with your mouse or keyboard.
+
+Copy and paste work between this computer and the computer on screen, as plain text only; images and files are not exchanged. When you use the paste shortcut on another computer's picture, Remote first puts the text on this computer's clipboard onto that computer's clipboard. When you use the copy or cut shortcut there, Remote brings the text on that computer's clipboard to this computer's clipboard. In the same way, another device of the same account can read or replace the text on this computer's clipboard, but only while **Let Other Computers See This** is on; this does not need Accessibility. Remote does not read the clipboard at any other time and does not save the text anywhere else. It stays on the clipboard until something replaces it.
 
 ## Network
 
@@ -33,15 +35,15 @@ account's email and password to the RUNNERS system server (`server.system.runner
 only over the encrypted connection (HTTPS), and the server keeps it only as a bcrypt hash. The server returns two tokens, which Remote keeps encrypted by the operating system in
 its own folder, and nothing else about you is kept. While signed in, Remote keeps one connection open to the server's
 relay, which tells it which computers and phones of the same account are online (each one's name and a random device
-id) and passes the short messages that set up a connection between two of them. Screens, clicks and keys do not pass
+id) and passes the short messages that set up a connection between two of them. Screens, clicks, keys and copied text do not pass
 through the server: they go directly between the two devices over WebRTC, encrypted (DTLS-SRTP). To find a direct path
 each device asks a public STUN server (`stun.l.google.com`) for its own internet address; nothing else is sent to it.
 
-- Another computer or phone of the same account sees this one only while **Let Other Computers See This** is on, and can click and
-  type only while **Let Other Computers Click and Type** is also on. **Disconnect Now** turns seeing off at once.
+- Another computer or phone of the same account sees this one only while **Let Other Computers See This** is on, and while it is on
+  can also click and type if Accessibility is allowed for Remote. **Disconnect Now** turns seeing off at once.
 - Remote answers only devices the relay lists for the same account; Remote does not listen on any port of this
   computer. **Sign Out** in the window ends the relay connection and every connection to another device.
-- The connection log (who viewed, clicked or typed, and when; never the text typed) stays in memory on this computer
+- The connection log (who viewed, clicked, typed, copied or pasted, and when; never the text typed or copied) stays in memory on this computer
   and is gone when Remote quits.
 - Pictures sent to another computer are not saved on either computer.
 
@@ -59,7 +61,7 @@ Questions: open an issue at https://github.com/RUNNERS-IM/remote/issues.
 
 # Remote 개인정보 처리방침
 
-최종 수정: 2026년 11월 5일
+최종 수정: 2026년 11월 10일
 
 Remote 는 Runners Co., Ltd 가 만드는, 다른 컴퓨터 화면을 보고 누르는 앱입니다. 이 방침은 모든 Remote 에 적용됩니다.
 
@@ -73,7 +75,9 @@ Remote 는 요청이 올 때만 이 컴퓨터 화면을 찍습니다. 요청하�
 
 모니터 목록과, 화면 기록 · 손쉬운 사용 권한이 켜졌는지도 읽습니다.
 
-Remote 창에서 다른 컴퓨터 화면을 보며 **클릭 보내기** 를 켜면, 그 화면 그림 위의 클릭 · 스크롤 · 키 입력이 이 컴퓨터가 아니라 그 컴퓨터로 갑니다. Remote 가 이 컴퓨터에 클릭 · 입력하는 것은 **다른 컴퓨터의 클릭 · 키 입력 허용** 이 켜져 있을 때 같은 계정의 다른 기기가 보낸 입력과, README 에 적은 승인을 거친 Claude 의 입력뿐입니다. 그 밖에는 마우스나 키보드에 아무것도 하지 않습니다.
+Remote 창에서 다른 컴퓨터 화면을 볼 때, 그 화면 그림 위의 클릭 · 스크롤 · 키 입력이 이 컴퓨터가 아니라 그 컴퓨터로 갑니다. Remote 가 이 컴퓨터에 클릭 · 입력하는 것은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있고 손쉬운 사용 권한이 있을 때 같은 계정의 다른 기기가 보낸 입력과, README 에 적은 승인을 거친 Claude 의 입력뿐입니다. 그 밖에는 마우스나 키보드에 아무것도 하지 않습니다.
+
+복사 · 붙여넣기는 이 컴퓨터와 화면에 띄운 컴퓨터 사이에서 일반 글자만 오갑니다. 그림과 파일은 주고받지 않습니다. 다른 컴퓨터 화면 그림 위에서 붙여넣기 단축키를 누르면 Remote 가 먼저 이 컴퓨터 클립보드의 글을 그 컴퓨터 클립보드에 넣습니다. 그 화면에서 복사나 잘라내기 단축키를 누르면 그 컴퓨터 클립보드의 글을 이 컴퓨터 클립보드로 가져옵니다. 마찬가지로 같은 계정의 다른 기기도 이 컴퓨터 클립보드의 글을 읽거나 바꿀 수 있지만, **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 그렇습니다. 여기에는 손쉬운 사용 권한이 필요하지 않습니다. 그 밖에 Remote 는 클립보드를 읽지 않고, 그 글을 다른 곳에 저장하지 않습니다. 글은 다른 내용으로 바뀔 때까지 클립보드에 남습니다.
 
 ## 인터넷 연결
 
@@ -91,15 +95,15 @@ Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연
 서버는 bcrypt 로 바꾼 값만 저장합니다. 서버가 돌려준 토큰 두 개는 운영체제가 암호화해 Remote 자기 폴더에 두고, 그 밖에 사용자에 관한 것은 두지
 않습니다. 로그인해 있는 동안 Remote 는 서버의 중계(relay)에 연결 하나를 열어 둡니다. 중계는 같은 계정의 어느 컴퓨터 ·
 휴대폰이 켜져 있는지(기기마다 이름과 무작위 기기 번호)를 알려 주고, 두 기기가 서로 연결을 맺는 데 필요한 짧은 메시지를
-전해 줍니다. 화면 · 클릭 · 키는 서버를 거치지 않고 WebRTC 로 두 기기 사이를 암호화(DTLS-SRTP)해 바로 오갑니다. 바로 갈
+전해 줍니다. 화면 · 클릭 · 키 · 복사한 글은 서버를 거치지 않고 WebRTC 로 두 기기 사이를 암호화(DTLS-SRTP)해 바로 오갑니다. 바로 갈
 길을 찾으려고 기기마다 공개 STUN 서버(`stun.l.google.com`)에 자기 인터넷 주소를 묻고, 그 밖에는 아무것도 보내지
 않습니다.
 
-- 같은 계정의 다른 컴퓨터 · 휴대폰은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 이 컴퓨터를 보고, **다른 컴퓨터의 클릭 ·
-  키 입력 허용** 까지 켜져 있을 때만 클릭 · 입력합니다. **지금 끊기** 는 보기를 바로 끕니다.
+- 같은 계정의 다른 컴퓨터 · 휴대폰은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 이 컴퓨터를 보고, 그때 손쉬운 사용
+  권한이 있으면 클릭 · 입력도 합니다. **지금 끊기** 는 보기를 바로 끕니다.
 - Remote 는 중계가 같은 계정이라고 알려 준 기기에만 답하고, 이 컴퓨터의 어떤 포트에서도 연결을 기다리지 않습니다.
   창의 **로그아웃** 은 중계 연결과 다른 기기와의 연결을 모두 끊습니다.
-- 접속 기록(누가 언제 보거나 클릭 · 입력했는지. 친 글자 내용은 적지 않습니다)은 이 컴퓨터 메모리에만 있고 Remote 를
+- 접속 기록(누가 언제 보거나 클릭 · 입력 · 복사 · 붙여넣기를 했는지. 친 글자와 복사한 글의 내용은 적지 않습니다)은 이 컴퓨터 메모리에만 있고 Remote 를
   끄면 사라집니다.
 - 다른 컴퓨터로 보낸 화면은 어느 쪽 컴퓨터에도 저장하지 않습니다.
 

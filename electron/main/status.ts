@@ -5,6 +5,7 @@
 // Other computers reach this one through the connection (link.ts), which calls remoteFrameSent for every picture it
 // hands out.
 import type { OffReason, Permissions, State, Status } from "../preload/api";
+import * as account from "./account";
 import { native } from "./native";
 
 /** Windows and Linux capture and input are not written yet (plan stage 6). */
@@ -54,6 +55,10 @@ export function current(): Status {
   } else if (!allowed.screenRecording) {
     state = "off";
     reason = "screenRecording";
+  } else if (!account.email()) {
+    // Why: signed out, this computer is on no account, so no other computer or phone can reach it.
+    state = "off";
+    reason = "signedOut";
   }
   const watching = state === "waiting" ? viewers() : [];
   if (watching.length > 0) state = "viewing";

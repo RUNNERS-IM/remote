@@ -9,6 +9,7 @@ import type {
   LogEntry,
   MenuCommand,
   MenuState,
+  SettingsTab,
   PeerInfo,
   PermissionKind,
   Permissions,
@@ -26,11 +27,11 @@ declare global {
 
 const api = () => window.remote;
 
-export type { Allow, Computer, Display, Input, Link, LogEntry, PeerInfo, MenuCommand, MenuState, PermissionKind, Permissions, Status, UpdateOffer };
+export type { Allow, Computer, Display, Input, Link, LogEntry, PeerInfo, MenuCommand, MenuState, PermissionKind, Permissions, SettingsTab, Status, UpdateOffer };
 
-/** Which window this page is: the Remote window, the About window or the update question. */
-export const page: "viewer" | "about" | "update" =
-  location.hash === "#about" ? "about" : location.hash === "#update" ? "update" : "viewer";
+/** Which window this page is: the Remote window, the panel, Settings or the update question. */
+export const page: "viewer" | "panel" | "settings" | "update" =
+  location.hash === "#panel" ? "panel" : location.hash === "#settings" ? "settings" : location.hash === "#update" ? "update" : "viewer";
 
 export const status = () => api().status();
 export const displays = () => api().displays();
@@ -57,6 +58,10 @@ export const openExternal = (url: string) => api().openExternal(url);
 export const menuState = () => api().menuState();
 export const command = (name: MenuCommand) => api().command(name);
 export const closeWindow = () => api().closeWindow();
+export const openSettings = (tab: SettingsTab) => api().openSettings(tab);
+export const onSettingsTab = (listener: (tab: SettingsTab) => void) => api().onSettingsTab(listener);
+export const openComputer = (host: string) => api().openComputer(host);
+export const onOpenComputer = (listener: (host: string) => void) => api().onOpenComputer(listener);
 export const updateOffer = () => api().updateOffer();
 export const onUpdateOffer = (listener: (offer: UpdateOffer) => void) => api().onUpdateOffer(listener);
 export const answerUpdate = (answer: "install" | "later") => api().answerUpdate(answer);
@@ -67,18 +72,11 @@ export function errorCode(error: unknown): string {
   return text.replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
 }
 
-/** Marks the page see-through where the OS blurs behind the window, and takes the system accent colour. */
+/** Marks the menu-bar panel see-through where the OS blurs behind it; every other window has a solid background. */
 export function applyWindowLook(): void {
   void api()
     .translucent()
     .then((on) => {
-      document.documentElement.dataset.translucent = String(on);
-    });
-  void api()
-    .accentColor()
-    .then((color) => {
-      if (!color) return;
-      // Why: the window look (runners-window.css) follows the OS accent.
-      document.documentElement.style.setProperty("--rw-accent", color);
+      document.documentElement.dataset.translucent = String(on && page === "panel");
     });
 }

@@ -1,11 +1,12 @@
 // The RUNNERS account in a desktop app's window, the same in Remote, Monitor, Split and Prompt (user decisions
 // 「[REMOTE] 개발 - 네 앱 계정 · 연결 통일」 2A 4A and 「… 연결 요금 · 웹 · 세션 역할」 2A, 2026-11-05):
 // - signed out, the app shows one Sign In button where its main content goes, and that button opens <SignInSheet>;
-// - signed in, <AccountButton> is a round badge with the email's first letter at the window's top right that opens the
+// - signed in, <AccountButton> is a round badge with the RUNNERS panda at the window's top right that opens the
 //   account menu (the email, one line the app chooses, the app's own items, then Log Out).
 // The source lives in runners-app-kit/desktop; each app copies this folder unchanged and runs check.mjs before it
 // builds. It needs only React: the R mark and icons are drawn here, and the words come from runners-account-text.ts.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import panda from './assets/panda/face.webp'
 import { TEXT, type TextKey } from './runners-account-text'
 import './runners-account.css'
 
@@ -49,9 +50,9 @@ export function accountText(lang: string, key: TextKey): string {
   return TEXT[pickLang(lang)][key]
 }
 
-/** The badge letter: the email's first letter or digit, upper case. */
-function initial(email: string): string {
-  return (email.match(/[\p{L}\p{N}]/u)?.[0] ?? '?').toUpperCase()
+/** The RUNNERS panda in the round account badge (user, 2026-11-08: no hair, eyebrows on every face). */
+function BadgePanda() {
+  return <img src={panda} alt="" draggable={false} />
 }
 
 /** The RUNNERS R mark on a rounded tile: a white tile with a black R in dark windows (user, 2026-11-05: 「다크모드에선
@@ -89,7 +90,7 @@ function CloseIcon() {
 
 function LogOutIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden {...STROKE}>
+    <svg className="ra-out" width="16" height="16" viewBox="0 0 24 24" aria-hidden {...STROKE}>
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
     </svg>
   )
@@ -103,6 +104,10 @@ export function AccountButton(props: {
   /** One line under the email, such as how many computers of the account are on. */
   line?: ReactNode
   items?: AccountMenuItem[]
+  /** The sign-out reaches every RUNNERS app on this Mac (account.sharedLogin()). */
+  sharedLogin?: boolean
+  /** The app this one followed into the account (account.signedInFrom()). */
+  signedInFrom?: string | null
   onSignOut: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -145,19 +150,24 @@ export function AccountButton(props: {
         title={props.account}
         onClick={() => setOpen(!open)}
       >
-        {initial(props.account)}
+        <BadgePanda />
       </button>
       {open && (
         <div className="ra-menu" role="menu">
           <div className="ra-menu-head">
             <span className="ra-badge ra-large" aria-hidden>
-              {initial(props.account)}
+              <BadgePanda />
             </span>
             <span className="ra-menu-text">
               <span className="ra-menu-email">{props.account}</span>
               <span className="ra-hint">{accountText(props.lang, 'title')}</span>
             </span>
           </div>
+          {props.signedInFrom && (
+            <div className="ra-menu-line ra-hint">
+              {accountText(props.lang, 'signedInFrom').replace('{app}', props.signedInFrom)}
+            </div>
+          )}
           {props.line && <div className="ra-menu-line ra-hint">{props.line}</div>}
           <div className="ra-menu-sep" />
           {props.items?.map((item) => (
@@ -179,7 +189,7 @@ export function AccountButton(props: {
             onClick={choose(props.onSignOut)}
           >
             <LogOutIcon />
-            <span>{accountText(props.lang, 'signOut')}</span>
+            <span>{accountText(props.lang, props.sharedLogin ? 'signOutAll' : 'signOut')}</span>
           </button>
         </div>
       )}

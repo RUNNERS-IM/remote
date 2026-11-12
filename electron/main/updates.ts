@@ -7,6 +7,7 @@ import { autoUpdater, type ProgressInfo } from "electron-updater";
 import { currentLocale, t } from "./i18n";
 import { releaseNoteLines } from "./releaseNotes";
 import { readSettings, writeSettings } from "./settings";
+import * as keepAlive from "./keepAlive";
 import { allowClose, askUpdate, type UpdateAnswer } from "./windows";
 
 /** Wait after launch so a login start is not slowed down by the check. */
@@ -67,6 +68,8 @@ async function check(asked: boolean): Promise<void> {
     // Why allowClose first: macOS closes every window before before-quit fires, and the Remote window only hides when
     // closed, so without this the app never quits and the new build is never put in place.
     allowClose();
+    // Why: the installer starts the new build itself; Remote must not also be started again by keepAlive.
+    keepAlive.quitAsked();
     autoUpdater.quitAndInstall(true, true);
   } catch (error) {
     if (asked) await tell(t("update.failed", { error: error instanceof Error ? error.message : String(error) }));

@@ -1,13 +1,12 @@
-/* Colours shared by the About window (About.css, RunnersApps.css) and the viewer (Viewer.css): design standard A, the macOS system look. */
+/* Colours shared by the About window (the kit's runners-about.css) and the viewer (Viewer.css): the RUNNERS design system's black and white (runners-window.css). */
 :root {
-  --accent: #007aff;
-  --panel: #f6f6f6;
-  --card: rgba(255, 255, 255, 0.85);
-  --ink: #1d1d1f;
-  --sub: #6e6e73;
-  --track: rgba(0, 0, 0, 0.08);
-  --line: rgba(0, 0, 0, 0.12);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --panel: var(--rw-window-bg);
+  --card: var(--rw-box-bg);
+  --ink: var(--rw-text);
+  --sub: var(--rw-text-secondary);
+  --track: var(--rw-control-bg);
+  --line: var(--rw-separator);
+  font-family: var(--rw-font-family);
   font-size: 13px;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -17,15 +16,12 @@
   text-wrap: pretty;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --panel: #1e1e20;
-    --card: rgba(255, 255, 255, 0.05);
-    --ink: #f5f5f7;
-    --sub: #98989d;
-    --track: rgba(255, 255, 255, 0.12);
-    --line: rgba(255, 255, 255, 0.14);
-  }
+/* Why: browsers give form controls their own font (Arial, monospace) instead of the page's. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 /* Why: grey text all but vanished over the blurred desktop, so secondary text is darker (lighter in dark mode) when blur is on. */
@@ -47,3 +43,14 @@ body,
   user-select: none;
   cursor: default;
 }
+
+/* The tray panel: Split's menu values from runners-menu.css (--rm-*). The OS draws the menu material behind it. */
+:root[data-window="panel"] {
+  color: var(--rm-text);
+  font-size: var(--rm-font);
+}
+
+/* Why: in right-to-left pages Chromium draws a wide, always-visible scroll bar on the left instead of the thin macOS one.
+   The scrolling box stays left-to-right, which keeps the thin bar, and everything inside it goes back to right-to-left. */
+:root[dir="rtl"] :is(.settings-body, .grid-scroll) { direction: ltr; }
+:root[dir="rtl"] :is(.settings-body, .grid-scroll) > * { direction: rtl; }

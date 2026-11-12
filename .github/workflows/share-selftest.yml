@@ -116,7 +116,13 @@ jobs:
             const [cx, cy] = (down ?? "mousedown -99,-99").slice(10).split(",").map(Number);
             if (Math.abs(cx - 300) > 3 || Math.abs(cy - 200) > 3) bad.push("click landed at " + down);
             for (const k of ["wheel", "keydown"]) if (!r.received?.events?.some((e) => e.startsWith(k))) bad.push("window got no " + k);
-            if (!r.received?.text?.includes("Remote 안녕")) bad.push("text: " + JSON.stringify(r.received?.text));
+            // Linux: Chromium(이 시험 창)은 빌린 키에 올린 한글을 읽지 못한다. xdotool 로 쳐도 같다(2026-11-12 run 43212474414).
+            // 그래서 Linux 에서는 영어 글자가 창에 들어갔는지와, Chromium 이 아닌 xev 가 한글 키 기호(U+AC00 가)를 받았는지를 본다.
+            if (process.platform === "linux") {
+              if (!r.received?.text?.includes("Remote")) bad.push("text: " + JSON.stringify(r.received?.text));
+              const xev = require("fs").existsSync(process.env.OUT + "/xev.txt") ? require("fs").readFileSync(process.env.OUT + "/xev.txt", "utf8") : "";
+              if (!xev.includes("UAC00")) bad.push("xev got no U+AC00");
+            } else if (!r.received?.text?.includes("Remote 안녕")) bad.push("text: " + JSON.stringify(r.received?.text));
             console.log(JSON.stringify({ status: r.status, received: r.received, move: r.move }, null, 2));
             if (bad.length) { console.log("::error::" + bad.join("; ")); process.exit(1); }
           '

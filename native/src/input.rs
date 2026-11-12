@@ -587,14 +587,12 @@ mod linux {
         }
 
         fn remap(&mut self, code: Keycode, keysym: Keysym) -> Result<(), String> {
-            let per = self.per.max(1);
-            let symbols = vec![keysym; usize::from(per)];
-            self.conn.change_keyboard_mapping(1, code, per, &symbols).map_err(err)?;
+            // Why two symbols (lower and upper case), as Chrome Remote Desktop's X11 input does: with the server's
+            // full width per key, Chromium on Xvfb read a borrowed Korean key as no character.
+            self.conn.change_keyboard_mapping(1, code, 2, &[keysym, keysym]).map_err(err)?;
             self.sync()?;
-            let start = usize::from(code - self.min) * usize::from(per);
-            if let Some(slot) = self.map.get_mut(start..start + usize::from(per)) {
-                slot.fill(keysym);
-            }
+            // Why read the map back: the server widens the two symbols to its own width per key.
+            self.read_map()?;
             if keysym != 0 {
                 sleep(REMAP_WAIT);
             }

@@ -299,13 +299,6 @@ async function runSelftest(folder: string): Promise<void> {
   };
   const list = screens.displays();
   steps.displays = list;
-  for (const display of list) {
-    await step(`capture-${display.id}`, async () => {
-      const jpeg = await screens.capture(display.id);
-      writeFileSync(join(folder, `capture-${display.id}.jpg`), jpeg);
-      return { bytes: jpeg.length };
-    });
-  }
   const main = list[0];
   // Why: a window of our own records what reaches it, so the run shows the input landed, not only that it was posted.
   const probe = new BrowserWindow({ width: 600, height: 400, show: false, title: "Remote selftest" });
@@ -321,6 +314,14 @@ async function runSelftest(folder: string): Promise<void> {
   await probe.webContents.executeJavaScript("t.focus()");
   const settle = () => new Promise((done) => setTimeout(done, 500));
   await settle();
+  // Why after the window: an empty test display is one flat colour, and the window shows the picture is real.
+  for (const display of list) {
+    await step(`capture-${display.id}`, async () => {
+      const jpeg = await screens.capture(display.id);
+      writeFileSync(join(folder, `capture-${display.id}.jpg`), jpeg);
+      return { bytes: jpeg.length };
+    });
+  }
   if (main) {
     const box = probe.getBounds();
     const x = (box.x + box.width / 2 - main.x) / main.width;

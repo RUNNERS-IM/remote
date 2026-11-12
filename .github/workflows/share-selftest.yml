@@ -41,7 +41,7 @@ jobs:
       # Xvfb 는 화면 없는 X 서버다. XTest 확장이 켜져 있어 입력을 보낼 수 있고, 창 관리자가 있어야 창이 포커스를 받는다.
       - name: Install the X server for Linux
         if: matrix.os == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y xvfb openbox x11-utils
+        run: sudo apt-get update && sudo apt-get install -y xvfb openbox x11-utils x11-xserver-utils
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm native
@@ -58,6 +58,7 @@ jobs:
             Xvfb :99 -screen 0 1920x1080x24 +extension XTEST & sleep 3
             export DISPLAY=:99
             openbox & sleep 2
+            xsetroot -solid "#3a6ea5"
             xdpyinfo | grep -E "dimensions|XTEST" || true
             ARGS=(--no-sandbox)
           else

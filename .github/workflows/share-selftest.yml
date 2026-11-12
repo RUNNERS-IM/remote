@@ -70,6 +70,31 @@ jobs:
           done
           ls -la "$OUT"
 
+      # 비교: Chromium 이 아닌 X 프로그램(xev)에 같은 네이티브 모듈과 xdotool 로 「안녕」을 쳐서, 키 기호가 X 에서 맞게
+      # 나오는지 본다. Chromium 시험 창만 글자를 못 읽는 것인지 가르기 위해서다.
+      - name: Compare text input outside Chromium
+        if: matrix.os == 'linux'
+        shell: bash
+        run: |
+          set -uo pipefail
+          export DISPLAY=:99
+          sudo apt-get install -y xdotool >/dev/null 2>&1 || true
+          xev -event keyboard > "$OUT/xev.txt" 2>&1 & XEV=$!
+          sleep 2
+          xdotool search --sync --name "Event Tester" windowactivate --sync 2>/dev/null || true
+          sleep 1
+          node -e '
+            const dir = "native";
+            const f = require("fs").readdirSync(dir).find((n) => n.startsWith("remote-native.linux") && n.endsWith(".node"));
+            const m = require(require("path").resolve(dir, f));
+            console.log("native:", m.sendInputAt(JSON.stringify({ kind: "text", text: "가A" }), 0, 0));
+          '
+          sleep 1
+          xdotool type --delay 100 "나B"
+          sleep 1
+          kill $XEV || true
+          grep -A2 "KeyPress" "$OUT/xev.txt" | grep -E "keysym|XLookupString" | head -40
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

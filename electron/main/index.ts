@@ -4,6 +4,7 @@
 import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeTheme, screen, shell, type Tray } from "electron";
 import { writeFileSync } from "node:fs";
 import { uptime } from "node:os";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import type { Allow, Input, PermissionKind, PressAt, SettingsTab } from "../preload/api";
 import { startClaude } from "./claude";
@@ -338,6 +339,12 @@ async function runSelftest(folder: string): Promise<void> {
   await step("text", () => screens.sendInput({ kind: "text", text: "Remote 안녕" }));
   await settle();
   steps.received = await probe.webContents.executeJavaScript("({ events: got, text: t.value })");
+  // Why: `REMOTE_SELFTEST_XDOTOOL=1` (Linux CI) types with xdotool too, to tell our input from what Chromium can read.
+  if (process.env.REMOTE_SELFTEST_XDOTOOL === "1") {
+    await step("xdotool", () => execFileSync("xdotool", ["type", "--delay", "100", "다C"]).toString());
+    await settle();
+    steps.receivedAfterXdotool = await probe.webContents.executeJavaScript("({ events: got.slice(-4), text: t.value })");
+  }
   probe.destroy();
   writeFileSync(join(folder, "selftest.json"), JSON.stringify(steps, null, 2));
   console.log("selftest:", JSON.stringify(steps));

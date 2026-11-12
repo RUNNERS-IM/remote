@@ -41,7 +41,7 @@ jobs:
       # Xvfb 는 화면 없는 X 서버다. XTest 확장이 켜져 있어 입력을 보낼 수 있고, 창 관리자가 있어야 창이 포커스를 받는다.
       - name: Install the X server for Linux
         if: matrix.os == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y xvfb openbox x11-utils x11-xserver-utils
+        run: sudo apt-get update && sudo apt-get install -y xvfb openbox x11-utils x11-xserver-utils xdotool
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm native
@@ -64,6 +64,7 @@ jobs:
           else
             ARGS=()
           fi
+          [ "${{ matrix.os }}" = linux ] && export REMOTE_SELFTEST_XDOTOOL=1
           REMOTE_SELFTEST="$OUT" timeout 90 $ELECTRON . "${ARGS[@]}" --lang=ko 2>&1 | tee "$OUT/selftest.log" || true
           for THEME in light dark; do
             REMOTE_OPEN=settings:mac REMOTE_THEME=$THEME REMOTE_SHOT="$OUT/settings-$THEME.png" timeout 40 $ELECTRON . "${ARGS[@]}" --lang=ko > "$OUT/settings-$THEME.log" 2>&1 || true  # 사진을 찍은 뒤에도 앱이 켜져 있어 timeout 이 끈다(124)

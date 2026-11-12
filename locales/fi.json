@@ -149,5 +149,6 @@
   "panel.hidden": "Piilotettu muilta tietokoneilta",
   "panel.signedOut": "Näkyy kirjautumisen jälkeen",
   "thisMac.allowHint": "Kun tämä on käytössä, saman RUNNERS-tilin tietokoneet ja puhelimet voivat nähdä tämän näytön ja napsauttaa sitä.",
+  "thisMac.allowHintUnsupported": "Tässä käyttöjärjestelmässä tätä näyttöä ei voi vielä näyttää muille tietokoneille.",
   "thisMac.nobody": "Yksikään tietokone ei katso nyt"
 }

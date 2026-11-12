@@ -147,5 +147,6 @@
   "panel.hidden": "对其他电脑隐藏",
   "panel.signedOut": "登录后可见",
   "thisMac.allowHint": "开启后，同一 RUNNERS 账号的电脑和手机可以查看此屏幕并点击。",
+  "thisMac.allowHintUnsupported": "在此操作系统上，暂时还不能让其他电脑查看此屏幕。",
   "thisMac.nobody": "现在没有电脑在查看"
 }

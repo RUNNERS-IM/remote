@@ -147,5 +147,6 @@
   "panel.hidden": "Ẩn với máy tính khác",
   "panel.signedOut": "Hiện sau khi đăng nhập",
   "thisMac.allowHint": "Khi bật, máy tính và điện thoại cùng tài khoản RUNNERS có thể xem màn hình này và nhấp vào đó.",
+  "thisMac.allowHintUnsupported": "Trên hệ điều hành này, chưa thể cho máy khác xem màn hình này.",
   "thisMac.nobody": "Hiện không có máy tính nào đang xem"
 }

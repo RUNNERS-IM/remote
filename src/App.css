@@ -44,6 +44,12 @@ body,
   cursor: default;
 }
 
+/* Why: greyed like a native menu's disabled line; Windows and Linux cannot share their screen yet. */
+.panel-off {
+  color: var(--rm-text-secondary);
+  cursor: default;
+}
+
 /* The tray panel: Split's menu values from runners-menu.css (--rm-*). The OS draws the menu material behind it. */
 :root[data-window="panel"] {
   color: var(--rm-text);

@@ -1,9 +1,11 @@
 // Remote's main process: a menu bar app whose picture shows whether this computer can be seen (off / waiting / being
 // viewed), a panel under it listing the other computers, the Remote window that shows every office computer and one
 // computer's screens with clicks and typing, and Settings for everything about this Mac.
-import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeTheme, shell, type Tray } from "electron";
+import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeTheme, screen, shell, type Tray } from "electron";
 import { writeFileSync } from "node:fs";
 import { uptime } from "node:os";
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 import type { Allow, Input, PermissionKind, PressAt, SettingsTab } from "../preload/api";
 import { startClaude } from "./claude";
 import * as input from "./input";
@@ -13,6 +15,7 @@ import * as login from "./login";
 import { buildMenu, forgetIcons, type Command, type MenuState } from "./menu";
 import { currentLocale, t } from "./i18n";
 import { native } from "./native";
+import * as screens from "./screens";
 import { readSettings, writeSettings } from "./settings";
 import * as status from "./status";
 import { createTray, showState } from "./tray";
@@ -210,7 +213,7 @@ function statusLoop(): void {
 }
 
 function requestPermission(kind: PermissionKind): void {
-  if (!status.SUPPORTED) return;
+  if (!status.ASKS_PERMISSIONS) return;
   const granted = kind === "screenRecording" ? native.requestScreenRecording() : native.requestAccessibility();
   // Why: macOS shows each prompt only once per app; after that the switch is only in System Settings.
   if (!granted) void shell.openExternal(SETTINGS_PAGE[kind]);
@@ -218,10 +221,10 @@ function requestPermission(kind: PermissionKind): void {
 
 function registerIpc(): void {
   ipcMain.handle("remote:status", () => status.current());
-  ipcMain.handle("remote:displays", () => (status.SUPPORTED ? JSON.parse(native.displays()) : []));
+  ipcMain.handle("remote:displays", () => (status.SUPPORTED ? screens.displays() : []));
   ipcMain.handle("remote:capture", (_event, display: number) => {
     if (!status.SUPPORTED) throw new Error("unsupported");
-    return native.capture(Number(display));
+    return screens.capture(Number(display));
   });
   ipcMain.handle("remote:requestPermission", (_event, kind: PermissionKind) => {
     if (kind === "screenRecording" || kind === "accessibility") requestPermission(kind);
@@ -285,12 +288,80 @@ function registerIpc(): void {
   ipcMain.on("remote:answerUpdate", (_event, answer: unknown) => answerUpdate(answer === "install" ? "install" : "later"));
 }
 
+/** The `REMOTE_SELFTEST` run: each step is written down with its result or error, so one failure does not hide the rest. */
+async function runSelftest(folder: string): Promise<void> {
+  const steps: Record<string, unknown> = { platform: process.platform, status: status.current() };
+  const step = async (name: string, work: () => unknown) => {
+    try {
+      steps[name] = await work();
+    } catch (error) {
+      steps[name] = { error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+  const list = screens.displays();
+  steps.displays = list;
+  const main = list[0];
+  // Why: a window of our own records what reaches it, so the run shows the input landed, not only that it was posted.
+  const probe = new BrowserWindow({ width: 600, height: 400, useContentSize: true, show: false, title: "Remote selftest" });
+  await probe.loadURL(
+    "data:text/html;charset=utf-8," +
+      encodeURIComponent(
+        '<textarea id="t" style="width:100%;height:100%"></textarea><script>window.got=[];addEventListener("mousedown",(e)=>got.push("mousedown "+e.clientX+","+e.clientY));addEventListener("wheel",()=>got.push("wheel"));addEventListener("keydown",(e)=>got.push("keydown "+e.key));</script>',
+      ),
+  );
+  if (main) probe.setPosition(main.x + 100, main.y + 100);
+  probe.show();
+  probe.focus();
+  await probe.webContents.executeJavaScript("t.focus()");
+  const settle = () => new Promise((done) => setTimeout(done, 500));
+  await settle();
+  // Why after the window: an empty test display is one flat colour, and the window shows the picture is real.
+  for (const display of list) {
+    await step(`capture-${display.id}`, async () => {
+      const jpeg = await screens.capture(display.id);
+      writeFileSync(join(folder, `capture-${display.id}.jpg`), jpeg);
+      return { bytes: jpeg.length };
+    });
+  }
+  if (main) {
+    const box = probe.getContentBounds();
+    const x = (box.x + box.width / 2 - main.x) / main.width;
+    const y = (box.y + box.height / 2 - main.y) / main.height;
+    await step("move", () => {
+      const at = screens.sendInput({ kind: "move", display: main.id, x, y });
+      return { sentTo: at, pointerNow: screen.getCursorScreenPoint(), window: box };
+    });
+    await step("click", () => screens.sendInput({ kind: "click", display: main.id, x, y, button: "left", count: 1 }));
+    await settle();
+    await step("scroll", () => screens.sendInput({ kind: "scroll", display: main.id, x, y, dx: 0, dy: 120 }));
+  }
+  await step("key", () => screens.sendInput({ kind: "key", code: 49, modifiers: [] }));
+  await step("text", () => screens.sendInput({ kind: "text", text: "Remote 안녕" }));
+  await settle();
+  steps.received = await probe.webContents.executeJavaScript("({ events: got, text: t.value })");
+  // Why: `REMOTE_SELFTEST_XDOTOOL=1` (Linux CI) types with xdotool too, to tell our input from what Chromium can read.
+  if (process.env.REMOTE_SELFTEST_XDOTOOL === "1") {
+    await step("xdotool", () => execFileSync("xdotool", ["type", "--delay", "100", "다C"]).toString());
+    await settle();
+    steps.receivedAfterXdotool = await probe.webContents.executeJavaScript("({ events: got.slice(-4), text: t.value })");
+  }
+  probe.destroy();
+  writeFileSync(join(folder, "selftest.json"), JSON.stringify(steps, null, 2));
+  console.log("selftest:", JSON.stringify(steps));
+}
+
 /** Debug runs only: `REMOTE_OPEN=viewer|panel|settings[:tab]|update|update-progress` opens that window at launch, so it can be
  *  captured without clicking the tray (`update` / `update-progress` show the update question with made-up notes,
  *  downloaded or still downloading, and install nothing), and `REMOTE_THEME=dark|light` forces the look. */
 function debugHooks(): void {
   const theme = process.env.REMOTE_THEME;
   if (theme === "dark" || theme === "light") nativeTheme.themeSource = theme;
+  // Why: `REMOTE_MENU_DUMP=1` prints the Linux tray menu's lines (as a signed-in user sees them), since a native menu
+  // cannot be captured on a Mac.
+  if (process.env.REMOTE_MENU_DUMP === "1") {
+    const lines = buildMenu(status.current(), { ...menuState(), linked: true }, run).items;
+    console.log("menu:", JSON.stringify(lines.filter((i) => i.type !== "separator").map((i) => ({ label: i.label, checked: i.checked, enabled: i.enabled }))));
+  }
   const which = process.env.REMOTE_OPEN;
   // Why: the tray icon needs a moment before it reports where it sits.
   if (which === "viewer") setTimeout(openViewer, 1500);
@@ -313,6 +384,11 @@ function debugHooks(): void {
       void window?.webContents.executeJavaScript(`document.querySelector(${JSON.stringify(press)})?.click()`);
     }, 3500);
   }
+  // Why: `REMOTE_SELFTEST=<folder>` runs the receiving side once on this system (display list, a still picture of each
+  // display, a pointer move, a key and text) and writes what happened to <folder>/selftest.json, then quits, so a
+  // Windows or Linux machine in CI can show it works without anyone at the screen.
+  const selftest = process.env.REMOTE_SELFTEST;
+  if (selftest) setTimeout(() => void runSelftest(selftest).finally(() => app.quit()), 3000);
   const shot = process.env.REMOTE_SHOT;
   if (shot && which) {
     setTimeout(() => {

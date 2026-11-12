@@ -149,5 +149,6 @@
   "panel.hidden": "Diğer bilgisayarlardan gizli",
   "panel.signedOut": "Giriş yapınca görünür",
   "thisMac.allowHint": "Açıkken aynı RUNNERS hesabındaki bilgisayarlar ve telefonlar bu ekranı görebilir ve üzerine tıklayabilir.",
+  "thisMac.allowHintUnsupported": "Bu işletim sisteminde bu ekran henüz diğer bilgisayarlara gösterilemiyor.",
   "thisMac.nobody": "Şu anda izleyen bilgisayar yok"
 }

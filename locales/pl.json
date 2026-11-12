@@ -155,5 +155,6 @@
   "panel.hidden": "Ukryty przed innymi komputerami",
   "panel.signedOut": "Widoczny po zalogowaniu",
   "thisMac.allowHint": "Gdy włączone, komputery i telefony z tego samego konta RUNNERS mogą widzieć ten ekran i klikać w nim.",
+  "thisMac.allowHintUnsupported": "W tym systemie operacyjnym nie można jeszcze pokazywać tego ekranu innym komputerom.",
   "thisMac.nobody": "Żaden komputer teraz nie ogląda"
 }

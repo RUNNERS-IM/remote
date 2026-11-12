@@ -73,14 +73,25 @@ const KEY_X = 7;
 const BAR_MS = 2500;
 const BAR_ZONE_PX = 56;
 
-/** Shortcuts the floating bar sends that this Mac would take for itself (macOS key codes, keys.ts). */
-const SHORTCUTS: { key: "switchApp" | "spotlight" | "forceQuit" | "lock" | "screenshot"; label: string; code: number; modifiers: ("shift" | "control" | "option" | "command")[] }[] = [
-  { key: "switchApp", label: "⌘⇥", code: 48, modifiers: ["command"] },
-  { key: "spotlight", label: "⌘Space", code: 49, modifiers: ["command"] },
-  { key: "forceQuit", label: "⌥⌘Esc", code: 53, modifiers: ["option", "command"] },
-  { key: "lock", label: "⌃⌘Q", code: 12, modifiers: ["control", "command"] },
-  { key: "screenshot", label: "⌘⇧4", code: 21, modifiers: ["shift", "command"] },
-];
+type Shortcut = { key: "switchApp" | "spotlight" | "forceQuit" | "lock" | "screenshot"; label: string; code: number; modifiers: ("shift" | "control" | "option" | "command")[] };
+
+/** Shortcuts the floating bar sends that this computer would take for itself (macOS key codes, keys.ts), by the system
+ *  of the computer on screen. A Windows or Linux computer turns option into Alt and control into Ctrl. Why fewer there:
+ *  locking and the screenshot tool need the Windows key, which a program cannot press on Windows. */
+const SHORTCUTS: Record<NonNullable<PeerInfo["system"]>, Shortcut[]> = {
+  mac: [
+    { key: "switchApp", label: "⌘⇥", code: 48, modifiers: ["command"] },
+    { key: "spotlight", label: "⌘Space", code: 49, modifiers: ["command"] },
+    { key: "forceQuit", label: "⌥⌘Esc", code: 53, modifiers: ["option", "command"] },
+    { key: "lock", label: "⌃⌘Q", code: 12, modifiers: ["control", "command"] },
+    { key: "screenshot", label: "⌘⇧4", code: 21, modifiers: ["shift", "command"] },
+  ],
+  windows: [
+    { key: "switchApp", label: "Alt+Tab", code: 48, modifiers: ["option"] },
+    { key: "forceQuit", label: "Ctrl+Shift+Esc", code: 53, modifiers: ["control", "shift"] },
+  ],
+  linux: [{ key: "switchApp", label: "Alt+Tab", code: 48, modifiers: ["option"] }],
+};
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -918,7 +929,7 @@ function Detail(props: { host: string; name: string; online: boolean; visible: b
             </button>
             {menu === "keys" && (
               <div className="bar-menu" role="menu">
-                {SHORTCUTS.map((s) => (
+                {SHORTCUTS[info?.system ?? "mac"].map((s) => (
                   <button key={s.key} type="button" role="menuitem" className="bar-menu-item" onClick={() => sendShortcut(s.code, s.modifiers)}>
                     <span className="invisible" />
                     <span>{t(`session.key.${s.key}`)}</span>

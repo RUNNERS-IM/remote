@@ -1,0 +1,128 @@
+# Windows · Linux 에서 화면 공유 받는 쪽(화면 목록 · 정지 사진 · 포인터 · 클릭 · 스크롤 · 키 · 글자)이 실제로 되는지 본다.
+# 사무실에 Windows · Linux 기계가 없어서 GitHub 기계에서 앱을 REMOTE_SELFTEST 로 한 번 띄워 결과를 남긴다.
+# 결과(selftest.json · 화면 사진 · 설정 창 사진)는 실행 첨부 파일로 받는다.
+name: Share selftest
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/share-win-linux]
+
+jobs:
+  selftest:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            runner: windows-latest
+          - os: linux
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/native/target.noindex
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native -> target.noindex
+
+      # Xvfb 는 화면 없는 X 서버다. XTest 확장이 켜져 있어 입력을 보낼 수 있고, 창 관리자가 있어야 창이 포커스를 받는다.
+      - name: Install the X server for Linux
+        if: matrix.os == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb openbox x11-utils x11-xserver-utils xdotool
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm native
+      - run: pnpm build
+
+      - name: Run the selftest
+        shell: bash
+        run: |
+          set -uo pipefail
+          OUT="$RUNNER_TEMP/selftest"; mkdir -p "$OUT"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+          ELECTRON=./node_modules/.bin/electron
+          if [ "${{ matrix.os }}" = linux ]; then
+            Xvfb :99 -screen 0 1920x1080x24 +extension XTEST & sleep 3
+            export DISPLAY=:99
+            openbox & sleep 2
+            xsetroot -solid "#3a6ea5"
+            xdpyinfo | grep -E "dimensions|XTEST" || true
+            ARGS=(--no-sandbox)
+          else
+            ARGS=()
+          fi
+          [ "${{ matrix.os }}" = linux ] && export REMOTE_SELFTEST_XDOTOOL=1
+          REMOTE_SELFTEST="$OUT" timeout 90 $ELECTRON . "${ARGS[@]}" --lang=ko 2>&1 | tee "$OUT/selftest.log" || true
+          for THEME in light dark; do
+            REMOTE_OPEN=settings:mac REMOTE_THEME=$THEME REMOTE_SHOT="$OUT/settings-$THEME.png" timeout 40 $ELECTRON . "${ARGS[@]}" --lang=ko > "$OUT/settings-$THEME.log" 2>&1 || true  # 사진을 찍은 뒤에도 앱이 켜져 있어 timeout 이 끈다(124)
+          done
+          ls -la "$OUT"
+
+      # 비교: Chromium 이 아닌 X 프로그램(xev)에 같은 네이티브 모듈과 xdotool 로 「안녕」을 쳐서, 키 기호가 X 에서 맞게
+      # 나오는지 본다. Chromium 시험 창만 글자를 못 읽는 것인지 가르기 위해서다.
+      - name: Compare text input outside Chromium
+        if: matrix.os == 'linux'
+        shell: bash
+        run: |
+          set -uo pipefail
+          export DISPLAY=:99
+          sudo apt-get install -y xdotool >/dev/null 2>&1 || true
+          xev -event keyboard > "$OUT/xev.txt" 2>&1 & XEV=$!
+          sleep 2
+          xdotool search --sync --name "Event Tester" windowactivate --sync 2>/dev/null || true
+          sleep 1
+          node -e '
+            const dir = "native";
+            const f = require("fs").readdirSync(dir).find((n) => n.startsWith("remote-native.linux") && n.endsWith(".node"));
+            const m = require(require("path").resolve(dir, f));
+            console.log("native:", m.sendInputAt(JSON.stringify({ kind: "text", text: "가A" }), 0, 0));
+          '
+          sleep 1
+          xdotool type --delay 100 "나B"
+          sleep 1
+          kill $XEV || true
+          grep -A2 "KeyPress" "$OUT/xev.txt" | grep -E "keysym|XLookupString" | head -40
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: selftest-${{ matrix.os }}
+          path: ${{ env.OUT }}
+
+      # 판정: 화면이 하나 이상, 화면마다 사진, 포인터가 보낸 곳에 있음, 시험 창이 클릭 · 키 · 글자를 받음.
+      - name: Check the result
+        shell: bash
+        run: |
+          node -e '
+            const r = require(process.env.OUT + "/selftest.json");
+            const bad = [];
+            if (!r.displays?.length) bad.push("no displays");
+            for (const d of r.displays ?? []) if (!r["capture-" + d.id]?.bytes) bad.push("capture " + d.id + ": " + JSON.stringify(r["capture-" + d.id]));
+            // 클릭은 시험 창(600x400) 가운데에 보냈으므로 창 안 좌표 (300, 200) 근처에 떨어져야 한다.
+            const down = (r.received?.events ?? []).find((e) => e.startsWith("mousedown "));
+            const [cx, cy] = (down ?? "mousedown -99,-99").slice(10).split(",").map(Number);
+            if (Math.abs(cx - 300) > 3 || Math.abs(cy - 200) > 3) bad.push("click landed at " + down);
+            for (const k of ["wheel", "keydown"]) if (!r.received?.events?.some((e) => e.startsWith(k))) bad.push("window got no " + k);
+            // Linux: Chromium(이 시험 창)은 빌린 키에 올린 한글을 읽지 못한다. xdotool 로 쳐도 같다(2026-11-12 run 43212474414).
+            // 그래서 Linux 에서는 영어 글자가 창에 들어갔는지와, Chromium 이 아닌 xev 가 한글 키 기호(U+AC00 가)를 받았는지를 본다.
+            if (process.platform === "linux") {
+              if (!r.received?.text?.includes("Remote")) bad.push("text: " + JSON.stringify(r.received?.text));
+              const xev = require("fs").existsSync(process.env.OUT + "/xev.txt") ? require("fs").readFileSync(process.env.OUT + "/xev.txt", "utf8") : "";
+              if (!xev.includes("UAC00")) bad.push("xev got no U+AC00");
+            } else if (!r.received?.text?.includes("Remote 안녕")) bad.push("text: " + JSON.stringify(r.received?.text));
+            console.log(JSON.stringify({ status: r.status, received: r.received, move: r.move }, null, 2));
+            if (bad.length) { console.log("::error::" + bad.join("; ")); process.exit(1); }
+          '

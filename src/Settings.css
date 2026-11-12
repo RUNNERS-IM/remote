@@ -7,11 +7,14 @@
   --separator: var(--rw-separator);
   --control-track: var(--rw-control-bg);
   --switch-off: rgba(0, 0, 0, 0.08);
+  /* Why green and not the accent: every RUNNERS app shows an on switch the same way (runners-wiki 2026-11-12). */
+  --switch-on: #34c759;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --tertiary: rgba(255, 255, 255, 0.25);
     --switch-off: rgba(255, 255, 255, 0.12);
+    --switch-on: #30d158;
   }
 }
 html[data-window='settings'], html[data-window='settings'] body, html[data-window='settings'] #root { height: 100%; margin: 0; }
@@ -151,7 +154,7 @@ html[data-window='settings'] body { background: var(--rw-window-bg); overflow: h
   transition: background-color 0.15s;
 }
 .switch.on {
-  background: var(--rw-primary);
+  background: var(--switch-on);
 }
 .switch-knob {
   position: absolute;
@@ -168,7 +171,6 @@ html[data-window='settings'] body { background: var(--rw-window-bg); overflow: h
   cursor: default;
 }
 .switch.on .switch-knob {
-  background: var(--rw-on-primary);
   transform: translateX(10px);
 }
 .s-content { display: flex; flex-direction: column; gap: var(--rw-box-gap); width: 100%; max-width: 600px; margin: 0 auto; padding: var(--rw-pad); box-sizing: border-box; }

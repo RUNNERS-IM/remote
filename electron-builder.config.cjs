@@ -21,8 +21,11 @@ module.exports = {
   // Why: the same app id as the Tauri build, so macOS keeps the Screen Recording and Accessibility permissions
   // already given to it (they are stored per app id and signing team).
   appId: "im.runners.remote",
-  productName: "Remote",
-  executableName: "remote",
+  // Why "Remotrol" here but "Remote" in package.json: package.json's productName is the name the running app reads,
+  // and Electron names the user data folder and the keychain entry that encrypts the sign-in after it. Keeping it
+  // "Remote" keeps the settings and sign-in of every computer that had Remote before the rename (2026-11-13).
+  productName: "Remotrol",
+  executableName: "remotrol",
   buildVersion,
   copyright: "© 2026 RUNNERS. All rights reserved.",
   directories: { output: "dist.noindex", buildResources: "build" },
@@ -44,9 +47,9 @@ module.exports = {
   // Why: no npm package with native code ships; the one native module is built by cargo above.
   npmRebuild: false,
   mac: {
-    // Why: executableName also names the app bundle, so without this the Mac app would be "remote.app". Windows and
-    // Linux keep the lower-case "remote" command.
-    executableName: "Remote",
+    // Why: executableName also names the app bundle, so without this the Mac app would be "remotrol.app". Windows and
+    // Linux keep the lower-case "remotrol" command.
+    executableName: "Remotrol",
     category: "public.app-category.utilities",
     icon: "build/icon.icns",
     // Why: screen pictures use ScreenCaptureKit's screenshot call, which macOS 14 added.
@@ -55,25 +58,29 @@ module.exports = {
       { target: "dmg", arch: ["arm64", "x64"] },
       { target: "zip", arch: ["arm64", "x64"] },
     ],
-    artifactName: `Remote-${tag}-mac-\${arch}.\${ext}`,
+    artifactName: `Remotrol-${tag}-mac-\${arch}.\${ext}`,
     hardenedRuntime: isRelease,
     notarize: isRelease,
     // Why: a local build is not signed with the Developer ID; it is signed ad hoc so it still opens on this Mac.
     ...(isRelease ? {} : { identity: null }),
     entitlements: "build/entitlements.mac.plist",
     entitlementsInherit: "build/entitlements.mac.plist",
+    // Why: macOS 26 takes the icon from Assets.car (scripts/icons.sh), which has the black plate for dark icons;
+    // icon.icns stays for older macOS.
+    extraResources: [{ from: "build/Assets.car", to: "Assets.car" }],
     extendInfo: {
-      // Remote lives in the menu bar only: no Dock icon, no app menu.
+      // Remotrol lives in the menu bar only: no Dock icon, no app menu.
       LSUIElement: true,
+      CFBundleIconName: "icon",
       CFBundleShortVersionString: shownVersion,
     },
   },
-  dmg: { artifactName: `Remote-${tag}-mac-\${arch}.\${ext}` },
+  dmg: { artifactName: `Remotrol-${tag}-mac-\${arch}.\${ext}` },
   forceCodeSigning: isRelease,
   win: {
     icon: "build/icon.ico",
     target: [{ target: "nsis", arch: ["x64"] }],
-    artifactName: `remote-${tag}-windows-x64-setup.\${ext}`,
+    artifactName: `remotrol-${tag}-windows-x64-setup.\${ext}`,
   },
   nsis: { oneClick: true, perMachine: false },
   linux: {
@@ -83,9 +90,9 @@ module.exports = {
     maintainer: "RUNNERS",
     synopsis: "See and click the screens of other computers",
   },
-  appImage: { artifactName: `remote-${tag}-linux-x86_64.AppImage` },
-  deb: { artifactName: `remote-${tag}-linux-amd64.deb` },
-  rpm: { artifactName: `remote-${tag}-linux-x86_64.rpm` },
+  appImage: { artifactName: `remotrol-${tag}-linux-x86_64.AppImage` },
+  deb: { artifactName: `remotrol-${tag}-linux-amd64.deb` },
+  rpm: { artifactName: `remotrol-${tag}-linux-x86_64.rpm` },
   // Read by electron-updater inside the app (app-update.yml). CI uploads the files itself (--publish never).
-  publish: { provider: "github", owner: "RUNNERS-IM", repo: "remote" },
+  publish: { provider: "github", owner: "RUNNERS-IM", repo: "remotrol" },
 };

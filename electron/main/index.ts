@@ -185,7 +185,7 @@ function setAppMenu(): void {
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       {
-        label: app.name,
+        label: "Remotrol",
         submenu: [
           { label: t("menu.settings"), accelerator: "CmdOrCtrl+,", click: () => openSettings() },
           { type: "separator" },

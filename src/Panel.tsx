@@ -47,7 +47,7 @@ export default function Panel() {
     <div ref={root} className="rm-panel" style={{ padding: "var(--rm-pad-y) 0" }}>
       {status && link && (
         <>
-          <MenuHead name="Remote" sub={`${status.computer} · ${statusText(status.state, status.reason)}`} />
+          <MenuHead name="Remotrol" sub={`${status.computer} · ${statusText(status.state, status.reason)}`} />
           <MenuSeparator />
           {link.account ? (
             <>

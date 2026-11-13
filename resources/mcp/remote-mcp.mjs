@@ -41,7 +41,7 @@ const display = { type: "number", description: "Display id from remote_displays 
 const TOOLS = [
   {
     name: "remote_computers",
-    description: "Lists this computer and the office computers Remote can reach, with whether each is online.",
+    description: "Lists this computer and the office computers Remotrol can reach, with whether each is online.",
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true },
   },
@@ -112,7 +112,7 @@ function connect() {
   });
   const fail = (error) => {
     socket = null;
-    for (const done of waiting.values()) done({ error: `Remote is not running or not reachable (${error?.message ?? "closed"})` });
+    for (const done of waiting.values()) done({ error: `Remotrol is not running or not reachable (${error?.message ?? "closed"})` });
     waiting.clear();
   };
   socket.on("error", fail);

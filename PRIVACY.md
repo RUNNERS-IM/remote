@@ -1,27 +1,27 @@
-# Remote Privacy Policy
+# Remotrol Privacy Policy
 
 Last updated: November 10, 2026
 
-Remote is an app made by Runners Co., Ltd for seeing and clicking the screens of other computers. This policy covers every version of Remote.
+Remotrol is an app made by Runners Co., Ltd for seeing and clicking the screens of other computers. This policy covers every version of Remotrol.
 
-## What Remote collects
+## What Remotrol collects
 
-Only the RUNNERS account you sign in with, as described under Office connection below. Remote has no ads and no analytics, and it does not send anything else about you or your computer to Runners or anyone else.
+Only the RUNNERS account you sign in with, as described under Office connection below. Remotrol has no ads and no analytics, and it does not send anything else about you or your computer to Runners or anyone else.
 
-## What Remote reads on your computer
+## What Remotrol reads on your computer
 
-Remote takes pictures of this computer's screen only when something asks for them: another computer or phone of the same account, while **Let Other Computers See This** is on, or Claude through Remote's MCP server (see Claude below). This happens whether or not the Remote window is open. Pictures for another device go straight to that device, as a video of up to 15 frames a second or as single pictures, and stop when it disconnects, when that switch is turned off, or when you choose **Disconnect Now**. The pictures are kept in memory only and are not saved to disk.
+Remotrol takes pictures of this computer's screen only when something asks for them: another computer or phone of the same account, while **Let Other Computers See This** is on, or Claude through Remotrol's MCP server (see Claude below). This happens whether or not the Remotrol window is open. Pictures for another device go straight to that device, as a video of up to 15 frames a second or as single pictures, and stop when it disconnects, when that switch is turned off, or when you choose **Disconnect Now**. The pictures are kept in memory only and are not saved to disk.
 
-Remote also reads the list of displays and whether it has the Screen Recording and Accessibility permissions.
+Remotrol also reads the list of displays and whether it has the Screen Recording and Accessibility permissions.
 
-When you are looking at another computer in the Remote window, your clicks, scrolls and keys on its picture are sent to that computer, not to this one. Remote clicks and types on this computer only when another device of the same account sends input while **Let Other Computers See This** is on and Accessibility is allowed for Remote, or when Claude does so with the approval described in the README. It does nothing else with your mouse or keyboard.
+When you are looking at another computer in the Remotrol window, your clicks, scrolls and keys on its picture are sent to that computer, not to this one. Remotrol clicks and types on this computer only when another device of the same account sends input while **Let Other Computers See This** is on and Accessibility is allowed for Remotrol, or when Claude does so with the approval described in the README. It does nothing else with your mouse or keyboard.
 
-Copy and paste work between this computer and the computer on screen, as plain text only; images and files are not exchanged. When you use the paste shortcut on another computer's picture, Remote first puts the text on this computer's clipboard onto that computer's clipboard. When you use the copy or cut shortcut there, Remote brings the text on that computer's clipboard to this computer's clipboard. In the same way, another device of the same account can read or replace the text on this computer's clipboard, but only while **Let Other Computers See This** is on; this does not need Accessibility. Remote does not read the clipboard at any other time and does not save the text anywhere else. It stays on the clipboard until something replaces it.
+Copy and paste work between this computer and the computer on screen, as plain text only; images and files are not exchanged. When you use the paste shortcut on another computer's picture, Remotrol first puts the text on this computer's clipboard onto that computer's clipboard. When you use the copy or cut shortcut there, Remotrol brings the text on that computer's clipboard to this computer's clipboard. In the same way, another device of the same account can read or replace the text on this computer's clipboard, but only while **Let Other Computers See This** is on; this does not need Accessibility. Remotrol does not read the clipboard at any other time and does not save the text anywhere else. It stays on the clipboard until something replaces it.
 
 ## Network
 
-Remote connects to the internet for two things: updates, and the office connection below. A minute after it starts and once a day after that, it reads
-the list of releases and the update file (`latest-mac.yml`, `latest.yml` or `latest-linux.yml`) from Remote's GitHub
+Remotrol connects to the internet for two things: updates, and the office connection below. A minute after it starts and once a day after that, it reads
+the list of releases and the update file (`latest-mac.yml`, `latest.yml` or `latest-linux.yml`) from Remotrol's GitHub
 release page to see whether there is a newer version; if there is, it downloads it, then asks you, and only installs it
 when you choose Install Now. Choosing Later means it does not ask again that day. The requests carry nothing about you
 or your computer; like any download, GitHub sees the computer's IP address. Turning off **Check for Updates
@@ -30,58 +30,58 @@ Automatically** stops the daily check. Choosing **Check for Updates…** does th
 
 ### Office connection
 
-Computers and phones connect through the RUNNERS account you sign in with in the Remote window. Remote sends the
+Computers and phones connect through the RUNNERS account you sign in with in the Remotrol window. Remotrol sends the
 account's email and password to the RUNNERS system server (`server.system.runners.im`) to sign in; the password goes
-only over the encrypted connection (HTTPS), and the server keeps it only as a bcrypt hash. The server returns two tokens, which Remote keeps encrypted by the operating system in
-its own folder, and nothing else about you is kept. While signed in, Remote keeps one connection open to the server's
+only over the encrypted connection (HTTPS), and the server keeps it only as a bcrypt hash. The server returns two tokens, which Remotrol keeps encrypted by the operating system in
+its own folder, and nothing else about you is kept. While signed in, Remotrol keeps one connection open to the server's
 relay, which tells it which computers and phones of the same account are online (each one's name and a random device
 id) and passes the short messages that set up a connection between two of them. Screens, clicks, keys and copied text do not pass
 through the server: they go directly between the two devices over WebRTC, encrypted (DTLS-SRTP). To find a direct path
 each device asks a public STUN server (`stun.l.google.com`) for its own internet address; nothing else is sent to it.
 
 - Another computer or phone of the same account sees this one only while **Let Other Computers See This** is on, and while it is on
-  can also click and type if Accessibility is allowed for Remote. **Disconnect Now** turns seeing off at once.
-- Remote answers only devices the relay lists for the same account; Remote does not listen on any port of this
+  can also click and type if Accessibility is allowed for Remotrol. **Disconnect Now** turns seeing off at once.
+- Remotrol answers only devices the relay lists for the same account; Remotrol does not listen on any port of this
   computer. **Sign Out** in the window ends the relay connection and every connection to another device.
 - The connection log (who viewed, clicked, typed, copied or pasted, and when; never the text typed or copied) stays in memory on this computer
-  and is gone when Remote quits.
+  and is gone when Remotrol quits.
 - Pictures sent to another computer are not saved on either computer.
 
 ### Claude
 
-When you add Remote's MCP server to Claude, Claude can list the computers, see their screens and, with the approval
+When you add Remotrol's MCP server to Claude, Claude can list the computers, see their screens and, with the approval
 described in the README, click and type. Screenshots Claude takes go to Claude like anything else you share with it,
-under Anthropic's terms; Remote itself sends nothing to Anthropic or Runners.
+under Anthropic's terms; Remotrol itself sends nothing to Anthropic or Runners.
 
 ## Contact
 
-Questions: open an issue at https://github.com/RUNNERS-IM/remote/issues.
+Questions: open an issue at https://github.com/RUNNERS-IM/remotrol/issues.
 
 ---
 
-# Remote 개인정보 처리방침
+# Remotrol 개인정보 처리방침
 
 최종 수정: 2026년 11월 10일
 
-Remote 는 Runners Co., Ltd 가 만드는, 다른 컴퓨터 화면을 보고 누르는 앱입니다. 이 방침은 모든 Remote 에 적용됩니다.
+Remotrol 은 Runners Co., Ltd 가 만드는, 다른 컴퓨터 화면을 보고 누르는 앱입니다. 이 방침은 모든 Remotrol 에 적용됩니다.
 
 ## 모으는 정보
 
-아래 사무실 연결에 적은, 로그인한 RUNNERS 계정 정보뿐입니다. Remote 에는 광고와 사용 통계 수집이 없고, 그 밖에 사용자나 컴퓨터에 관한 정보를 Runners 나 다른 곳으로 보내지 않습니다.
+아래 사무실 연결에 적은, 로그인한 RUNNERS 계정 정보뿐입니다. Remotrol 에는 광고와 사용 통계 수집이 없고, 그 밖에 사용자나 컴퓨터에 관한 정보를 Runners 나 다른 곳으로 보내지 않습니다.
 
 ## 컴퓨터 안에서 읽는 정보
 
-Remote 는 요청이 올 때만 이 컴퓨터 화면을 찍습니다. 요청하는 쪽은 둘입니다. **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때 같은 계정의 다른 컴퓨터 · 휴대폰, 그리고 Remote 의 MCP 서버로 붙은 Claude(아래 Claude 참고)입니다. Remote 창이 닫혀 있어도 찍습니다. 다른 기기에 보내는 화면은 그 기기로 바로 가며(초당 최대 15장의 영상, 또는 한 장씩), 상대가 연결을 끊거나 그 스위치를 끄거나 **지금 끊기** 를 고르면 멈춥니다. 찍은 화면은 메모리에만 있고 디스크에 저장하지 않습니다.
+Remotrol 은 요청이 올 때만 이 컴퓨터 화면을 찍습니다. 요청하는 쪽은 둘입니다. **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때 같은 계정의 다른 컴퓨터 · 휴대폰, 그리고 Remotrol 의 MCP 서버로 붙은 Claude(아래 Claude 참고)입니다. Remotrol 창이 닫혀 있어도 찍습니다. 다른 기기에 보내는 화면은 그 기기로 바로 가며(초당 최대 15장의 영상, 또는 한 장씩), 상대가 연결을 끊거나 그 스위치를 끄거나 **지금 끊기** 를 고르면 멈춥니다. 찍은 화면은 메모리에만 있고 디스크에 저장하지 않습니다.
 
 모니터 목록과, 화면 기록 · 손쉬운 사용 권한이 켜졌는지도 읽습니다.
 
-Remote 창에서 다른 컴퓨터 화면을 볼 때, 그 화면 그림 위의 클릭 · 스크롤 · 키 입력이 이 컴퓨터가 아니라 그 컴퓨터로 갑니다. Remote 가 이 컴퓨터에 클릭 · 입력하는 것은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있고 손쉬운 사용 권한이 있을 때 같은 계정의 다른 기기가 보낸 입력과, README 에 적은 승인을 거친 Claude 의 입력뿐입니다. 그 밖에는 마우스나 키보드에 아무것도 하지 않습니다.
+Remotrol 창에서 다른 컴퓨터 화면을 볼 때, 그 화면 그림 위의 클릭 · 스크롤 · 키 입력이 이 컴퓨터가 아니라 그 컴퓨터로 갑니다. Remotrol 이 이 컴퓨터에 클릭 · 입력하는 것은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있고 손쉬운 사용 권한이 있을 때 같은 계정의 다른 기기가 보낸 입력과, README 에 적은 승인을 거친 Claude 의 입력뿐입니다. 그 밖에는 마우스나 키보드에 아무것도 하지 않습니다.
 
-복사 · 붙여넣기는 이 컴퓨터와 화면에 띄운 컴퓨터 사이에서 일반 글자만 오갑니다. 그림과 파일은 주고받지 않습니다. 다른 컴퓨터 화면 그림 위에서 붙여넣기 단축키를 누르면 Remote 가 먼저 이 컴퓨터 클립보드의 글을 그 컴퓨터 클립보드에 넣습니다. 그 화면에서 복사나 잘라내기 단축키를 누르면 그 컴퓨터 클립보드의 글을 이 컴퓨터 클립보드로 가져옵니다. 마찬가지로 같은 계정의 다른 기기도 이 컴퓨터 클립보드의 글을 읽거나 바꿀 수 있지만, **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 그렇습니다. 여기에는 손쉬운 사용 권한이 필요하지 않습니다. 그 밖에 Remote 는 클립보드를 읽지 않고, 그 글을 다른 곳에 저장하지 않습니다. 글은 다른 내용으로 바뀔 때까지 클립보드에 남습니다.
+복사 · 붙여넣기는 이 컴퓨터와 화면에 띄운 컴퓨터 사이에서 일반 글자만 오갑니다. 그림과 파일은 주고받지 않습니다. 다른 컴퓨터 화면 그림 위에서 붙여넣기 단축키를 누르면 Remotrol 이 먼저 이 컴퓨터 클립보드의 글을 그 컴퓨터 클립보드에 넣습니다. 그 화면에서 복사나 잘라내기 단축키를 누르면 그 컴퓨터 클립보드의 글을 이 컴퓨터 클립보드로 가져옵니다. 마찬가지로 같은 계정의 다른 기기도 이 컴퓨터 클립보드의 글을 읽거나 바꿀 수 있지만, **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 그렇습니다. 여기에는 손쉬운 사용 권한이 필요하지 않습니다. 그 밖에 Remotrol 은 클립보드를 읽지 않고, 그 글을 다른 곳에 저장하지 않습니다. 글은 다른 내용으로 바뀔 때까지 클립보드에 남습니다.
 
 ## 인터넷 연결
 
-Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연결 두 가지입니다. 켜진 지 1분 뒤와 그 뒤 하루에 한 번 Remote 의 GitHub
+Remotrol 이 인터넷에 접속하는 일은 업데이트와 아래 사무실 연결 두 가지입니다. 켜진 지 1분 뒤와 그 뒤 하루에 한 번 Remotrol 의 GitHub
 릴리스 페이지에서 릴리스 목록과 업데이트 파일(`latest-mac.yml`, `latest.yml`, `latest-linux.yml`)을 받아 새 버전이
 있는지 보고, 있으면 먼저 받아 둔 뒤 물어보고 **지금 설치** 를 고를 때만 설치합니다. **나중에** 를 고르면 그날은 다시
 묻지 않습니다. 이 요청에는 사용자나 컴퓨터에 관한 정보가 들어가지 않습니다. 다만 다른 내려받기와 마찬가지로 GitHub 는
@@ -90,10 +90,10 @@ Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연
 
 ### 사무실 연결
 
-컴퓨터와 휴대폰은 Remote 창에서 로그인한 RUNNERS 계정으로 이어집니다. 로그인할 때 Remote 는 계정의 이메일과
+컴퓨터와 휴대폰은 Remotrol 창에서 로그인한 RUNNERS 계정으로 이어집니다. 로그인할 때 Remotrol 은 계정의 이메일과
 비밀번호를 RUNNERS 시스템 서버(`server.system.runners.im`)로 보냅니다. 비밀번호는 암호화된 연결(HTTPS)로만 보내고,
-서버는 bcrypt 로 바꾼 값만 저장합니다. 서버가 돌려준 토큰 두 개는 운영체제가 암호화해 Remote 자기 폴더에 두고, 그 밖에 사용자에 관한 것은 두지
-않습니다. 로그인해 있는 동안 Remote 는 서버의 중계(relay)에 연결 하나를 열어 둡니다. 중계는 같은 계정의 어느 컴퓨터 ·
+서버는 bcrypt 로 바꾼 값만 저장합니다. 서버가 돌려준 토큰 두 개는 운영체제가 암호화해 Remotrol 자기 폴더에 두고, 그 밖에 사용자에 관한 것은 두지
+않습니다. 로그인해 있는 동안 Remotrol 은 서버의 중계(relay)에 연결 하나를 열어 둡니다. 중계는 같은 계정의 어느 컴퓨터 ·
 휴대폰이 켜져 있는지(기기마다 이름과 무작위 기기 번호)를 알려 주고, 두 기기가 서로 연결을 맺는 데 필요한 짧은 메시지를
 전해 줍니다. 화면 · 클릭 · 키 · 복사한 글은 서버를 거치지 않고 WebRTC 로 두 기기 사이를 암호화(DTLS-SRTP)해 바로 오갑니다. 바로 갈
 길을 찾으려고 기기마다 공개 STUN 서버(`stun.l.google.com`)에 자기 인터넷 주소를 묻고, 그 밖에는 아무것도 보내지
@@ -101,18 +101,18 @@ Remote 가 인터넷에 접속하는 일은 업데이트와 아래 사무실 연
 
 - 같은 계정의 다른 컴퓨터 · 휴대폰은 **다른 컴퓨터에 이 화면 보이기** 가 켜져 있을 때만 이 컴퓨터를 보고, 그때 손쉬운 사용
   권한이 있으면 클릭 · 입력도 합니다. **지금 끊기** 는 보기를 바로 끕니다.
-- Remote 는 중계가 같은 계정이라고 알려 준 기기에만 답하고, 이 컴퓨터의 어떤 포트에서도 연결을 기다리지 않습니다.
+- Remotrol 은 중계가 같은 계정이라고 알려 준 기기에만 답하고, 이 컴퓨터의 어떤 포트에서도 연결을 기다리지 않습니다.
   창의 **로그아웃** 은 중계 연결과 다른 기기와의 연결을 모두 끊습니다.
-- 접속 기록(누가 언제 보거나 클릭 · 입력 · 복사 · 붙여넣기를 했는지. 친 글자와 복사한 글의 내용은 적지 않습니다)은 이 컴퓨터 메모리에만 있고 Remote 를
+- 접속 기록(누가 언제 보거나 클릭 · 입력 · 복사 · 붙여넣기를 했는지. 친 글자와 복사한 글의 내용은 적지 않습니다)은 이 컴퓨터 메모리에만 있고 Remotrol 을
   끄면 사라집니다.
 - 다른 컴퓨터로 보낸 화면은 어느 쪽 컴퓨터에도 저장하지 않습니다.
 
 ### Claude
 
-Remote 의 MCP 서버를 Claude 에 붙이면, Claude 는 컴퓨터 목록과 화면을 보고, README 에 적은 승인을 거쳐 클릭 · 입력할
+Remotrol 의 MCP 서버를 Claude 에 붙이면, Claude 는 컴퓨터 목록과 화면을 보고, README 에 적은 승인을 거쳐 클릭 · 입력할
 수 있습니다. Claude 가 찍은 화면은 Claude 에 보여 주는 다른 것과 똑같이 Anthropic 약관에 따라 Claude 로 갑니다.
-Remote 자체는 Anthropic 이나 Runners 로 아무것도 보내지 않습니다.
+Remotrol 자체는 Anthropic 이나 Runners 로 아무것도 보내지 않습니다.
 
 ## 문의
 
-https://github.com/RUNNERS-IM/remote/issues 에 글을 남겨 주세요.
+https://github.com/RUNNERS-IM/remotrol/issues 에 글을 남겨 주세요.

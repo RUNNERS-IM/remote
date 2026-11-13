@@ -455,11 +455,25 @@
 }
 
 .this-mac-text {
-  flex: 1;
-  min-width: 0;
+  /* Why: the name and state come first, so they keep their width and only the list of tabs on the right gives way. */
+  flex: 0 1 auto;
+  min-width: 140px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.this-mac-text > span,
+.this-mac-summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.this-mac-summary {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: right;
 }
 
 .flip {

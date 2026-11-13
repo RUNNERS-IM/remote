@@ -1,4 +1,4 @@
-// Keeps Remote up to date from the GitHub release (electron-updater, RUNNERS-IM/remote): checks once a day,
+// Keeps Remotrol up to date from the GitHub release (electron-updater, RUNNERS-IM/remotrol): checks once a day,
 // first about a minute after launch. A new version is downloaded first and only then does Remote ask, so "Install Now"
 // restarts at once (the shared rule for all RUNNERS apps). Release builds only: a dev run is not a signed build,
 // so it has nothing to compare with or install.

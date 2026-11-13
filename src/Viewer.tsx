@@ -297,7 +297,9 @@ export default function Viewer() {
               <span className={`state-dot ${status.state}`} aria-hidden /> {statusText(status.state, status.reason)}
             </span>
           </span>
-          <span className="hint">{t("thisMac.summary")}</span>
+          <span className="hint this-mac-summary" title={t("thisMac.summary")}>
+            {t("thisMac.summary")}
+          </span>
           <ChevronLeft className="flip" size={14} strokeWidth={1.5} aria-hidden />
         </button>
       )}

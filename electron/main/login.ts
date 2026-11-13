@@ -3,7 +3,7 @@
 // line changes it, so turning it off sticks. macOS 13+ registers the app itself (listed by name and icon under
 // Login Items), Windows uses the Run key, Linux an autostart .desktop file.
 import { app } from "electron";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -31,7 +31,7 @@ export function setOn(on: boolean): void {
     mkdirSync(join(homedir(), ".config", "autostart"), { recursive: true });
     writeFileSync(
       LINUX_AUTOSTART,
-      `[Desktop Entry]\nType=Application\nName=Remote\nExec="${exec}" ${HIDDEN_ARG}\nX-GNOME-Autostart-enabled=true\n`,
+      `[Desktop Entry]\nType=Application\nName=Remotrol\nExec="${exec}" ${HIDDEN_ARG}\nX-GNOME-Autostart-enabled=true\n`,
     );
     return;
   }
@@ -48,9 +48,26 @@ export function toggle(): boolean {
  *  copy of Electron is never registered. */
 export function applyDefault(): void {
   if (!app.isPackaged) return;
+  followMove();
   const marker = join(app.getPath("userData"), DEFAULT_APPLIED);
   if (existsSync(marker)) return;
   setOn(true);
   mkdirSync(app.getPath("userData"), { recursive: true });
   writeFileSync(marker, "");
+}
+
+/** Why: on Windows and Linux the install folder is named after the app, so the rename to Remotrol (2026-11-13) moved
+ *  the program; a login item still pointing at the old path would quietly stop starting it. When one is on but names
+ *  another path, it is written again for this one. */
+function followMove(): void {
+  if (process.platform === "linux") {
+    if (!existsSync(LINUX_AUTOSTART)) return;
+    const exec = process.env.APPIMAGE ?? process.execPath;
+    if (!readFileSync(LINUX_AUTOSTART, "utf8").includes(`Exec="${exec}"`)) setOn(true);
+    return;
+  }
+  if (process.platform !== "win32") return;
+  const here = process.execPath.toLowerCase();
+  const items = app.getLoginItemSettings({ args: [HIDDEN_ARG] }).launchItems ?? [];
+  if (items.some((item) => item.enabled && item.path.toLowerCase() !== here)) setOn(true);
 }

@@ -65,9 +65,13 @@ module.exports = {
     ...(isRelease ? {} : { identity: null }),
     entitlements: "build/entitlements.mac.plist",
     entitlementsInherit: "build/entitlements.mac.plist",
+    // Why: macOS 26 takes the icon from Assets.car (scripts/icons.sh), which has the black plate for dark icons;
+    // icon.icns stays for older macOS.
+    extraResources: [{ from: "build/Assets.car", to: "Assets.car" }],
     extendInfo: {
       // Remotrol lives in the menu bar only: no Dock icon, no app menu.
       LSUIElement: true,
+      CFBundleIconName: "icon",
       CFBundleShortVersionString: shownVersion,
     },
   },
